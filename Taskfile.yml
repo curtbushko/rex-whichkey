@@ -1,0 +1,61 @@
+version: "3"
+
+# Built-in variables used: ROOT_DIR
+output: prefixed
+
+vars:
+  OS:
+    sh: go env GOOS
+  ARCH:
+    sh: go env GOARCH
+  BINARY:
+    sh: basename -s .git $(git remote get-url origin)
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the binary
+    cmds:
+      - mkdir -p {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}
+      - GOOS={{.OS}} GOARCH={{.ARCH}} go build -o {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}} ./cmd
+      - chmod +x {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}}
+
+  run:
+    desc: Run the binary
+    cmds:
+      - "{{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}}"
+
+  clean:
+    desc: Clean /bin directory
+    cmds:
+      - rm -rf {{.ROOT_DIR}}/bin
+
+  install:
+    desc: Install the binary using go install
+    cmds:
+      - GOOS={{.OS}} GOARCH={{.ARCH}} go install ./cmd
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: test:unit
+      - task: test:race
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Run race tests
+    cmds:
+      - go test -race ./...
+
+  tidy:
+    desc: Run go mod tidy
+    cmds:
+      - go mod tidy
