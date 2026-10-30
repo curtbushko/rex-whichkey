@@ -2,6 +2,9 @@ module example.com/whichkey-research
 
 go 1.25.5
 
+// Bounded experimental decoder correction; see third_party/ansi/PROVENANCE.md.
+replace github.com/charmbracelet/x/ansi => ./third_party/ansi
+
 require (
 	charm.land/bubbletea/v2 v2.0.8
 	github.com/creack/pty v1.1.24

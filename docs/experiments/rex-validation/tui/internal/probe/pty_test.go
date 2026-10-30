@@ -2,6 +2,8 @@ package probe_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"debug/buildinfo"
 	"errors"
 	"fmt"
 	"io"
@@ -18,30 +20,54 @@ import (
 )
 
 type terminal struct {
-	file    *os.File
-	cmd     *exec.Cmd
-	chunks  chan []byte
-	output  bytes.Buffer
-	started time.Time
+	file       *os.File
+	cmd        *exec.Cmd
+	chunks     chan []byte
+	output     bytes.Buffer
+	started    time.Time
+	done       chan struct{}
+	readerDone chan struct{}
+	waited     bool
 }
 
 func startTerminal(t *testing.T, name string) *terminal {
 	t.Helper()
 	root, err := filepath.Abs("../..")
 	require.NoError(t, err)
+	binaryRoot := os.Getenv("WK_FIXTURE_BINARY_DIR")
+	if binaryRoot == "" {
+		binaryRoot = root
+	}
+	binary := filepath.Join(binaryRoot, name)
+	data, err := os.ReadFile(binary)
+	require.NoError(t, err)
+	info, err := buildinfo.ReadFile(binary)
+	require.NoError(t, err)
+	t.Logf("binary=%s sha256=%x build=%s", binary, sha256.Sum256(data), info)
 	cmd := exec.Command("/bin/bash", filepath.Join(root, "restore.sh"))
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "WK_BINARY="+filepath.Join(root, name))
+	for _, entry := range os.Environ() {
+		// PTY tests never inherit a live Rex callback destination.
+		if !strings.HasPrefix(entry, "WK_") || strings.HasPrefix(entry, "WK_ASCII=") {
+			cmd.Env = append(cmd.Env, entry)
+		}
+	}
+	cmd.Env = append(cmd.Env, "TERM=xterm-256color", "WK_BINARY="+binary)
 	started := time.Now()
 	f, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 80})
 	require.NoError(t, err)
-	tr := &terminal{file: f, cmd: cmd, chunks: make(chan []byte, 128), started: started}
+	tr := &terminal{file: f, cmd: cmd, chunks: make(chan []byte, 128), started: started, done: make(chan struct{}), readerDone: make(chan struct{})}
 	go func() {
 		defer close(tr.chunks)
+		defer close(tr.readerDone)
 		for {
 			b := make([]byte, 4096)
 			n, err := f.Read(b)
 			if n > 0 {
-				tr.chunks <- b[:n]
+				select {
+				case tr.chunks <- b[:n]:
+				case <-tr.done:
+					return
+				}
 			}
 			if err != nil {
 				return
@@ -49,10 +75,17 @@ func startTerminal(t *testing.T, name string) *terminal {
 		}
 	}()
 	t.Cleanup(func() {
-		_ = f.Close()
-		if cmd.Process != nil {
-			_ = cmd.Process.Kill()
+		close(tr.done)
+		if !tr.waited {
+			if err := cmd.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+				t.Logf("cleanup kill: %v", err)
+			}
+			if err := cmd.Wait(); err != nil {
+				t.Logf("cleanup wait after failed test: %v", err)
+			}
 		}
+		require.NoError(t, f.Close())
+		<-tr.readerDone
 	})
 	return tr
 }
@@ -79,6 +112,7 @@ func (tr *terminal) finish(t *testing.T, want int) {
 	t.Helper()
 	tr.until(t, "TERMINAL_RESTORED")
 	err := tr.cmd.Wait()
+	tr.waited = true
 	if want == 0 {
 		require.NoError(t, err)
 	} else {
@@ -96,14 +130,25 @@ func TestPTY(t *testing.T) {
 		}{{"select", "y", 0}, {"cancel", "q", 0}, {"escape", "\x1b", 0}, {"error", "e", 1}, {"navigate", "\t\x7fy", 0}} {
 			t.Run(name+"/"+tc.name, func(t *testing.T) {
 				tr := startTerminal(t, name)
-				tr.until(t, "RESEARCH READY")
+				tr.frame(t)
+				start := time.Now()
 				tr.send(t, tc.key)
 				tr.finish(t, tc.code)
+				if tc.name == "escape" {
+					require.Less(t, time.Since(start), time.Second, "standalone Escape must resolve within a bounded interval")
+				}
+				if tc.code == 0 {
+					want := "cancel"
+					if tc.name == "select" || tc.name == "navigate" {
+						want = "choose"
+					}
+					require.Contains(t, tr.output.String(), "RESEARCH RESULT "+want)
+				}
 			})
 		}
 		t.Run(name+"/resize", func(t *testing.T) {
 			tr := startTerminal(t, name)
-			tr.until(t, "RESEARCH READY")
+			tr.frame(t)
 			tr.output.Reset()
 			require.NoError(t, pty.Setsize(tr.file, &pty.Winsize{Rows: 12, Cols: 40}))
 			tr.until(t, "40x12")
@@ -129,7 +174,7 @@ func TestStartupSamples(t *testing.T) {
 			exit := make([]float64, 0, 20)
 			for range 20 {
 				tr := startTerminal(t, name)
-				tr.until(t, "RESEARCH READY")
+				tr.frame(t)
 				first = append(first, float64(time.Since(tr.started).Microseconds())/1000)
 				start := time.Now()
 				tr.send(t, "y")
