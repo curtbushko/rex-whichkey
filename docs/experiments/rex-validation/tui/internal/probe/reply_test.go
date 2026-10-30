@@ -37,7 +37,8 @@ func (tr *terminal) quiet(t *testing.T, duration time.Duration) {
 
 func TestFragmentedOSC(t *testing.T) {
 	// Initial ESC shares the bounded standalone-Escape ambiguity interval.
-	// Every fragment is delivered within that interval, including ST's final ESC.
+	// This table exercises every split inside that interval. Established OSC
+	// retention beyond it is covered separately below.
 	for _, terminator := range []string{"\a", "\x1b\\"} {
 		reply := "\x1b]11;rgb:2222/3333/4444" + terminator
 		for split := 0; split <= len(reply); split++ {

@@ -66,13 +66,21 @@ func TestStyledWrapClip(t *testing.T) {
 
 func TestStyledIsolatedMarks(t *testing.T) {
 	for _, mode := range []ansi.Method{ansi.WcWidth, ansi.GraphemeWidth} {
-		for _, text := range []string{"\u0301\u0327", "\u0301\u0327x", "x\\n\u0301\u0327y"} {
+		for _, text := range []string{"\u0301\u0327", "\u0301\u0327x", "x\n\u0301\u0327y", "\u0301\u0327\nx", "x\n\u0301\u0327"} {
 			t.Run(fmt.Sprintf("%d/%q", mode, text), func(t *testing.T) {
 				buf := uv.NewScreenBuffer(8, 3)
 				buf.Method = mode
 				uv.NewStyledString(text).Draw(buf, buf.Bounds())
 				// No placement policy is invented here: at minimum, retain the marks.
 				assert.Contains(t, buf.Render(), "\u0301\u0327")
+				if text == "x\n\u0301\u0327y" {
+					requireCell(t, buf, 0, 0, "x", 1)
+					assert.Contains(t, buf.Line(1).String(), "y")
+					assert.Contains(t, buf.Line(1).String(), "\u0301\u0327")
+					assert.NotContains(t, buf.Line(0).String(), "y")
+				} else if text == "\u0301\u0327x" {
+					assert.Contains(t, buf.Render(), "x")
+				}
 			})
 		}
 	}
@@ -82,14 +90,29 @@ func TestStyledIsolatedMarks(t *testing.T) {
 // A combining mark separated from its base by styling still needs an owner.
 func TestStyledDetachedMarks(t *testing.T) {
 	for _, mode := range []ansi.Method{ansi.WcWidth, ansi.GraphemeWidth} {
-		for _, boundary := range []string{"\x1b[31m", "\x1b]8;;https://example.test\x1b\\"} {
-			t.Run(fmt.Sprint(mode)+"/"+boundary, func(t *testing.T) {
-				buf := uv.NewScreenBuffer(8, 2)
-				buf.Method = mode
-				uv.NewStyledString("e"+boundary+"\u0301\u0327x").Draw(buf, buf.Bounds())
-				requireCell(t, buf, 0, 0, "e\u0301\u0327", 1)
-				requireCell(t, buf, 1, 0, "x", 1)
-			})
+		for _, boundary := range []string{"\x1b[31m", "\x1b[0m", "\x1b]8;;https://example.test\x1b\\", "\x1b]8;;https://example.test\a", "\x1b]8;;\x1b\\"} {
+			for _, suffix := range []string{"x", "", "\nq"} {
+				for _, base := range []string{"e", "界"} {
+					t.Run(fmt.Sprintf("%d/%q/%q/%q", mode, boundary, suffix, base), func(t *testing.T) {
+						buf := uv.NewScreenBuffer(8, 2)
+						buf.Method = mode
+						uv.NewStyledString(base+boundary+"\u0301\u0327"+suffix).Draw(buf, buf.Bounds())
+						width := mode.StringWidth(base)
+						requireCell(t, buf, 0, 0, base+"\u0301\u0327", width)
+						if width == 2 {
+							requireCell(t, buf, 1, 0, "", 0)
+						}
+						if suffix == "x" {
+							requireCell(t, buf, width, 0, "x", 1)
+						} else if suffix == "\nq" {
+							requireCell(t, buf, 0, 1, "q", 1)
+						}
+						// Styling after the base must not replace the base's attributes.
+						assert.True(t, buf.CellAt(0, 0).Style.IsZero())
+						assert.True(t, buf.CellAt(0, 0).Link.IsZero())
+					})
+				}
+			}
 		}
 	}
 }

@@ -32,3 +32,6 @@ require (
 	golang.org/x/sys v0.46.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Exact pinned correction experiment; see third_party/ultraviolet/PROVENANCE.md.
+replace github.com/charmbracelet/ultraviolet => ./third_party/ultraviolet
