@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -173,6 +174,12 @@ func printString[T []byte | string](
 
 	for len(str) > 0 {
 		seq, width, n, newState := decoder(str, state, p)
+		if width > 0 && !utf8.ValidString(string(seq)) {
+			// An invalid byte can share a decoded cluster with valid marks.
+			// Drop only invalid bytes, without synthesizing replacement glyphs.
+			seq = T(strings.ToValidUTF8(string(seq), ""))
+			width = m.StringWidth(string(seq))
+		}
 		switch width {
 		case 1, 2, 3, 4: // wide cells can go up to 4 cells wide
 			flush()
@@ -232,12 +239,11 @@ func printString[T []byte | string](
 					x = bounds.Min.X
 				}
 			default:
-				// Zero display width does not imply safe cell content: CSI,
-				// OSC, tabs and backspaces must never execute during rendering.
+				// Unicode format/extender characters are text, even outside
+				// category Mark. Reject executable C0/C1/ANSI and invalid bytes,
+				// not valid zero-width Unicode such as emoji tags.
 				marks := string(seq)
-				if strings.IndexFunc(marks, func(r rune) bool {
-					return !unicode.IsMark(r) && r != '\u200c' && r != '\u200d'
-				}) >= 0 {
+				if !utf8.ValidString(marks) || strings.IndexFunc(marks, unicode.IsControl) >= 0 {
 					break
 				}
 				if hasLast {

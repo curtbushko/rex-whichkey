@@ -11,8 +11,11 @@ MIT license, were copied from the existing Go module cache. Before editing,
 `diff -qr` confirmed an identical copy. The upstream module and checksum files
 remain unchanged. At the A02 snapshot only `styled.go`, `decoder.go` and
 `terminal_reader.go` differed; this document was additional. A03's current
-source/test differences are listed below. Existing upstream lint directives are copied verbatim, not new
-suppressions. No shared cache source was edited.
+source/test differences are listed below. The tracked A02/A03 copies omit upstream
+`.golangci.yml`: the unchanged root `.gitignore` excludes that name. This omission
+is retained in A04, not a new lint-policy change. Upstream tests, module files and
+license remain intact. Existing upstream lint directives are copied verbatim, not
+new suppressions. No shared cache source was edited.
 
 ## Original identity
 
@@ -53,7 +56,7 @@ both original x/ansi and the local ANSI correction. It is not skipped, rewritten
 or treated as a pass. See `../../VALIDATION-A02.md`. This prevents a
 ready-for-review outcome despite passing the task's nested regression gates.
 
-## Current A03 correction
+## Historical A03 correction
 
 `../../VALIDATION-A03.md` supersedes the preceding A02 implementation/gate
 status, without changing `../../VALIDATION.md` or `../../VALIDATION-A02.md`.
@@ -87,9 +90,31 @@ This is the same accepted experiment authorization, not a new public interface.
   Nested probe tests additionally check live-reader timing/shutdown, all four
   original regression families, changed widths, metadata, safe output and redraw.
 
+## Current A04 correction
+
+`../../VALIDATION-A04.md` records T01-REVIEW-009 under the same accepted
+experiment authorization. A01–A03 validation documents remain unchanged.
+
+Only `styled.go` changes in this pinned copy. The category-Mark/ZWNJ/ZWJ
+whitelist is replaced by Unicode-versus-executable-control classification:
+valid zero-width Unicode, including Cf emoji tags, is retained; C0/C1 controls,
+ANSI operations and invalid byte sequences are not cell content. Supported
+SGR/OSC-8 remain metadata. Invalid bytes within a positive-width decoded cluster
+are removed without replacement glyphs, retaining any neighboring valid marks;
+width is then recalculated with the existing selected method. Valid encoded
+U+FFFD is not removed. There is no normalization or synthetic glyph.
+
+The scanner, decoder, 64 KiB bound, width algorithms, pins and all earlier tests
+are unchanged. New nested `unicode_metadata_test.go` asserts exact England tag
+bytes across SGR/OSC-8 BEL/ST, all tag partition points, both width modes,
+Lines/Draw, attributes/links, placeholders, following text, clipping/wrapping,
+final-row bounds, sentinels and redraw. Unicode comparison cases include
+ZWNJ/ZWJ, CGJ, VS16, zero-width space, word joiner and encoded U+FFFD; negative
+cases include C0, raw/encoded C1, invalid UTF-8 and unsupported ANSI operations.
+
 Current SHA-256:
 
-- styled.go: `7c2af3a02f205b6d34365829ce0901efb6e10931db37007b7b0e3fd9781f4f64`
+- styled.go: `63f0b6c67bc7e2cdc2f29a03c69c959a5a326bbf555f30b2697972535022b2f9`
 - decoder.go: `279b168f49fd30f8e6535ccef2a3f38104637c68abc403e51c2e965288543a8a`
 - terminal_reader.go: `08a58ea4073f779221c1815ce7b0fd2451ac8e4608cced012c2816091f5b046c`
 - key_test.go: `1b615bf750e0414172f993ecbba0f5f1256f6ab8051450a2092d33b39a8f03ed`
@@ -97,7 +122,10 @@ Current SHA-256:
 - osc_limit_test.go: `d1186505cf96b05817d4da1a4f5a0053f4e7dd64772c8ff62b512c409ab563f6`
 
 License, upstream go.mod/go.sum, x/ansi copy and root policies are unchanged.
-Full UV suites now pass with original pinned ANSI and effective local ANSI,
-including 50 full non-race and 10 full race repetitions **per environment** on
-final source. This does not explain or erase review/2's earlier transient poll
-cancellation failure; no recurrence was observed in these repetitions.
+A04 full UV normal/race suites pass with original pinned ANSI and effective
+local ANSI. New Unicode/control/geometry regressions also pass 20 plain and
+3 race repetitions in each ANSI environment. A03's historical 50 full non-race
+and 10 full race repetitions **per environment** are preserved in its validation
+document; they are not claimed as A04 repetitions. This style-only correction
+does not change the scanner or explain/erase review/2's earlier transient poll
+cancellation failure. No recurrence was observed in A04.
