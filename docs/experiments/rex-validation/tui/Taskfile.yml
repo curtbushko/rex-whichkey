@@ -1,0 +1,12 @@
+version: '3'
+tasks:
+  build:
+    cmds:
+      - go build -o direct ./cmd/direct
+      - go build -o tea ./cmd/tea
+  test:
+    cmds:
+      - go test -count=1 -timeout=90s ./...
+  lint:
+    cmds:
+      - go vet ./...
