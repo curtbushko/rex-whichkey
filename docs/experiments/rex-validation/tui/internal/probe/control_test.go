@@ -11,15 +11,18 @@ import (
 
 func TestStyledMarkControls(t *testing.T) {
 	for _, mode := range []ansi.Method{ansi.WcWidth, ansi.GraphemeWidth} {
-		for _, control := range []string{"\a", "\t", "\b"} {
+		for _, control := range []string{"\a", "\t", "\b", "\x1b[2J", "\x1b[5C", "\x1b]0;unsafe title\a", "\x1b]52;c;eA==\x1b\\", "\x1b7", "\x00", "\x7f", "\x1bPignored\x1b\\"} {
 			for _, suffix := range []string{"", "x"} {
 				t.Run(fmt.Sprintf("%d/%q/%q", mode, control, suffix), func(t *testing.T) {
 					buf := uv.NewScreenBuffer(8, 2)
 					buf.Method = mode
 					uv.NewStyledString("e"+control+"\u0301\u0327"+suffix).Draw(buf, buf.Bounds())
-					// The styled-string path retains these controls as bytes; it is
-					// not a terminal emulator for tab stops or cursor movement.
-					requireCell(t, buf, 0, 0, "e"+control+"\u0301\u0327", 1)
+					// Unsupported terminal operations are not executable cell content.
+					// Ignoring them must not lose the neighboring marks or move x.
+					requireCell(t, buf, 0, 0, "e\u0301\u0327", 1)
+					assert.NotContains(t, buf.Render(), control)
+					lines := uv.NewStyledString(control + "\u0301e").Lines(mode)
+					assert.Equal(t, "\u0301e", lines[0].String())
 					if suffix != "" {
 						requireCell(t, buf, 1, 0, "x", 1)
 					}

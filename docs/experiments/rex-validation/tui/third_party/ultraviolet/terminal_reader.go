@@ -141,6 +141,7 @@ func (d *TerminalReader) StreamEvents(ctx context.Context, eventc chan<- Event) 
 	errc := make(chan error, 1)
 	readc := make(chan []byte)
 	timeout := time.NewTimer(d.EscTimeout)
+	defer timeout.Stop()
 	ttimeout := time.Now().Add(d.EscTimeout)
 
 	var wg sync.WaitGroup
@@ -247,6 +248,54 @@ type eventScanner struct {
 	table       map[string]Key
 	lookup      bool
 	logger      Logger
+
+	// Established OSC belongs to the scanner, not the Escape timeout buffer.
+	osc         []byte
+	oscActive   bool
+	oscEscape   bool
+	oscOverflow bool
+}
+
+// maxPendingOSC is an internal experiment bound, not a public input contract.
+// Oversized OSC is discarded through BEL/ST/CAN/SUB without releasing payload.
+const maxPendingOSC = 64 * 1024
+
+// scanOSC consumes only new bytes. A retained prefix is decoded once, on
+// completion; idle timeouts never copy or reparse it.
+func (d *eventScanner) scanOSC(buf []byte) (n int, event Event) {
+	for n < len(buf) {
+		b := buf[n]
+		cancelled := b == ansi.CAN || b == ansi.SUB
+		terminated := cancelled || b == ansi.BEL || b == ansi.ST
+		if d.oscEscape && b != '\\' && !terminated && !d.oscOverflow {
+			// Match the decoder's ESC cancellation: the non-ST byte starts
+			// the next event. Overflow instead discards until an explicit end.
+			d.osc, d.oscActive, d.oscEscape = d.osc[:0], false, false
+			return n, nil
+		}
+		n++
+		if !d.oscOverflow {
+			if len(d.osc) == maxPendingOSC {
+				d.osc, d.oscOverflow = d.osc[:0], true
+			} else {
+				d.osc = append(d.osc, b)
+			}
+		}
+		complete := terminated || (d.oscEscape && b == '\\')
+		if complete {
+			if !cancelled && !d.oscOverflow {
+				_, event = d.Decode(d.osc)
+				if _, ignored := event.(ignoredEvent); ignored {
+					event = nil
+				}
+			}
+			d.osc = d.osc[:0]
+			d.oscActive, d.oscEscape, d.oscOverflow = false, false, false
+			return n, event
+		}
+		d.oscEscape = b == ansi.ESC
+	}
+	return n, nil
 }
 
 // newEventScanner creates a new event scanner.
@@ -271,11 +320,13 @@ func (d *eventScanner) scanEvents(buf []byte, expired bool) (total int, events [
 
 	var dn int
 	d.logf("processing buf %d %q", len(buf), buf)
-	dn, buf = d.deserializeWin32Input(buf)
-	total += dn
+	if !d.oscActive {
+		dn, buf = d.deserializeWin32Input(buf)
+		total += dn
+	}
 
 	// Lookup table first
-	if d.lookup && len(buf) > 2 && buf[0] == ansi.ESC {
+	if d.lookup && !d.oscActive && len(buf) > 2 && buf[0] == ansi.ESC {
 		if k, ok := d.table[string(buf)]; ok {
 			return len(buf), []Event{KeyPressEvent(k)}
 		}
@@ -283,6 +334,39 @@ func (d *eventScanner) scanEvents(buf []byte, expired bool) (total int, events [
 
 	// total is the total number of bytes processed
 	for len(buf) > 0 {
+		// Retain the Alt+] ambiguity (including an immediately following
+		// Alt key), but once OSC data begins consume it incrementally,
+		// even on expiration.
+		if d.paste == nil && !d.oscActive {
+			intro := 0
+			if buf[0] == ansi.OSC {
+				intro = 1
+			} else if len(buf) > 2 && buf[0] == ansi.ESC && buf[1] == ']' && buf[2] != ansi.ESC {
+				intro = 2
+			}
+			if intro > 0 {
+				if d.osc == nil {
+					d.osc = make([]byte, 0, maxPendingOSC)
+				}
+				d.osc = append(d.osc[:0], buf[:intro]...)
+				d.oscActive = true
+				buf, total = buf[intro:], total+intro
+			}
+		}
+		if d.oscActive {
+			n, event := d.scanOSC(buf)
+			buf, total = buf[n:], total+n
+			if event != nil {
+				events = append(events, event)
+			}
+			if !d.oscActive && len(buf) > 0 {
+				// Input following the terminator is input again, including
+				// serialized Win32 events; OSC payload itself is never decoded.
+				dn, buf = d.deserializeWin32Input(buf)
+				total += dn
+			}
+			continue
+		}
 		esc := buf[0] == ansi.ESC
 		n, event := d.Decode(buf)
 		if d.incompleteOSC && d.paste == nil {

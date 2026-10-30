@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image/color"
 	"strings"
+	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -124,17 +125,57 @@ func printString[T []byte | string](
 
 	var cell Cell
 	var last Cell
-	var lastPos Position
 	var hasLast bool
 	var clipped bool
 	var pending string
 	var style Style
 	var link Link
 	var state byte
+
+	// Delay placement until the next base or line boundary. Marks separated by
+	// metadata can change the cluster's extent (VS16/keycaps), so bounds and
+	// placeholders must be computed from the completed cell, not its old width.
+	flush := func() {
+		if !hasLast {
+			return
+		}
+		cell, hasLast = last, false
+		width := cell.Width
+		if s == nil {
+			if y >= len(lines) {
+				lines = append(lines, Line{})
+			}
+			lines[y] = append(lines[y], cell)
+			x += width
+		} else if !clipped {
+			if !truncate && x+width > bounds.Max.X && width <= bounds.Dx() && y+1 < bounds.Max.Y {
+				x = bounds.Min.X
+				y++
+			}
+			if Pos(x, y).In(bounds) {
+				if truncate && tailc.Width > 0 && x+width > bounds.Max.X-tailc.Width {
+					if x+tailc.Width <= bounds.Max.X {
+						tail := tailc
+						tail.Style, tail.Link = cell.Style, cell.Link
+						s.SetCell(x, y, &tail)
+					}
+					x, clipped = bounds.Max.X, true
+				} else if x+width <= bounds.Max.X {
+					s.SetCell(x, y, &cell)
+					x += width
+				} else {
+					x, clipped = bounds.Max.X, true
+				}
+			}
+		}
+		cell = Cell{}
+	}
+
 	for len(str) > 0 {
 		seq, width, n, newState := decoder(str, state, p)
 		switch width {
 		case 1, 2, 3, 4: // wide cells can go up to 4 cells wide
+			flush()
 			if clipped {
 				break
 			}
@@ -145,42 +186,7 @@ func printString[T []byte | string](
 			cell.Style = style
 			cell.Link = link
 
-			if s == nil {
-				// Building lines: unwrapped, no bounds
-				if y >= len(lines) {
-					lines = append(lines, Line{})
-				}
-				lines[y] = append(lines[y], cell)
-				last, lastPos, hasLast = cell, Pos(len(lines[y])-1, y), true
-				x += width
-			} else {
-				// A cell must fit completely, even on the final available row.
-				hasLast = false
-				if !truncate && x+width > bounds.Max.X && width <= bounds.Dx() && y+1 < bounds.Max.Y {
-					x = bounds.Min.X
-					y++
-				}
-
-				pos := Pos(x, y)
-				if pos.In(bounds) {
-					if truncate && tailc.Width > 0 && x+width > bounds.Max.X-tailc.Width {
-						if x+tailc.Width <= bounds.Max.X {
-							cell = tailc
-							cell.Style = style
-							cell.Link = link
-							s.SetCell(x, y, &cell)
-						}
-						x, clipped = bounds.Max.X, true
-					} else if x+width <= bounds.Max.X {
-						s.SetCell(x, y, &cell)
-						last, lastPos, hasLast = cell, pos, true
-						x += width
-					} else {
-						// Discard the rest of this clipped line, not the next line.
-						x, clipped = bounds.Max.X, true
-					}
-				}
-			}
+			last, hasLast = cell, true
 
 			// Reset cell for next iteration
 			cell = Cell{}
@@ -195,6 +201,7 @@ func printString[T []byte | string](
 				// Hyperlinks
 				ReadLink(p.Data(), &link)
 			case ansi.Equal(seq, T("\n")):
+				flush()
 				if pending != "" {
 					cell.Content = pending
 					if s != nil && Pos(x, y).In(bounds) {
@@ -217,6 +224,7 @@ func printString[T []byte | string](
 				// Always treat a NL as CR-LF similar to Termios ONLCR.
 				fallthrough
 			case ansi.Equal(seq, T("\r")):
+				flush()
 				hasLast, clipped = false, false
 				if s == nil {
 					x = 0
@@ -224,16 +232,19 @@ func printString[T []byte | string](
 					x = bounds.Min.X
 				}
 			default:
+				// Zero display width does not imply safe cell content: CSI,
+				// OSC, tabs and backspaces must never execute during rendering.
+				marks := string(seq)
+				if strings.IndexFunc(marks, func(r rune) bool {
+					return !unicode.IsMark(r) && r != '\u200c' && r != '\u200d'
+				}) >= 0 {
+					break
+				}
 				if hasLast {
-					// Styling does not sever the preceding base's mark association.
-					last.Content += string(seq)
-					if s == nil {
-						lines[lastPos.Y][lastPos.X] = last
-					} else {
-						s.SetCell(lastPos.X, lastPos.Y, &last)
-					}
+					last.Content += marks
+					last.Width = m.StringWidth(last.Content)
 				} else {
-					pending += string(seq)
+					pending += marks
 				}
 			}
 		}
@@ -248,6 +259,8 @@ func printString[T []byte | string](
 			break
 		}
 	}
+
+	flush()
 
 	// Retain wholly base-less bytes as zero-width content, not a fallback glyph.
 	if pending != "" {

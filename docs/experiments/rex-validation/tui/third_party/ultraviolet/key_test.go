@@ -2354,7 +2354,7 @@ func TestSplitSequences(t *testing.T) {
 		{
 			name: "unknown sequence after timeout",
 			chunks: [][]byte{
-				[]byte("\x1b]11;rgb:1111/2222/3333"),
+				[]byte("\x1b[999"),
 				[]byte("abc"),
 				[]byte("x"),
 				[]byte("x"),
@@ -2362,7 +2362,7 @@ func TestSplitSequences(t *testing.T) {
 				[]byte("x"),
 			},
 			want: []Event{
-				UnknownEvent("\x1b]11;rgb:1111/2222/3333"),
+				UnknownEvent("\x1b[999"),
 				KeyPressEvent{Code: 'a', Text: "a"},
 				KeyPressEvent{Code: 'b', Text: "b"},
 				KeyPressEvent{Code: 'c', Text: "c"},
@@ -2372,6 +2372,48 @@ func TestSplitSequences(t *testing.T) {
 				KeyPressEvent{Code: 'x', Text: "x"},
 			},
 			delay: 60 * time.Millisecond, // Ensure the timeout is triggered.
+		},
+		{
+			name: "established OSC retained through timeouts until CAN",
+			chunks: [][]byte{
+				[]byte("\x1b]11;rgb:1111/2222/3333"),
+				[]byte("abc"), []byte("x"), []byte("x"), []byte("x"), []byte("x"),
+				[]byte("\x18"), []byte("y"),
+			},
+			want:  []Event{KeyPressEvent{Code: 'y', Text: "y"}},
+			delay: 60 * time.Millisecond,
+		},
+		{
+			name: "established OSC retained through timeouts until SUB",
+			chunks: [][]byte{
+				[]byte("\x1b]11;rgb:1111/2222/3333"),
+				[]byte("abc"), []byte("x"), []byte("x"), []byte("x"), []byte("x"),
+				[]byte("\x1a"), []byte("y"),
+			},
+			want:  []Event{KeyPressEvent{Code: 'y', Text: "y"}},
+			delay: 60 * time.Millisecond,
+		},
+		{
+			name: "delayed OSC BEL completion and following y",
+			chunks: [][]byte{
+				[]byte("\x1b]11;rgb:1111/2222/3333"), []byte("\a"), []byte("y"),
+			},
+			want: []Event{
+				BackgroundColorEvent{Color: ansi.XParseColor("rgb:1111/2222/3333")},
+				KeyPressEvent{Code: 'y', Text: "y"},
+			},
+			delay: 100 * time.Millisecond,
+		},
+		{
+			name: "delayed OSC split ST completion and following y",
+			chunks: [][]byte{
+				[]byte("\x1b]11;rgb:1111/2222/3333"), []byte("\x1b"), []byte("\\"), []byte("y"),
+			},
+			want: []Event{
+				BackgroundColorEvent{Color: ansi.XParseColor("rgb:1111/2222/3333")},
+				KeyPressEvent{Code: 'y', Text: "y"},
+			},
+			delay: 100 * time.Millisecond,
 		},
 		{
 			name: "multiple broken down sequences",
