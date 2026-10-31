@@ -1,6 +1,6 @@
 ---
 workflowKind: task
-workflowLanguage: go
+workflowLanguage: nix
 workflowOrder: 1
 workflowRequirements:
   - REQ-014
@@ -26,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:45.490Z'
-dateModified: '2026-10-31T11:26:30.356Z'
+dateModified: '2026-10-31T19:58:43.905Z'
 tags:
   - task
 type: task
@@ -36,12 +36,20 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-04-05-popup-integration.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-05-01-session-actions.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-05-02-tab-actions.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-05-03-pane-actions.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-05-04-host-menu.md]]'
+    reltype: FINISHTOSTART
 ---
 # Product implementation task
 
 ## Current direction — REXWHICHKEY-20261031-072107
 
-User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. Provisional IF-* signatures remain unapproved; current execution and completion policy is recorded in projects/rex-whichkey.md.
 
 ## Deliverable and scope
 
@@ -51,7 +59,7 @@ Expose a Nix package for the executable and Lua integration using the server-sid
 ## Functional criteria
 
 REQ-014
-Build installs a runnable executable and loadable Lua module, including complete default mappings as integrated. Package installation does not write init.lua or assume caller-local module paths. Use nix skill alongside Go project verification.
+The package definition must install the executable and loadable Lua integration with complete integrated defaults. Package installation must not write init.lua or assume caller-local module paths. Use Nix source review, not Go project verification, package builds or Nix evaluation; build/load success remains unexecuted.
 
 
 ## Ownership
@@ -67,7 +75,15 @@ Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* 
 
 ## Execution and completion
 
-No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve source and necessary current state; completed tasks/phases retain concise delivery summaries. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. Independent source review is required before delivery; no runtime verification is claimed. Follow the current execution and completion policy in projects/rex-whichkey.md.
+
+## Worker routing
+
+Intended workflowLanguage: nix. Use the supported matching language/documentation worker and independent source-review route once the coordinator confirms the narrow tooling capability update. Do not dispatch through Go TDD gates or substitute Go metadata while support is unavailable. The project no-tests/no-experiments policy overrides worker defaults.
+
+## Actual producer inputs and final source assembly
+
+Retain the popup prerequisite. Also require delivered 05-01 lua/rex_whichkey/defaults/sessions.lua, 05-02 lua/rex_whichkey/defaults/tabs.lua, 05-03 lua/rex_whichkey/defaults/panes.lua and lua/rex_whichkey/defaults/app.lua, and 05-04 hosts.go before completion. Review the final package source/install inventory against those files and the popup's Go/Lua entry points. Include the integrated Go-owned format from mapping.go and docs/mapping-format.md through these producer chains; do not redefine it in Nix. Do not claim an earlier popup-only package includes defaults produced later. Source review must identify missing inputs or stale install lists; no build result or runtime load pass is inferred.
 
 <!-- mtn:evidence:v1 -->
 

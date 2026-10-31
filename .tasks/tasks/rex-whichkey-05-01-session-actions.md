@@ -1,6 +1,6 @@
 ---
 workflowKind: task
-workflowLanguage: go
+workflowLanguage: lua
 workflowOrder: 1
 workflowRequirements:
   - REQ-010
@@ -26,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:35.431Z'
-dateModified: '2026-10-31T11:26:27.096Z'
+dateModified: '2026-10-31T19:58:33.007Z'
 tags:
   - task
 type: task
@@ -36,12 +36,14 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-04-05-popup-integration.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
+    reltype: FINISHTOSTART
 ---
 # Product implementation task
 
 ## Current direction — REXWHICHKEY-20261031-072107
 
-User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. Provisional IF-* signatures remain unapproved; current execution and completion policy is recorded in projects/rex-whichkey.md.
 
 ## Deliverable and scope
 
@@ -67,7 +69,15 @@ Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* 
 
 ## Execution and completion
 
-No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve source and necessary current state; completed tasks/phases retain concise delivery summaries. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. Independent source review is required before delivery; no runtime verification is claimed. Follow the current execution and completion policy in projects/rex-whichkey.md.
+
+## Authoritative format input
+
+Consume mapping.go and docs/mapping-format.md from tasks/rex-whichkey-03-05-mapping-format.md after its native producer prerequisite is delivered. These Go-owned files define the shared mapping/configuration standard; do not define or copy an independent Lua/Nix/consumer schema. Executable configuration and callbacks remain in the originating Rex Lua runtime. Follow the existing functional requirements; raise a consequential new public interface or dependency choice for user approval instead of silently selecting it.
+
+## Worker routing
+
+Intended workflowLanguage: lua. Use the supported matching language/documentation worker and independent source-review route once the coordinator confirms the narrow tooling capability update. Do not dispatch through Go TDD gates or substitute Go metadata while support is unavailable. The project no-tests/no-experiments policy overrides worker defaults.
 
 <!-- mtn:evidence:v1 -->
 

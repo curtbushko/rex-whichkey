@@ -34,7 +34,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:33.418Z'
-dateModified: '2026-10-31T11:26:26.430Z'
+dateModified: '2026-10-31T19:58:32.104Z'
 tags:
   - task
 type: task
@@ -48,12 +48,14 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-02-03-block-layers.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
+    reltype: FINISHTOSTART
 ---
 # Product implementation task
 
 ## Current direction — REXWHICHKEY-20261031-072107
 
-User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. Provisional IF-* signatures remain unapproved; current execution and completion policy is recorded in projects/rex-whichkey.md.
 
 ## Deliverable and scope
 
@@ -63,7 +65,7 @@ Wire the short launcher and terminal-owned Go process to launch/config/selection
 ## Functional criteria
 
 REQ-001, REQ-005, REQ-007, REQ-008, REQ-011, REQ-013
-Popup survives beyond the configuration action lifetime, carries exact origin identities, executes one validated selection and cleans only owned resources on cancellation/errors. All five graphical positions and focus restoration pass; moved origins resolve safely. No background daemon or user init.lua takeover.
+Popup survives beyond the configuration action lifetime, carries exact origin identities, executes one validated selection and cleans only owned resources on cancellation/errors. Implement all five graphical positions and focus restoration; moved origins resolve safely. Independent source review must trace layout, focus and cleanup paths; graphical/runtime behavior remains unexecuted, not passed. No background daemon or user init.lua takeover.
 
 
 ## Ownership
@@ -79,7 +81,17 @@ Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* 
 
 ## Execution and completion
 
-No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve source and necessary current state; completed tasks/phases retain concise delivery summaries. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. Independent source review is required before delivery; no runtime verification is claimed. Follow the current execution and completion policy in projects/rex-whichkey.md.
+
+## Authoritative format input
+
+Consume mapping.go and docs/mapping-format.md from tasks/rex-whichkey-03-05-mapping-format.md after its native producer prerequisite is delivered. These Go-owned files define the shared mapping/configuration standard; do not define or copy an independent Lua/Nix/consumer schema. Executable configuration and callbacks remain in the originating Rex Lua runtime. Follow the existing functional requirements; raise a consequential new public interface or dependency choice for user approval instead of silently selecting it.
+
+## Remote implementation and mixed-language review
+
+Own server-side popup executable/config resolution and propagation of exact originating server/session/block/client identities in config.go and cmd/main.go, with only required launcher glue in lua/rex_whichkey.lua. Use the execution host's installed executable/module paths, not a client-local absolute path; 03-01 owns user module loading, 03-04 owns callback/action validation and Phase 2 owns CLI/resource targeting. Preserve no-fallback origin behavior and cleanup only resources returned as owned. 05-05 documents these source paths; it cannot supply missing implementation.
+
+Keep workflowLanguage go for this mixed task. Independent source review must explicitly cover lua/rex_whichkey.lua and its loading/argv/origin/lifetime behavior alongside all owned Go files and the Lua config/dispatch boundary. No Lua work may be omitted because the primary route is Go; no Go TDD/runtime gates are authorized.
 
 <!-- mtn:evidence:v1 -->
 

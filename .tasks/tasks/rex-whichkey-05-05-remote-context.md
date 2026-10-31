@@ -1,6 +1,6 @@
 ---
 workflowKind: task
-workflowLanguage: go
+workflowLanguage: docs
 workflowOrder: 5
 workflowRequirements:
   - REQ-003
@@ -16,7 +16,7 @@ workflowOwnership:
   sharedPaths: []
   resources: []
   interfaces: []
-title: Document remote-safe configuration and targeting
+title: Document remote-context implementation and limitations
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-05-remote-context/1
   intent: 8f0038b537789d88bcbdadbce533286b75c4345d06c3535ecd212a9bd9a483a3
@@ -26,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:43.485Z'
-dateModified: '2026-10-31T11:26:41.540Z'
+dateModified: '2026-10-31T19:58:40.268Z'
 tags:
   - task
 type: task
@@ -38,16 +38,26 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-02-04-host-inventory.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-02-01-cli-execution.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-02-02-resources.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-02-03-block-layers.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-03-01-lua-config.md]]'
+    reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-03-04-invocation-dispatch.md]]'
+    reltype: FINISHTOSTART
 ---
-# Product implementation task
+# Product documentation task
 
 ## Current direction — REXWHICHKEY-20261031-072107
 
-User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. Provisional IF-* signatures remain unapproved; current execution and completion policy is recorded in projects/rex-whichkey.md.
 
 ## Deliverable and scope
 
-Implement remote-safe executable/module resolution and propagation of server/session/block/client identities using the documented API. Do not add a remote acceptance harness or perform remote experiments. Changes outside owned paths require explicit reassignment.
+Document the actually delivered remote-safe executable/module resolution and server/session/block/client identity propagation in docs/remote-compatibility.md. This task owns documentation only, not runtime implementation or an acceptance harness. Identify residual source-review risks and unexecuted remote behavior honestly.
 
 ## Functional criteria
 
@@ -55,18 +65,28 @@ Retain REQ-003, REQ-005, REQ-011, REQ-013 functional intent. Record implementati
 
 ## Ownership
 
-Allowed source/test edits: tests/integration/remote, docs/remote-compatibility.md. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.
+Allowed documentation edits: docs/remote-compatibility.md. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.
 
 
 ## Inputs and prerequisites
 
-Use the current PRD and published Rex API/CLI contracts. Read documentation/source as needed; implement only the integration the menu needs. Preserve the flat short-lived Go application, minimal Lua integration, concrete Rex resource types, argument-array execution, origin identity, bounded owned-resource cleanup and user init.lua ownership. No daemon, service hierarchy, new transport framework, research harness or prerequisite final RFC. Unknown API behavior is a concrete implementation issue, not an open-ended research gate.
+Use the current PRD and published Rex API/CLI contracts. Read delivered source and documentation as needed; document the integration the menu needs without taking runtime ownership. Preserve the flat short-lived Go application, minimal Lua integration, concrete Rex resource types, argument-array execution, origin identity, bounded owned-resource cleanup and user init.lua ownership. No daemon, service hierarchy, new transport framework, research harness or prerequisite final RFC. Unknown API behavior is a concrete implementation issue, not an open-ended research gate.
 
 Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* names in historical drafts are not adopted public contracts. Prioritize mapping and menu tasks before integration-only work.
 
 ## Execution and completion
 
-No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve source and necessary current state; completed tasks/phases retain concise delivery summaries. Only actual delivered documentation within this task's ownership counts as its delivery; it does not establish delivery or runtime verification of the implementation it describes. Cancelled research does not count as successful delivery. Independent source review is required before delivery; no runtime verification is claimed. Follow the current execution and completion policy in projects/rex-whichkey.md.
+
+## Worker routing
+
+Intended workflowLanguage: docs. Use the supported matching language/documentation worker and independent source-review route once the coordinator confirms the narrow tooling capability update. Do not dispatch through Go TDD gates or substitute Go metadata while support is unavailable. The project no-tests/no-experiments policy overrides worker defaults.
+
+## Runtime owners and documentation inputs
+
+Trace delivered code from 02-01 rex/rex.go and rex/exec.go (CLI executable and targeting), 02-02 rex/session.go and rex/window.go (stable identities), 02-03 rex/block.go and rex/layer.go (current origin/owned resources), 03-01 lua/rex_whichkey/config.lua (server module lookup), 03-04 lua/rex_whichkey/dispatch.lua (origin-bound Rex-runtime callback/action dispatch), and 04-05 config.go, cmd/main.go and lua/rex_whichkey.lua (popup executable/config resolution and identity propagation). These existing runtime owners implement REQ-003/005/011/013; raise missing implementation to them rather than editing outside docs ownership. Keep the existing 02-04 inventory input to explain its distinct targeting behavior.
+
+Reference mapping.go and docs/mapping-format.md when describing shared data. Do not duplicate a schema, propose remote attach/bootstrap/WOL, reserve a remote server, or claim compatibility demonstrated by a trial. Completion means independently reviewed accurate documentation of delivered source and its limitations, not a remote feature pass.
 
 <!-- mtn:evidence:v1 -->
 
