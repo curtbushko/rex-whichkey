@@ -24,13 +24,13 @@ title: Implement moved-block focus and owned layer lifecycle
 mtnCreateRetry:
   key: rex-whichkey/draft-task/02-03-block-layers/1
   intent: a023ce25bab658bbdd983ebffe687ad76f7f95db08e95ed852e1b8493e14fee9
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:13.382Z'
-dateModified: '2026-10-31T19:57:59.584Z'
+dateModified: '2026-10-31T20:51:18.797Z'
 tags:
   - task
 type: task
@@ -40,6 +40,7 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-02-02-resources.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -79,8 +80,8 @@ rex/block.go and rex/layer.go resolve origin/block location in the selected serv
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjA5LjQyMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDItMDMtYmxvY2stbGF5ZXJzLm1kIiwiaW50ZW50IjoiOTI0NjZlYmNmOTcxOGI2M2YwZjY5ZjdkMDQxNDY3MWJjMmZlZDk3M2Q2NjNiNzY4NDk5MTliNGJiM2RlNWM2NyJ9 -->
-### 2026-10-31T11:25:09.421Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDIwOjUxOjE4Ljc4NloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMi10MDMtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiYmFjMTRmMWFjNTE2ODg5OTg0YzhmOTE2OTgxNWUwOWRmZGNlNDkwZTYzMTg0YzM4NjZjMzU4NTdiY2U2OWE3NiJ9 -->
+### 2026-10-31T20:51:18.786Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-02-03-block-layers.md","kind":"historical","recordRef":"tasks/rex-whichkey-02-03-block-layers.md","specHash":"sha256:3494b04da8031ba7f14cd58ad12a5781b6fefed1313a2c202a1f9d514d239ae1","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement block lookup/focus and layer create/resize/close methods required by the approved popup contract. Resolve current block location rather than trusting cached window membership.\n\n## Requirement criteria\nREQ-002, REQ-011, REQ-013\nMoved blocks focus in their current window while session identity remains correct. Missing origins, invalid bounds, process exits and already-vanished wait targets fail safely without blind layer recreation. Cleanup touches only returned owned IDs.\n\n## Ownership\nAllowed source/test edits: rex/block.go, rex/block_test.go, rex/layer.go, rex/layer_test.go, rex/testdata/layers. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-02-02-resources.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN targeting/lifecycle fixtures and real isolated-server moved-block/layer checks; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement moved-block focus and owned layer lifecycle","approvalSummary":["User-approved corrected Phase2 plan and explicit implementation continuation.","Fresh independent combined review rex-whichkey-p02-t03-reviewer-a02/review/2 APPROVED current attempt after cleanup race P02-T03-R1 was fixed."],"artifacts":[".mtn-tmp/phase2-delivery/rex-whichkey-p02-t03-reviewer-a02/review.json"],"attempt":2,"eventId":"rex-whichkey-p02-t03-builder-a02/summary/2","files":["rex/block.go","rex/layer.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live Rex/remote trials for this implementation.","Source review and standard compilation are not runtime behavior verification; cross-family review unavailable.","Cleanup refuses unsafe remaining layer removal rather than issue a cascading close that could destroy unrelated blocks."],"recordRef":"tasks/rex-whichkey-02-03-block-layers.md","requirements":["REQ-002","REQ-011","REQ-013"],"schemaVersion":1,"specHash":"sha256:74177525d85656ad88ef2f18025e0b803585fb5589ccf3cb75425851fe13ada2","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"fb7ed1228620a335d0e325e88a66ee3c024dfef6","targetTree":"c9985ba3a14e69000dd9b9a4b341b7bb07c67080","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./rex (combined integration candidate)","result":"pass"},{"command":"git rev-parse candidate^{tree} equals current approved build tree; git diff --check target-base candidate; git merge-base --is-ancestor integrated-commit main","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

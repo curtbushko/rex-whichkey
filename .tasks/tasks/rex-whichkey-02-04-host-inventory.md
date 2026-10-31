@@ -22,13 +22,13 @@ title: Decode effective Rex-known host inventory
 mtnCreateRetry:
   key: rex-whichkey/draft-task/02-04-host-inventory/1
   intent: f32ba3182e5c6d7e88394a0c32ec9f399618af8fce884641f8a2c5456977abbe
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:15.389Z'
-dateModified: '2026-10-31T19:58:00.507Z'
+dateModified: '2026-10-31T20:32:23.973Z'
 tags:
   - task
 type: task
@@ -38,6 +38,7 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-02-01-cli-execution.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -73,8 +74,8 @@ No tests or experiments are scheduled or authorized by this plan revision. Do no
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjExLjg5MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDItMDQtaG9zdC1pbnZlbnRvcnkubWQiLCJpbnRlbnQiOiJkODBmZjJjYmJlZTY3YTk2OGI2MTZhMDg1MjI3Y2ZkMGVhM2QwOTc4NDc5NDkwNGY5NDhhNGQxM2Y1OTU0ZGQ0In0 -->
-### 2026-10-31T11:25:11.892Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDIwOjMyOjIzLjk2MVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMi10MDQtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiODQyYzFkYjQ2ZTI1OWNjMDE3MDA2NTQ0NWRkNTJjNDRkMmU4NDkxYWIyOGFmNGUwYTgzNjk3ZWYzNzRkZjZiYiJ9 -->
+### 2026-10-31T20:32:23.961Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-02-04-host-inventory.md","kind":"historical","recordRef":"tasks/rex-whichkey-02-04-host-inventory.md","specHash":"sha256:5c9bf786c22cc609f5b3674eac8b0c7d3babca33bfcc825cd6c651908246eb42","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nWrap rex hosts --json as the effective CLI inventory, not raw hosts.list; follow approved IF-HOSTS ownership and keep it separate from retargetable server operations.\n\n## Requirement criteria\nREQ-002, REQ-012, REQ-013\nDecode stable IDs/labels, nested host records, warnings, held/cached-home state, empty inventory and malformed output. Do not pretend --server retargets rex hosts; do not add hosts, enumerate Tailscale or probe every endpoint.\n\n## Ownership\nAllowed source/test edits: rex/hosts.go, rex/hosts_test.go, rex/testdata/hosts. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-02-01-cli-execution.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN effective-inventory fixtures and read-only real Rex discovery; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Decode effective Rex-known host inventory","approvalSummary":["User-approved corrected Phase2 plan and explicit implementation continuation.","Independent combined source review rex-whichkey-p02-t04-reviewer-a01/review/1 APPROVED; fresh same-family context."],"attempt":1,"eventId":"rex-whichkey-p02-t04-builder-a01/summary/1","files":["rex/hosts.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live Rex/remote trials for this implementation.","Source review and standard compilation are not runtime behavior verification; cross-family review unavailable."],"recordRef":"tasks/rex-whichkey-02-04-host-inventory.md","requirements":["REQ-002","REQ-012","REQ-013"],"schemaVersion":1,"specHash":"sha256:76ad67c9a797ebe2f570d1173f2e6f96dd2c768fdd953e18f87c9e5bbdcd5c54","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"43352560fb2b248c8ce360b9675a66ff277bac98","targetTree":"6f2ee75ed5a244856220fdf08fc57a025126b956","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./rex (combined integration candidate)","result":"pass"},{"command":"git diff --check target-base candidate; git merge-base --is-ancestor integrated-commit main","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

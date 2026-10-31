@@ -25,19 +25,20 @@ title: Implement safe Rex CLI execution and generic calls
 mtnCreateRetry:
   key: rex-whichkey/draft-task/02-01-cli-execution/1
   intent: bc8b5a8f23e937add2ddc261806611855b9f57f5b3a11943a73ba89c45167673
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:09.390Z'
-dateModified: '2026-10-31T19:57:57.788Z'
+dateModified: '2026-10-31T20:23:20.810Z'
 tags:
   - task
 type: task
 id: befda34b-e61c-4162-9329-f7c635788f97
 projects:
   - '[[phases/rex-whichkey-02-rex-client.md]]'
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -77,8 +78,8 @@ Own executable resolution for the rex CLI and exact server/session targeting in 
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjA0LjQ1M1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDItMDEtY2xpLWV4ZWN1dGlvbi5tZCIsImludGVudCI6IjI3NzZkMmI0ZWQxOWZjOGEyMTkzZDUzMjBjNGM0YTRiZDA0NjMzYTYwOTIyYjhlMWYzOTdjMTBjNmJmY2VmYWQifQ -->
-### 2026-10-31T11:25:04.453Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDIwOjIzOjIwLjc5OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMi10MDEtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiOWU0OGVkNmM4ZTUwMGM0M2E0ZGY1NTliZTE4ODQ2YzBjNTJhMDIwMDBkMzI1NzdlZWE1YzUzNmVjMDczYTJmNCJ9 -->
+### 2026-10-31T20:23:20.799Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-02-01-cli-execution.md","kind":"historical","recordRef":"tasks/rex-whichkey-02-01-cli-execution.md","specHash":"sha256:f0db125adb522b9d384ef145419ea511edec39e62ce53d78df61f30b48bd3bfc","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement concrete client targeting, argument-array process execution, typed JSON/error handling and generic Call according to approved IF-REX. A small private process-runner seam is permitted; no service or transport hierarchy.\n\n## Requirement criteria\nREQ-002, REQ-013\nFixtures verify exact argv for server/session targeting, spaces/metacharacters and JSON values; invalid JSON, nonzero exits, missing executable, cancellation and timeouts return useful errors. Never shell-eval user configuration or automatically retry destructive requests.\n\n## Ownership\nAllowed source/test edits: rex/rex.go, rex/rex_test.go, rex/exec.go, rex/exec_test.go, rex/testdata/cli, go.mod, go.sum. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: none beyond parent phase barriers. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN table-driven CLI fixtures and canceled-process tests; root task build, task test and task lint. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement safe Rex CLI execution and generic calls","approvalSummary":["User-approved corrected Phase2 plan; implementation explicitly resumed by user.","Independent combined source review rex-whichkey-p02-t01-reviewer-a01/review/1 APPROVED; fresh same-family reviewer context."],"artifacts":[".mtn-tmp/phase2-delivery/rex-whichkey-p02-t01-reviewer-a01/review.json",".mtn-tmp/phase2-delivery/integration-t01-a01/integration.json"],"attempt":1,"eventId":"rex-whichkey-p02-t01-builder-a01/summary/1","files":["rex/exec.go","rex/rex.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live Rex/remote trials performed for this implementation.","Source review and standard compilation are not runtime behavior verification; cross-family review unavailable."],"recordRef":"tasks/rex-whichkey-02-01-cli-execution.md","requirements":["REQ-002","REQ-013"],"schemaVersion":1,"specHash":"sha256:fdaea00d3856d8587fa74d80f5d05147510537f58f11eed452187cd68f7cbc7d","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"020a31e7271ef75c68ab3f432c256057f5d1d6b1","targetTree":"69ff536db6a4ff5ca6e21c9e5a4b28a48755389b","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./rex (combined integration candidate)","result":"pass"},{"command":"git diff --check target-base candidate; git merge-base --is-ancestor integrated-commit main","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
