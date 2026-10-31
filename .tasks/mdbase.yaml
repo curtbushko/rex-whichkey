@@ -1,0 +1,23 @@
+spec_version: 0.3.0
+name: TaskNotes
+description: Task collection managed by mdbase-tasknotes
+settings:
+  types_folder: _types
+  contracts_folder: _contracts
+  record_extensions:
+    - md
+  validation: warn
+  explicit_type_keys:
+    - type
+    - types
+  id_field: id
+  exclude:
+    - _types
+    - _contracts
+    - _schemas
+    - .git
+    - node_modules
+    - .mdbase
+    - .mtn
+    - .mtn-recovery
+    - .mtn-tmp

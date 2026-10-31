@@ -35,7 +35,11 @@ go.work.sum
 /bin
 /temp
 .claude/settings.local.json
-.tasks
+.tasks/.mdbase/
+.tasks/.mtn/
+.tasks/.mtn-tmp/
+.tasks/.mtn-recovery/
+.mtn-tmp/
 
 .trash/
 

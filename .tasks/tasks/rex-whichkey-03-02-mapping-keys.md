@@ -1,0 +1,77 @@
+---
+workflowKind: task
+workflowLanguage: go
+workflowOrder: 2
+workflowRequirements:
+  - REQ-004
+workflowDocuments:
+  - ref: prds/rex-whichkey.md
+    hash: 'sha256:7ea834417c1b09142a3f8f9877ae6fc34b4500d7a8841d7460edb74ed97553d1'
+workflowOwnership:
+  paths:
+    - lua/rex_whichkey/mapping.lua
+    - tests/lua/mapping
+  sharedPaths: []
+  resources: []
+  interfaces:
+    - whichkey-mapping-compiler
+title: 'Compile key sequences, groups and inherited scopes'
+mtnCreateRetry:
+  key: rex-whichkey/draft-task/03-02-mapping-keys/1
+  intent: 95e0eae9f536611a4c99352a126ef0e3555c0d7f2124caead5e05c09ce7a47ff
+status: open
+priority: normal
+recurrenceAnchor: scheduled
+occurrenceMaterialization: manual
+occurrenceNextTrigger: completion
+dateCreated: '2026-10-30T13:56:19.386Z'
+dateModified: '2026-10-31T11:26:21.886Z'
+tags:
+  - task
+type: task
+id: 098f027d-48e8-4799-81b5-ec65e92d1c89
+projects:
+  - '[[phases/rex-whichkey-03-lua-mappings.md]]'
+blockedBy:
+  - uid: '[[tasks/rex-whichkey-03-01-lua-config.md]]'
+    reltype: FINISHTOSTART
+---
+# Product implementation task
+
+## Current direction — REXWHICHKEY-20261031-072107
+
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+
+## Deliverable and scope
+
+Compile full sequences, implicit groups and nested inherited attributes into the data-only mapping contract. Preserve behavior, not the old compiler architecture.
+
+
+## Functional criteria
+
+REQ-004
+Support arbitrary depth, named actions/args, labels/icons and <Space>/<lt>; reject duplicate action mappings, group/action conflicts and unsupported key notation with actionable errors.
+
+
+## Ownership
+
+Allowed source/test edits: lua/rex_whichkey/mapping.lua, tests/lua/mapping. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.
+
+
+## Inputs and prerequisites
+
+Use the current PRD and published Rex API/CLI contracts. Read documentation/source as needed; implement only the integration the menu needs. Preserve the flat short-lived Go application, minimal Lua integration, concrete Rex resource types, argument-array execution, origin identity, bounded owned-resource cleanup and user init.lua ownership. No daemon, service hierarchy, new transport framework, research harness or prerequisite final RFC. Unknown API behavior is a concrete implementation issue, not an open-ended research gate.
+
+Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* names in historical drafts are not adopted public contracts. Prioritize mapping and menu tasks before integration-only work.
+
+## Execution and completion
+
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjE2Ljg0MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDMtMDItbWFwcGluZy1rZXlzLm1kIiwiaW50ZW50IjoiZjg2ZWVkMDdkYzgyOGIyMWEwMGEzZmNkZjVlNWFmZGFmMTIyMTc4YjFiNzEyODk3M2E5ODcxZWY2YTA0OWU4MCJ9 -->
+### 2026-10-31T11:25:16.842Z · historical · unspecified
+
+{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-03-02-mapping-keys.md","kind":"historical","recordRef":"tasks/rex-whichkey-03-02-mapping-keys.md","specHash":"sha256:fad42bbe0f95b3f622121ca98ea472005aa04aac5a8779a92beec06baba57300","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nCompile full sequences, implicit groups and nested inherited attributes into the approved data-only mapping contract. Preserve behavior, not the old compiler architecture.\n\n## Requirement criteria\nREQ-004\nSupport arbitrary depth, named actions/args, labels/icons and <Space>/<lt>; reject duplicate action mappings, group/action conflicts and unsupported key notation with actionable errors.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/mapping.lua, tests/lua/mapping. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-03-01-lua-config.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN positive and negative baseline fixtures, including deeply nested scopes and conflicts; Lua harness and root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+<!-- mtn:end-entry:v1 -->

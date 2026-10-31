@@ -1,0 +1,79 @@
+---
+workflowKind: phase
+workflowOrder: 3
+workflowRequirements:
+  - REQ-002
+  - REQ-011
+  - REQ-012
+  - REQ-013
+workflowDocuments:
+  - ref: prds/rex-whichkey.md
+    hash: 'sha256:7ea834417c1b09142a3f8f9877ae6fc34b4500d7a8841d7460edb74ed97553d1'
+title: 'Phase 2: Concrete Rex CLI client'
+mtnCreateRetry:
+  key: rex-whichkey/draft-phase/02-rex-client/1
+  intent: 101950907959ee46e985b3d1be8b22feb042fcdef98be290fea65a9277e575ec
+status: open
+priority: normal
+recurrenceAnchor: scheduled
+occurrenceMaterialization: manual
+occurrenceNextTrigger: completion
+dateCreated: '2026-10-30T13:55:53.493Z'
+dateModified: '2026-10-31T11:29:39.225Z'
+tags:
+  - task
+type: task
+id: 27b3cef3-37f5-4e51-9430-6a72d0dc1a6f
+projects:
+  - '[[projects/rex-whichkey.md]]'
+blockedBy: []
+---
+# Product implementation milestone
+
+## Current direction — REXWHICHKEY-20261031-072107
+
+User-directed replanning: which-key behavior is the product; Rex is a documented API dependency, not a research milestone. Stop further tests and experiments. Do not launch probes, benchmarks, test runners, GUI exercises, remote trials or temporary config/reload procedures. This revision schedules none, including at release. Existing results and untested limitations remain accurately recorded, not converted into passes. Product behavior and safety requirements remain; previous experimental/RFC-before-implementation barriers are superseded. Existing test files are preserved. This planning update does not execute implementation or approve provisional IF-* signatures.
+
+## Deliverable
+
+Implement the small concrete Rex client through documented CLI/API calls: safe process execution, resource operations, current block lookup, popup lifecycle and known-host listing. Build only the operations consumed by which-key; no independent Rex validation program.
+
+## Requirement coverage
+
+REQ-002, REQ-011, REQ-012, REQ-013. Child records retain their complementary functional responsibilities.
+
+## Inputs and dependencies
+
+Use the current PRD and published Rex API/CLI contracts. Read documentation/source as needed; implement only the integration the menu needs. Preserve the flat short-lived Go application, minimal Lua integration, concrete Rex resource types, argument-array execution, origin identity, bounded owned-resource cleanup and user init.lua ownership. No daemon, service hierarchy, new transport framework, research harness or prerequisite final RFC. Unknown API behavior is a concrete implementation issue, not an open-ended research gate.
+
+No Phase1 or final-RFC prerequisite remains. Existing task-level product dependencies still apply; phase numbering does not create a dependency. Prior research is optional historical context, never an approval-required input.
+
+## Execution and completion
+
+No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve existing files and evidence. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. This request updates plans only; no agents or implementation are dispatched.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMwVDEzOjU5OjE4Ljg0MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2RyYWZ0LW1hbmlmZXN0L3BoYXNlcy9yZXgtd2hpY2hrZXktMDItcmV4LWNsaWVudC5tZC8xIiwiaW50ZW50IjoiNGY1YjI2ZTI2ZDMwZDBhM2FiNmZjNWFjM2UyZjlhN2I3ZTE0MzVhMmM1MzgwYzFjNGYxM2NjYWM2YzQ0NDk0OSJ9 -->
+### 2026-10-30T13:59:18.842Z · historical · unspecified
+
+{"approvalScope":"Draft record creation and repair investigation only","approvedBy":"user","attempt":1,"content":"User-approved draft decomposition; not a dispatch-approved project/phase plan. All final interfaces and implementation remain gated.","coverage":[{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-002"},{"records":["tasks/rex-whichkey-02-03-block-layers.md"],"requirement":"REQ-011"},{"records":["tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-012"},{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-013"}],"decisionEvidence":"yes, I approve both decisions","decisionId":"REXWHICHKEY-20261030-094737","decisionState":"Accepted","deferred":["remote attach/reuse/create","reachability/WOL","SSH bootstrap/fallback/retries"],"documents":[{"hash":"sha256:2b57ebed7620171e9b1528c160dc374314926b89e021f1f920c77783638eccd8","ref":"prds/rex-whichkey.md"},{"hash":"sha256:e0ff3acbc8f4df5f55d35eca62647afceca007edbebacfe80001775b246a5ad4","ref":"designs/rex-whichkey-research.md"}],"eventId":"rex-whichkey/draft-manifest/phases/rex-whichkey-02-rex-client.md/1","gateEligible":false,"kind":"historical","provenance":"Current conversation: proposal REXWHICHKEY-20261030-094737 and decisions 3a/3b; user replied: yes, I approve both decisions.","recordRef":"phases/rex-whichkey-02-rex-client.md","records":[{"prerequisites":[],"ref":"tasks/rex-whichkey-02-01-cli-execution.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:f0db125adb522b9d384ef145419ea511edec39e62ce53d78df61f30b48bd3bfc"},{"prerequisites":[null],"ref":"tasks/rex-whichkey-02-02-resources.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:614cbea337f6fbc3a97d4c93eaad87a91ce11b140bbab1ee7875d8752bd94df5"},{"prerequisites":[null],"ref":"tasks/rex-whichkey-02-03-block-layers.md","requirements":["REQ-002","REQ-011","REQ-013"],"specHash":"sha256:3494b04da8031ba7f14cd58ad12a5781b6fefed1313a2c202a1f9d514d239ae1"},{"prerequisites":[null],"ref":"tasks/rex-whichkey-02-04-host-inventory.md","requirements":["REQ-002","REQ-012","REQ-013"],"specHash":"sha256:5c9bf786c22cc609f5b3674eac8b0c7d3babca33bfcc825cd6c651908246eb42"}],"schemaVersion":1,"specHash":"sha256:c043f3bf13e97923e093b8b37d0a4ba797262b5f7d8771aeb705c00a677d57e6"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMwVDE0OjAyOjMxLjk1OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2RyYWZ0LW1hbmlmZXN0L3BoYXNlcy9yZXgtd2hpY2hrZXktMDItcmV4LWNsaWVudC5tZC8yIiwiaW50ZW50IjoiOTQ0Y2U5NWE1NjVmM2NkY2Q2MjgyZDAzNzQ2YzIwMWUyMmU1OGZiZmVjZWRhZTcwYzgzYTgwZjg1ZmE1YWM2NyJ9 -->
+### 2026-10-30T14:02:31.959Z · historical · unspecified
+
+{"approvalScope":"Draft creation and repair investigation only","approvedBy":"user","attempt":2,"content":"Corrected non-gating draft manifest. Version 1 mistakenly extracted prerequisite refs at the wrong native response path and recorded nulls; native relationships were correct and unchanged. This version uses blockedBy[].resolution.ref. This remains draft-only, not an implementation-approved plan.","coverage":[{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-002"},{"records":["tasks/rex-whichkey-02-03-block-layers.md"],"requirement":"REQ-011"},{"records":["tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-012"},{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-013"}],"decisionEvidence":"yes, I approve both decisions","decisionId":"REXWHICHKEY-20261030-094737","decisionState":"Accepted","deferred":["remote attach/reuse/create","reachability/WOL","SSH bootstrap/fallback/retries"],"documents":[{"hash":"sha256:2b57ebed7620171e9b1528c160dc374314926b89e021f1f920c77783638eccd8","ref":"prds/rex-whichkey.md"},{"hash":"sha256:e0ff3acbc8f4df5f55d35eca62647afceca007edbebacfe80001775b246a5ad4","ref":"designs/rex-whichkey-research.md"}],"eventId":"rex-whichkey/draft-manifest/phases/rex-whichkey-02-rex-client.md/2","gateEligible":false,"kind":"historical","prerequisites":["phases/rex-whichkey-01-design-gates.md"],"provenance":"Current conversation: user replied yes, I approve both decisions to draft creation and repair investigation; native graph independently read back after publication.","recordRef":"phases/rex-whichkey-02-rex-client.md","records":[{"prerequisites":[],"ref":"tasks/rex-whichkey-02-01-cli-execution.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:f0db125adb522b9d384ef145419ea511edec39e62ce53d78df61f30b48bd3bfc"},{"prerequisites":["tasks/rex-whichkey-02-01-cli-execution.md"],"ref":"tasks/rex-whichkey-02-02-resources.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:614cbea337f6fbc3a97d4c93eaad87a91ce11b140bbab1ee7875d8752bd94df5"},{"prerequisites":["tasks/rex-whichkey-02-02-resources.md"],"ref":"tasks/rex-whichkey-02-03-block-layers.md","requirements":["REQ-002","REQ-011","REQ-013"],"specHash":"sha256:3494b04da8031ba7f14cd58ad12a5781b6fefed1313a2c202a1f9d514d239ae1"},{"prerequisites":["tasks/rex-whichkey-02-01-cli-execution.md"],"ref":"tasks/rex-whichkey-02-04-host-inventory.md","requirements":["REQ-002","REQ-012","REQ-013"],"specHash":"sha256:5c9bf786c22cc609f5b3674eac8b0c7d3babca33bfcc825cd6c651908246eb42"}],"schemaVersion":1,"specHash":"sha256:c043f3bf13e97923e093b8b37d0a4ba797262b5f7d8771aeb705c00a677d57e6","supersedes":"rex-whichkey/draft-manifest/phases/rex-whichkey-02-rex-client.md/1"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI0OjQyLjM3MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3BoYXNlc19fcmV4LXdoaWNoa2V5LTAyLXJleC1jbGllbnQubWQiLCJpbnRlbnQiOiI4MTQzNDg5Y2YwZGMyMzU3ZjljOWM5NDhlOTE1NDZmYTk5NGU4NTkyNDVkNGQ2ODYxNWU4N2RmZjllOTViNTljIn0 -->
+### 2026-10-31T11:24:42.370Z · historical · unspecified
+
+{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/phases__rex-whichkey-02-rex-client.md","kind":"historical","recordRef":"phases/rex-whichkey-02-rex-client.md","specHash":"sha256:c043f3bf13e97923e093b8b37d0a4ba797262b5f7d8771aeb705c00a677d57e6","attempt":1,"content":"# Draft delivery milestone\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable\nOne reusable concrete rex package with safe CLI execution, resource identities, moved-block targeting and effective host inventory.\n\n## Acceptance and traceability\nREQ-002, REQ-011, REQ-012, REQ-013; criteria are the corresponding registered PRD acceptance statements. Child tasks identify complementary contributions, not duplicate completion credit.\n\n## Inputs and outputs\nUse the registered PRD and experimental design snapshot in workflowDocuments. The research snapshot is evidence, not an approved RFC. Produce the deliverable above; task descriptions define consumer/producer contracts.\n\n## Verification and final milestone gate\nControlled CLI contract fixtures, cancellation/error tests and isolated real-server resource checks. Record combined-target evidence only after all required child integrations; never treat an ordinary experiment run as product acceptance.\n\n## Prerequisites and parallelism\nExplicit native prerequisite: phases/rex-whichkey-01-design-gates.md. After that barrier, this phase may overlap other phases; consult task-level prerequisite edges and ownership conflicts. Numbering is not a dependency.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI5OjM5LjIxN1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3BsYW4vcGhhc2VzX19yZXgtd2hpY2hrZXktMDItcmV4LWNsaWVudC5tZCIsImludGVudCI6IjhiOWE4ODkyNTZjZWMyZDU4ZGQ5YzM3OWNhNWVkYTc2MTlmMzE2MGNkZTEwYzYwZTBkYTVkNWUzMjk3YzVkNjAifQ -->
+### 2026-10-31T11:29:39.217Z · plan · unspecified
+
+{"approvedBy":"user","attempt":1,"coverage":[{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-002"},{"records":["tasks/rex-whichkey-02-03-block-layers.md"],"requirement":"REQ-011"},{"records":["tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-012"},{"records":["tasks/rex-whichkey-02-01-cli-execution.md","tasks/rex-whichkey-02-02-resources.md","tasks/rex-whichkey-02-03-block-layers.md","tasks/rex-whichkey-02-04-host-inventory.md"],"requirement":"REQ-013"}],"decision":"approved","decisionEvidence":"User explicitly directed: Do not do any more tests and experiments. The core of this program is the whichkey behaviour. rex is just an api and easy to understand. Follow-up: upate the plans.","decisionId":"REXWHICHKEY-20261031-072107","documents":[{"hash":"sha256:7ea834417c1b09142a3f8f9877ae6fc34b4500d7a8841d7460edb74ed97553d1","ref":"prds/rex-whichkey.md"}],"eventId":"rex-whichkey/whichkey-first/plan/phases__rex-whichkey-02-rex-client.md","executionPriority":["mapping/configuration","menu behavior and rendering","minimal Rex API and dispatch wiring","built-in actions and host listing","packaging and documentation"],"kind":"plan","recordRef":"phases/rex-whichkey-02-rex-client.md","records":[{"prerequisites":[],"ref":"tasks/rex-whichkey-02-01-cli-execution.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:c971c3c71e476e5e0a8d1ab025c814a5c83ecddf0dd9f6f31649d6f66d63085b"},{"prerequisites":["tasks/rex-whichkey-02-01-cli-execution.md"],"ref":"tasks/rex-whichkey-02-02-resources.md","requirements":["REQ-002","REQ-013"],"specHash":"sha256:922a9b42829ca4a70e818ca607d706171af3926d421e2fbfc9d31a2e09eb330f"},{"prerequisites":["tasks/rex-whichkey-02-02-resources.md"],"ref":"tasks/rex-whichkey-02-03-block-layers.md","requirements":["REQ-002","REQ-011","REQ-013"],"specHash":"sha256:63dba91040ac9267b14b6b2fa8c947acfa463a0477d21ac736791ac95edf2ee4"},{"prerequisites":["tasks/rex-whichkey-02-01-cli-execution.md"],"ref":"tasks/rex-whichkey-02-04-host-inventory.md","requirements":["REQ-002","REQ-012","REQ-013"],"specHash":"sha256:97d708f9c3140adaa6ac9708c491407681afdd1e5c265d756423527db1785780"}],"retired":["phases/rex-whichkey-01-design-gates.md"],"schemaVersion":1,"scope":"User-directed implementation-first replanning and task decomposition. No tests/experiments, no research/RFC-before-product barrier, no approval of provisional public interfaces, no implementation dispatch/completion.","specHash":"sha256:357e2fc821fa2e90a8a73ca5704f8b1a86ca6d8a540e05054a3563caea9b2be7","verificationPolicy":"No further tests/experiments scheduled, including release. Preserve prior results and untested limitations. No passing runtime claim or completed delivery inferred."}
+<!-- mtn:end-entry:v1 -->
