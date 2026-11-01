@@ -19,6 +19,7 @@ workflowOwnership:
     - config.go
     - config_test.go
     - lua/rex_whichkey.lua
+    - popup.go
     - tests/integration/popup
   sharedPaths: []
   resources: []
@@ -34,7 +35,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:33.418Z'
-dateModified: '2026-11-01T02:06:19.311Z'
+dateModified: '2026-11-01T06:07:45.279Z'
 tags:
   - task
 type: task
@@ -100,6 +101,14 @@ Composition owns final source wiring of 04-03 theme producer, 04-02 rendering an
 
 ## Explicit frame producer and loop/composition consumers
 Own real executable composition invoking the delivered terminal render/input loop, not an unused helper. The assembled source must reach RenderMenu for initial/navigation/resize/theme refresh, consume frame placements/Lines and pass frame.Pages into Menu.HandleKey. Verify these actual callers along with palette decoder ordering and semantic theme use in the frozen combined source before Phase4 completion. No graphical/runtime execution or test passes may be inferred.
+
+
+## Accepted bridge and current implementation authority
+The user approved bridge decision REXWHICHKEY-20261031-220348 and delegated subsequent bounded technical choices. Consume revised Go standard and Lua dispatch producers only after actual delivery. Implement prompt-return detached Go popup lifecycle and authenticated post-return completion/cancellation using the same original server Lua VM and explicitly captured caller identities, not synchronous waiting or weakened context guards. Go owns shared message/capability data; Lua callbacks/tickets remain private in the originating VM. Wire a user-owned explicit completion-action registration fragment without taking over init.lua. Preserve actual five-position render/input/palette/pages composition, server-local executable/module resolution, origin focus and owned-only cleanup. Go argument-array execution, private/bounded transport artifacts and explicit fail-closed API validation are required; no daemon, Go-Lua VM, deferred attach/WOL/SSH feature or product trials. Partial source 00fe2599ef12ccbc784ed10e992b450a453a6c4a is preserved for a NEW reviewed attempt after producers are delivered; it is not already approved or integrated. Current authority: .mtn-tmp/remaining-delivery/bridge-resume/accepted-authority.md.
+
+
+## Bounded application lifecycle layout
+popup.go is an additional literal owned path for flat application lifecycle helpers, keeping cmd/main.go composition and config.go decoding focused. Prefer a simple invocation-bounded Go controller using documented detached execution and a separate Go popup/PTY child when needed, so closing the UI or invoking an action that closes the origin cannot kill its own cleanup/completion caller. This is not a persistent daemon/service framework; native close-on-exit primitives may simplify it if actually documented. No configuration-Lua timers/events are assumed. Validate real API/argv/context contracts from source/docs; do not fabricate callback hooks or silently retarget. Preserve exact owned returned resource IDs, finite lifetime, private transport artifacts, cancellation and independent current source review. The approved bridge and current delegated authority cover these bounded implementation choices; no new approval round is required.
 
 <!-- mtn:evidence:v1 -->
 

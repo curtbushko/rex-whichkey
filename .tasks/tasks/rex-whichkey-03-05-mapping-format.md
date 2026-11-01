@@ -28,14 +28,14 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-31T19:57:50.563Z'
-dateModified: '2026-11-01T00:49:01.993Z'
+dateModified: '2026-11-01T06:03:32.137Z'
 tags:
   - task
 type: task
 id: b8465e20-4fed-4cec-b307-bd1808a8bfc6
 projects:
   - '[[phases/rex-whichkey-03-lua-mappings.md]]'
-completedDate: '2026-10-31'
+completedDate: '2026-11-01'
 ---
 # Go-owned mapping/configuration standard
 
@@ -57,10 +57,14 @@ No Phase1 research or Phase4 menu prerequisite. Phase3 Lua tasks, Phase4 navigat
 ## Verification and completion
 Independent Go source review and graph/ownership/requirement checks are required. Do not run project tests, experiments, probes or remote trials under current project authority; record those execution limitations honestly rather than claiming passes or reinstating TDD. Package README research is not selection, compatibility verification or delivery. Coordinator integrates only reviewed authorized source, commits each actually completed phase on main, and retains concise completed task/phase delivery summaries with commit references and limitations; metadata-only checkpoints are not implementation delivery.
 
+
+## Accepted bridge and current implementation authority
+Accepted bridge REXWHICHKEY-20261031-220348 extends this existing single Go producer, not a new independently owned Lua schema. In mapping.go/docs/mapping-format.md define canonical data-only single-use completion/cancellation messages, strict field/type/selection validation and unpredictable invocation capabilities (Go crypto/rand; 256-bit canonical capability, fail closed on RNG failure). Only retained selection identity/confirmation may cross back, never caller-supplied replacement actions/arguments or executable callbacks. Document lifetime/config-generation/client-connection binding responsibilities, explicit origin-targeting and trusted versus untrusted fields. Provide small useful Go helpers, no daemon/framework or Go-Lua VM. Lua 03-04 and popup 04-05 consume these exact authoritative files after this real prerequisite. Preserve all existing mapping/config semantics, including nil-returning conditions disabled versus absent raw conditions enabled. Exact internal names/encoding details and future bounded technical choices are delegated by current user authority. No tests/experiments; standard compilation/source review only, then coordinator integration.
+
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAwOjQ5OjAxLjk4MVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDUtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiY2I1YjBjNTU1ZGFhZTFiNmM3ZGE2ZjNhM2VjZWMwZjZmZWNlZjZhYjkxZmM5NDY2NmI0OTIzOTYxZTVlNmE2ZiJ9 -->
-### 2026-11-01T00:49:01.981Z · summary · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA2OjAzOjMyLjEyNVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDUtYnVpbGRlci1hMDMvc3VtbWFyeS8zIiwiaW50ZW50IjoiNTk2ZWQ5ZmQ5NjBiNDExYWFlMDIzYzcwYWIxNTIyNzBiMzcwMTNhOTZjMzg4YTk5OWNhYjhlNGNmMGFiZGNiOCJ9 -->
+### 2026-11-01T06:03:32.125Z · summary · unspecified
 
-{"acceptedScope":"Define Go-owned mapping and configuration standard","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t05-reviewer-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t05-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p03-t05-builder-a02/summary/2","files":["docs/mapping-format.md","mapping.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-05-mapping-format.md","requirements":["REQ-003","REQ-004","REQ-005","REQ-013"],"schemaVersion":1,"specHash":"sha256:d269b66266505131a8ea3c09d564d2630184052333391a6a8cb06c31235057ca","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"25ba58a071608d28a19af0882a96a262627b5619","targetTree":"fb4e8d067a34dc335e2798a7896417dd57c66c31","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
+{"acceptedScope":"Define Go-owned mapping and configuration standard","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t05-reviewer-a03/review/3 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t05-builder-a03/integration/integration.json"],"attempt":3,"eventId":"rex-whichkey-p03-t05-builder-a03/summary/3","files":["docs/mapping-format.md","mapping.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-05-mapping-format.md","requirements":["REQ-003","REQ-004","REQ-005","REQ-013"],"schemaVersion":1,"specHash":"sha256:cfbd5ec84b1afab8948a7e7cbf6983f9b0f08cf2c59f2638c967b7a8205009fa","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"55da14c0d247e0768179cd51f56dda640378b6bb","targetTree":"044621f9b0794fc61aae860bab0adb8167b96284","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
