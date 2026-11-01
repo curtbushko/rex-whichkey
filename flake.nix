@@ -52,6 +52,18 @@
       default = rex-whichkey;
     });
 
+    homeManagerModules = {
+      rex-whichkey = {
+        lib,
+        pkgs,
+        ...
+      }: {
+        imports = [./nix/home-manager.nix];
+        programs.rex-whichkey.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.rex-whichkey;
+      };
+      default = self.homeManagerModules.rex-whichkey;
+    };
+
     devShells = forEachSupportedSystem ({
       pkgs,
       system,
