@@ -2,9 +2,16 @@
 
 ## Ordinary startup and one-time setup
 
-Run `rex-whichkey` inside the originating Rex terminal. No arguments and no
-hand-authored JSON are needed. `rex-whichkey --help` (or `-h`) describes the public
-`rex-whichkey [options]` entrypoint without contacting Rex. Public options are:
+After the one-time setup below, run inside the originating Rex terminal:
+
+```sh
+rex-whichkey
+```
+
+No arguments and no hand-authored JSON are needed: this activates a real Rex
+floating popup, not a greeting, demo or standalone terminal menu.
+`rex-whichkey --help` (or `-h`) describes the public `rex-whichkey [options]`
+entrypoint without contacting Rex. Public options are:
 
 - `--server ENDPOINT`: a concrete execution-host endpoint override.
 - `--client FULL_ID`: an exact `client:UUID` attached to this terminal's session.
@@ -27,7 +34,6 @@ popup.register_completion("whichkey_complete")
 local menu = popup.new(require("rex_whichkey.defaults"))
 menu.setup() -- or menu.setup(inline_options, "my_whichkey")
 menu.register_launch("whichkey") -- omitted name also defaults to whichkey
--- Optional normal key binding: rex.bind("ctrl+space", "whichkey")
 ```
 
 This registers a genuine `rex.action` whose `run(ctx, args)` receives the actual
@@ -37,6 +43,15 @@ works from keys/palette without an origin envelope; existing direct
 distinct; duplicate module launch registration fails. Use another registered name
 with public `--action NAME`. The constructor's optional second endpoint override
 remains available and must agree with the public caller's resolved endpoint.
+For example, a deployment actually using Rex's documented shared socket can use
+`popup.new(defaults, "/run/rex/server.sock")` and launch with
+`rex-whichkey --server /run/rex/server.sock`. That is an explicit shared-server
+example, **not** the personal Linux/macOS default. The public flag is not forwarded
+as a Lua constructor override: preparation resolves separately in the server
+process's environment. Matching canonical endpoints are required; a flag cannot
+retarget a runtime hosted elsewhere. Changing a terminal's environment does not
+change an already-running server's environment. No keybinding is installed;
+bind the registered action through your existing Rex configuration if desired.
 Modules never edit or reload `init.lua`. Remote Control must permit CLI activation
 on the selected client; installing/registering these pieces is not automatic.
 
@@ -61,9 +76,10 @@ empty, label/suffix, malformed and duplicate IDs fail. Every nonlost attachment
 must have a nonblank UTF-8 `connected_at` generation of at most 1024 bytes without
 control characters. Rex's documented missing/unknown connection state counts as
 connected; only `lost` is disconnected. Without a selector, require exactly one
-eligible attachment. Zero/several eligible attachments fail with instructions to
-supply an exact full attached client ID. A supplied selector must match exactly
-one eligible attachment; no global or arbitrary-first client selection is used.
+eligible attachment. Rex terminals are not assumed to export `REX_CLIENT`.
+Zero/several eligible attachments fail with instructions to supply an exact full
+attached client ID. A supplied selector must match exactly one eligible
+attachment; no global or arbitrary-first client selection is used.
 
 The launch route reuses `popupRequest.originBlock` and `popupOriginConnection`:
 recheck the selected connection generation, inspect the exact session and require
@@ -173,6 +189,11 @@ selects one endpoint in this order:
    to two seconds, with a 250 ms process-pipe shutdown allowance and a 64 KiB
    stdout bound. Child stdin is closed and stderr is discarded.
 
+An empty `REX_SERVER` permits native discovery, unlike an explicitly empty
+constructor/public override. A nonempty malformed environment value never falls
+through. For custom/shared deployments, set matching concrete overrides or
+execution-host environments on both public caller and server-side preparation.
+
 The native branch removes inherited `REX_SERVER`, `REX_CLIENT`, `REX_SESSION`,
 `REX_WINDOW` and `REX_BLOCK` selectors from the child environment. It leaves Rex's
 native home, runtime, authentication and XDG environment intact. The platform
@@ -280,10 +301,25 @@ top-level concrete `endpoint`; this consumer requires that shape and rejects
 unsupported shapes rather than guessing field alternatives. These are source/help
 contracts, not a claim that every CLI version has been exercised.
 
-No exact undocumented Linux/macOS path formula is asserted here. This change has
-not been compiled or run by its builder: project tests/TDD, product execution,
-live identity queries, GUI/remote trials and configuration reloads are prohibited.
-Formatting and source checks do not verify runtime or Darwin behavior. The route
-above is a source trace, not a claimed popup/runtime/Remote Control pass. Combined
-compilation and independent mixed Go/Lua source review remain coordinator gates;
-the private preparation mode is not the normal user entrypoint.
+No exact undocumented Linux/macOS path formula is asserted here. The earlier
+explicit-only endpoint decision REXWHICHKEY-20261101-015342 was refined by accepted
+REXWHICHKEY-20261101-101502 under delegated authority to meet REQ-017. Native CLI
+discovery replaces the draft duplicated-path proposal REXWHICHKEY-20261101-100106
+(Superseded); explicit overrides, opaque identity separation and fail-closed
+origin safeguards remain. This document reflects that choice, not a new approval
+or rewrite of historical evidence.
+
+Endpoint task 07-01 and launch task 07-02 have recorded independent mixed Go/Lua
+APPROVED source reviews and coordinator `go build ./...`/Git integration evidence
+at `d1164e7` and `69078fc`, respectively; see the [delivery inventory](acceptance.md)
+for exact identities and artifact refs. These are supplied prior results, not
+commands run by this documentation builder. The final documentation revision
+still needs independent source-consistency review, and the coordinator must run
+the existing `task build` on the final combined candidate and record actual
+integration/ancestry before Phase07 completion. No such final gate is claimed here.
+
+No project tests/TDD, example/product execution, new live identity queries,
+GUI/remote trials or configuration reloads were performed for this revision.
+Formatting, compilation and source checks do not verify runtime or Darwin
+behavior. The complete route above is a source trace, not a claimed popup,
+Remote Control or callback pass. Private preparation is not the normal entrypoint.

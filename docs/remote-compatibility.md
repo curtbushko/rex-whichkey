@@ -3,8 +3,9 @@
 ## Status and scope
 
 This describes the delivered source paths for REQ-003 (configuration loading),
-REQ-005 (Rex-runtime callbacks), REQ-011 (origin/focus/cleanup) and REQ-013
-(remote-server compatibility). It is not a remote acceptance result. No project
+REQ-005 (Rex-runtime callbacks), REQ-011 (origin/focus/cleanup), REQ-013
+(remote-server compatibility), REQ-016 (ordinary launch) and REQ-017 (platform
+default endpoints). It is not a remote acceptance result. No project
 tests, compilation, live API/GUI probes, remote trials or configuration reloads
 were run for this documentation task. Remote execution, disconnect/reconnect,
 moved-block behavior and cleanup remain runtime-unverified.
@@ -26,7 +27,7 @@ client or translate client-local absolute paths.
 | --- | --- |
 | Lua integration and user options | `lua/rex_whichkey.lua` requires the installed `rex_whichkey.*` modules in the server runtime. `lua/rex_whichkey/config.lua` loads an optional user module with server-side `require`, including files beside that server's `init.lua`. It does not rewrite `package.path` or infer a client home directory. |
 | User module name | A dotted Lua module name, not an absolute/relative filename. The loader rejects the `rex_whichkey` integration namespace and its submodules for user configuration. The imported module must return an options table. |
-| Initial helper | Lua uses argument-array `rex.exec({ "rex-whichkey", "prepare" }, ...)`, so the server process's command environment/PATH must resolve the installed helper. A graphical client's PATH does not install it on the server. |
+| Ordinary caller and preparation | Run `rex-whichkey` in the original server-host Rex terminal with its captured `REX_SESSION`/`REX_BLOCK`. Go explicitly targets the installed original-VM launch action. Lua uses argument-array `rex.exec({ "rex-whichkey", "prepare" }, ...)`, adding `--server` only for a supplied constructor override. The terminal and server process's command environments must resolve their installed helper/CLI; a graphical client's PATH does not install them on the server. |
 | Controller and popup | `PreparePopup` in `popup.go` returns `os.Executable()` through captured output; Lua starts that server-local executable as a detached controller. The controller uses its own `os.Executable()` for the popup terminal command. No client-discovered binary path is substituted. |
 | Rex CLI | The generic `rex` package resolves explicit `Options.Executable`, otherwise `REX_BIN_DIR/rex`, otherwise `rex` from the execution host's PATH. A configured but unusable executable/directory produces an error, not fallback to another copy. Popup composition separately requires `REX_BIN_DIR` to be absolute when set and uses the resolved CLI for its client and completion calls. |
 
@@ -55,44 +56,88 @@ fields, mapping rules and completion data belong to [`mapping.go`](../mapping.go
 and [the mapping standard](mapping-format.md), not a second Lua schema.
 
 The user owns `init.lua`. Installation/registration is explicit opt-in, using the
-initialization fragment in the mapping standard: load the integration/defaults,
-register the completion configuration action at load time, construct the menu
-with this server's fixed endpoint, call setup and register the launch action.
-Nothing here writes or reloads that file. Imported modules are trusted Lua code;
-this loader is not a configuration sandbox or a hot-reload mechanism.
+initialization fragment in the [mapping standard](mapping-format.md): load the
+integration/defaults, register completion at load time, construct with
+`popup.new(defaults)`, call `menu.setup()` and `menu.register_launch("whichkey")`.
+Then `rex-whichkey` is the ordinary floating-popup command; it needs no resolved
+JSON or private subcommand. Optional constructor/public overrides are described
+below. Nothing here writes or reloads that file. Imported modules are trusted
+Lua code; this loader is not a configuration sandbox or hot-reload mechanism.
 
 ## Endpoint selection is not runtime identity
 
-`popup.new(defaults, server_endpoint)` requires an explicit constructor-bound
-endpoint for **the server hosting that Lua runtime**. It is not a mapping option
-and setup cannot replace it. The authoritative Go validator accepts an absolute
-`unix:///...` socket address or `host:port` (including bracketed IPv6), with a
-nonzero numeric port. Mutable host labels, missing endpoints and automatic
-conversion of `ctx.server` are not accepted popup bindings. An absolute socket
-path is local to the execution host, not to the graphical client.
+`popup.new(defaults)` uses the single Go-owned policy in
+[`rex/endpoint.go`](../rex/endpoint.go), shared with public `rex-whichkey` launch:
+
+1. A present explicit override: public `--server ENDPOINT`, or optional immutable
+   `popup.new(defaults, endpoint)` for the server-side preparation process.
+2. Nonempty `REX_SERVER` in that process's execution-host environment.
+3. Linux/macOS native discovery via the installed Rex CLI's bounded
+   `rex --autostart=false --timeout 2s whoami --json` identity query.
+
+No exact filesystem formula is copied: Rex owns platform runtime/home/XDG rules.
+Native discovery strips inherited target selectors, retains those native settings,
+and validates/captures one top-level concrete `endpoint` from the response. It
+requires the normal default server already running and reachable on that host.
+Missing runtime/home context, unavailable server/CLI or malformed identity JSON
+fails; no server autostart, directory creation, socket scan, alternate-server
+fallback or viewing-Mac filesystem lookup is attempted. Explicit empty/malformed
+overrides and malformed nonempty environment values fail without discovery.
+An empty `REX_SERVER` permits native discovery. See the [launch contract](launch-contract.md)
+for exact bounds and validation. Default resolution is implemented source, not
+Linux/macOS runtime certification.
+
+Custom/shared-server owners must configure the hosting endpoint consistently for
+the terminal caller and Lua preparation. A public flag is not forwarded as a
+constructor override. Use matching `--server` and `popup.new(defaults, endpoint)`,
+or matching process environments; the public and preparation canonical endpoints
+must agree. Rex's documented shared socket `/run/rex/server.sock` is a possible
+explicit deployment, **not** a personal platform default. The optional constructor
+binding is outside mapping options and cannot be replaced by setup. The validator
+accepts absolute Unix socket paths (normalized to `unix:///...`), strict absolute
+Unix URIs and numeric nonzero-port `host:port` (bracket IPv6), not mutable host
+labels, whitespace or controls. Socket paths belong to the execution host.
 
 The Lua `ctx.server` value is an opaque runtime identity. The dispatcher retains
-it and compares it with `rawequal` on the fresh completion action. It is never
-serialized or stringified into a CLI address. The separately configured endpoint
-is routing data, not replacement authority for that retained identity.
+it and compares it with `rawequal` on fresh completion. It is never serialized or
+stringified into a CLI address. Resolved routing data is not replacement authority
+for that identity. This refines the earlier mandatory-explicit setup decision
+REXWHICHKEY-20261101-015342 only as to default routing; its explicit overrides,
+opaque-identity separation and fail-closed origin safeguards remain.
 
-Before creating resources or arming deferred focus/cancellation, the controller
-uses that exact endpoint to find the captured session, placed block and client
-connection generation. Missing/mismatched origin data fails read-only at this
-stage. The endpoint must still be supplied correctly by the server owner; these
-checks are not endpoint discovery, a new authentication protocol or proof of
-remote deployment. Transport access/authentication remains Rex's responsibility.
+The public caller first validates captured full terminal session/block IDs and
+selects an exact `--client`, present `REX_CLIENT`, or exactly one eligible attached
+client of that session with a valid `connected_at` generation. Stale origin,
+wrong realm, missing/ambiguous attachment and changed generation fail rather than
+using focus/current-client selection. Lua checks the actual fresh ctx and live
+generation before evaluating mappings, then compares preparation's canonical
+endpoint with the caller's envelope before starting the controller. Independently,
+the controller finds that exact session, uniquely placed block and connection
+through its explicit endpoint before mutation or deferred focus/cancellation.
+These are origin checks, not a new authentication protocol or remote-deployment
+proof. Transport access/authentication remains Rex's responsibility.
 
-`rex.New` has a broader reusable CLI contract: it captures `Options.Server`, or
-`REX_SERVER` when the option is empty, and refuses an absent server. Calls retain
-that selector and pass `--server` and `--autostart=false`; they do not silently
-start or select a local server. The popup supplies its constructor-bound endpoint
-explicitly, so it does not use that environment fallback. Generic API calls pass
-an explicit configured session when present; they do not default to
-`REX_SESSION`. `Session`/`Window`/`Block` resources retain their captured server and
-stable session IDs rather than following environment changes or mutable labels.
+`rex.New` keeps its broader reusable CLI contract: it captures `Options.Server`,
+or `REX_SERVER` when the option is empty, and refuses an absent server. Popup
+callers instead supply the already resolved concrete endpoint explicitly; private
+controller handoffs validate it without ambient defaulting. Calls pass `--server`
+and `--autostart=false`. Generic API calls pass an explicit configured session
+when present; they do not default to `REX_SESSION`. `Session`/`Window`/`Block`
+resources retain their captured server and stable session IDs rather than
+following environment changes or mutable labels.
 
 ## Origin propagation and post-return dispatch
+
+Ordinary no-argument launch activates `menu.register_launch("whichkey")` in the
+original VM with explicit server/session/block/client targeting and a Go-owned
+origin envelope on stdin. This transport data constrains the actual ctx; it does
+not replace it. Key/palette calls and existing direct `menu.launch(ctx)` use their
+real action ctx without that envelope. Public activation is attempted once with
+bounded output/time and safe prerequisite guidance. A zero exit status means
+activation was accepted, not proof of popup display. Failed/uncertain activation
+or later action execution is not retried. Missing modules/PATH/setup/registration
+or client Remote Control must be corrected through user-owned administration,
+not a reload or fallback performed by this tool.
 
 1. The original action supplies full `session_id`, `block_id` and `client_id` plus
    opaque `ctx.server`. `dispatch.lua` reserves an invocation before evaluation,
@@ -230,10 +275,11 @@ does not schedule tests, remote trials, reloads or changes to user configuration
   [`config.lua`](../lua/rex_whichkey/config.lua) and
   [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua): server loading, launch and
   original-VM completion authority.
-- [`popup.go`](../popup.go), [`config.go`](../config.go) and
-  [`cmd/main.go`](../cmd/main.go): process composition, decoding and private
-  transport; [`mapping.go`](../mapping.go) and [mapping-format.md](mapping-format.md)
-  remain the shared-data standard.
+- [`popup.go`](../popup.go), [`config.go`](../config.go),
+  [`cmd/main.go`](../cmd/main.go), [`launch.go`](../launch.go) and
+  [`rex/endpoint.go`](../rex/endpoint.go): public launch, native routing, process
+  composition, decoding and private transport; [`mapping.go`](../mapping.go) and
+  [mapping-format.md](mapping-format.md) remain the shared-data standard.
 - [`rex/rex.go`](../rex/rex.go), [`exec.go`](../rex/exec.go),
   [`session.go`](../rex/session.go), [`window.go`](../rex/window.go),
   [`block.go`](../rex/block.go), [`layer.go`](../rex/layer.go) and

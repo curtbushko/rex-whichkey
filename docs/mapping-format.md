@@ -224,26 +224,35 @@ retained mapping snapshot, and callbacks remain in the originating Lua VM.
 Existing endpoint binding, origin checks, privacy, expiry and owned-only cleanup
 are unchanged.
 
-Opt-in initialization in the **user-owned** Rex configuration can consume the
-resolved composer; substitute that server's fixed configured endpoint, never
-convert opaque `ctx.server` into an address:
+Opt-in initialization in the **user-owned** Rex configuration consumes the
+resolved composer, with no mandatory socket in the Linux/macOS default case:
 
 ```lua
 local popup = require("rex_whichkey")
 local defaults = require("rex_whichkey.defaults")
 popup.register_completion("whichkey_complete")
-local menu = popup.new(defaults, "unix:///absolute/server/socket")
+local menu = popup.new(defaults)
 menu.setup() -- or menu.setup(inline_options, optional_user_module_name)
-rex.action{
-  name = "whichkey", title = "Which key",
-  run = function(ctx) menu.launch(ctx) end,
-}
+menu.register_launch("whichkey")
 ```
 
-This is an opt-in fragment, not an installed/reloaded user `init.lua`. Imported
-and inline `spec` overrides still replace the whole default spec. No defaults
-are silently reinserted after setup; retaining the listing in a custom spec
-requires retaining an explicit provider marker.
+After one-time module/PATH/setup/registration and client Remote Control setup,
+`rex-whichkey` in the originating Rex terminal activates the real floating popup;
+standalone `menu` remains low-level resolved-JSON UI. The optional constructor
+endpoint `popup.new(defaults, endpoint)` is immutable routing data outside mapping
+options. Public `--server`/constructor override > nonempty execution-host
+`REX_SERVER` > bounded no-autostart native Rex Linux/macOS discovery; Rex owns the
+platform paths. Public and preparation endpoints must agree for custom/shared
+servers. Never convert opaque `ctx.server` into an address or select a focused/
+current client to compensate for missing/stale origin. See the
+[launch contract](launch-contract.md) for endpoint validation, exact origin/client
+selection, action-name overrides and actionable prerequisite failures.
+
+This is an opt-in fragment, not an installed/reloaded user `init.lua`. Callbacks
+remain in the original VM. Imported and inline `spec` overrides still replace the
+whole default spec. No defaults are silently reinserted after setup; retaining
+the listing in a custom spec requires retaining an explicit provider marker.
+Startup/routing changes do not change any mapping or completion semantics below.
 
 ## Callback ownership, lifetime and dispatch
 
