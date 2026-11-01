@@ -25,7 +25,7 @@ workflowOwnership:
     - usability-acceptance-inventory
 projects:
   - '[[phases/rex-whichkey-07-usability.md]]'
-status: open
+status: done
 priority: normal
 title: Document ordinary startup and assemble usability delivery
 blockedBy:
@@ -40,11 +40,12 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-01T15:15:20.700Z'
-dateModified: '2026-11-01T15:15:20.700Z'
+dateModified: '2026-11-01T16:04:17.529Z'
 tags:
   - task
 type: task
 id: f7724bb4-4f07-4f79-b87d-98ce766e0ac3
+completedDate: '2026-11-01'
 ---
 # Document ordinary startup and assemble usability delivery
 
@@ -69,3 +70,11 @@ Markdown-only writes: `README.md`, `examples/README.md`, `docs/remote-compatibil
 
 No project tests/TDD/experiments/product execution/GUI/live/remote/API probes/config reloads/dependency installs or package activation trials. No lint/Taskfile/hook weakening. Preserve tests. Allowed documentation evidence is static review/whitespace/link-to-local-source consistency, not executing example snippets or probing documented endpoints. Return changed Markdown paths, exact revision, reviewable source-to-doc traces, actual static checks and explicit remaining limitations. Combined compilation and Git integration are coordinator gates; never report them passed without supplied actual evidence. If a producer defect requires source changes, return the exact finding to that owner and serial coordinator instead of exceeding literal ownership.
 
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDE2OjA0OjE3LjUxN1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNy10MDMtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiM2JlNGJkNTFjYTI2ZTcxZWQ1NjNmNTllZjY2NDI1ZjNkZTYyMThhOTU0NDc0ZmRmN2Q4ZjNiZmE1NThmNzg1YSJ9 -->
+### 2026-11-01T16:04:17.517Z · summary · unspecified
+
+{"acceptedScope":"Document ordinary startup and assemble usability delivery","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p07-t03-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/usability/rex-whichkey-p07-t03-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p07-t03-builder-a01/summary/1","files":["README.md","docs/acceptance.md","docs/launch-contract.md","docs/mapping-format.md","docs/remote-compatibility.md","examples/README.md"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-07-03-usage-assembly.md","requirements":["REQ-016","REQ-017"],"schemaVersion":1,"specHash":"sha256:6a20f5f77ec91c0b496a65a0e6946c035ccd78920606cf2401b367289c819a46","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"1af28738a79fe20f2634c21a3405d8d1f5ff7bc2","targetTree":"a256fa6e761d1f5cf160b448829d332f7cded754","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
+<!-- mtn:end-entry:v1 -->

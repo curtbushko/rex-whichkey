@@ -24,7 +24,7 @@ workflowOwnership:
     - public-original-vm-launch-origin
 projects:
   - '[[phases/rex-whichkey-07-usability.md]]'
-status: open
+status: done
 priority: normal
 title: Wire no-argument popup through original-runtime launch action
 blockedBy:
@@ -37,11 +37,12 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-01T15:15:18.902Z'
-dateModified: '2026-11-01T15:15:18.902Z'
+dateModified: '2026-11-01T15:51:40.075Z'
 tags:
   - task
 type: task
 id: e8a0fa34-695d-4967-82ff-9ef716541464
+completedDate: '2026-11-01'
 ---
 # Wire genuine no-argument original-runtime popup activation
 
@@ -66,3 +67,11 @@ Owned paths only: new root `launch.go`, existing `cmd/main.go`, `popup.go`, `lua
 
 No tests/TDD/experiments, product execution, GUI/live/remote/API trials, config reloads or dependency installation. Preserve all existing tests/gates; never run hidden test hooks. Builder may format and statically inspect Go/Lua/Markdown and whitespace only. A fresh independent reviewer explicitly covers BOTH Go and Lua and the entire actual startup/callback/origin/error path, plus compatibility of internal modes. Coordinator compiles the actual combined revision with existing `task build` under the allocated gate and publishes exact review/combined Git identity, ancestry/diff and integration proof before completion. Compilation is not runtime verification. No worker mtn writes, integration or agent launch. Return revision-bound evidence/limitations, not an uncreated-record fingerprint or an inferred popup runtime pass.
 
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDE1OjUxOjQwLjA2NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNy10MDItYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiYjFlM2Y5YzE4YzY4NmY2ZjFlNTkzZmIxOWY4ODE4MTI5ZGUyYTU0NDhiMGM1YmJjNGMxN2U2YzYxOGRmMTFiMCJ9 -->
+### 2026-11-01T15:51:40.064Z · summary · unspecified
+
+{"acceptedScope":"Wire no-argument popup through original-runtime launch action","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p07-t02-reviewer-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/usability/rex-whichkey-p07-t02-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p07-t02-builder-a01/summary/1","files":["cmd/main.go","docs/launch-contract.md","launch.go","lua/rex_whichkey.lua","popup.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-07-02-direct-launch.md","requirements":["REQ-016","REQ-017"],"schemaVersion":1,"specHash":"sha256:408dd4478e572880d5b6fe9d0c3354876e5d583f47569f398c3c14d40e60af6b","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"69078fcee3dc0bbd9598e1b58e33920934e82497","targetTree":"82dc432f715295a3b82829be8be509e83aa0197a","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
+<!-- mtn:end-entry:v1 -->

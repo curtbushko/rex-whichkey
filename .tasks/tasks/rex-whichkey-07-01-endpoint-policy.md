@@ -23,7 +23,7 @@ workflowOwnership:
     - private-prepare-server-result
 projects:
   - '[[phases/rex-whichkey-07-usability.md]]'
-status: open
+status: done
 priority: normal
 title: Implement platform endpoint policy and real Lua consumption
 blockedBy: []
@@ -34,11 +34,12 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-01T15:15:17.098Z'
-dateModified: '2026-11-01T15:15:17.098Z'
+dateModified: '2026-11-01T15:35:45.514Z'
 tags:
   - task
 type: task
 id: 30b5d1fe-6dbc-49ce-aed8-1b24a97546b8
+completedDate: '2026-11-01'
 ---
 # Implement Go-owned endpoint policy and its real Lua consumer
 
@@ -62,3 +63,11 @@ rex/endpoint.go, popup.go, cmd/main.go, lua/rex_whichkey.lua, docs/launch-contra
 ## Verification and delivery
 
 No project tests/TDD/experiments/product execution/GUI/live API/remote trials/config reloads/dependency installation. Builder formats Go/Lua and performs whitespace/static source checks only; no heavy slot. Preserve tests/gates. Fresh review must cover Go and Lua real resolver -> prepare -> launcher -> explicit controller flow, native-discovery selector handling, override precedence and original dispatch safeguards. Coordinator compiles reviewed combined candidate and verifies exact source/Git ancestry before task completion. No stub/token caller, source/managed write outside scope, push or integration by worker. Full protocol build goes to dispatch payloadFile AND MTN_REX_RESULT_FILE; final visible handoff is a concise filename pointer.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDE1OjM1OjQ1LjUwMloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNy10MDEtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiMjhkMzViN2EyZDhmNDk3Y2I0YzNjMTA5NDM4MDA0YWJjZTBjYmNkYTBhNzZmMDg5Mzg3OTdiYmVkZWNiOWNlMCJ9 -->
+### 2026-11-01T15:35:45.502Z · summary · unspecified
+
+{"acceptedScope":"Implement platform endpoint policy and real Lua consumption","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p07-t01-reviewer-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/usability/rex-whichkey-p07-t01-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p07-t01-builder-a02/summary/2","files":["cmd/main.go","docs/launch-contract.md","lua/rex_whichkey.lua","popup.go","rex/endpoint.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-07-01-endpoint-policy.md","requirements":["REQ-017"],"schemaVersion":1,"specHash":"sha256:04c3bc95c1b164f2d02e6d500995fb8d01e7a6630369deebb8ec1105d437dc3d","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"d1164e75028760421446a926421d50750ddade28","targetTree":"07f7faabe9248e41c94a6d9e05ede573301273cc","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
+<!-- mtn:end-entry:v1 -->
