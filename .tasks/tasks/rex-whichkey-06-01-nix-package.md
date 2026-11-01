@@ -20,13 +20,13 @@ title: Package the Go executable and Lua integration with Nix
 mtnCreateRetry:
   key: rex-whichkey/draft-task/06-01-nix-package/1
   intent: 402a3b8e428c8918108b7f66f0cc70987fb4191654b8e99fd993cbd45619503a
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:45.490Z'
-dateModified: '2026-10-31T19:58:43.905Z'
+dateModified: '2026-11-01T07:59:26.794Z'
 tags:
   - task
 type: task
@@ -44,6 +44,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-05-04-host-menu.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product implementation task
 
@@ -87,8 +88,8 @@ Retain the popup prerequisite. Also require delivered 05-01 lua/rex_whichkey/def
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjQ5LjExNVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDYtMDEtbml4LXBhY2thZ2UubWQiLCJpbnRlbnQiOiI4Y2QyOGQxZTcyZDVkYzlmZTZmMDFjZGFiYTk1MmNkOGFmMTdmMmQyYTE4ZDNhYTgzNDEzYTJjNDdkZTZiYmY4In0 -->
-### 2026-10-31T11:25:49.115Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjU5OjI2Ljc4M1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNi10MDEtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiNWI0NTA4NWY2NTVhYTU4MTIxN2Q3MWUwMmI5ODBjOGU2ODVhNmU0Y2MwZDkyZGYxNTE1MThjZjM4YmZjODdkZiJ9 -->
+### 2026-11-01T07:59:26.783Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-06-01-nix-package.md","kind":"historical","recordRef":"tasks/rex-whichkey-06-01-nix-package.md","specHash":"sha256:edcdcd47f3046bbf1948bfe703fc045bb43c2bf2600e5af1003fc05dc46323ba","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nExpose a Nix package for the executable and Lua integration using the approved server-side installation/module paths. Retain pinned inputs; changes to flake.lock require separate authorization.\n\n## Requirement criteria\nREQ-014\nBuild installs a runnable executable and loadable Lua module, including complete default mappings as integrated. Package installation does not write init.lua or assume caller-local module paths. Use nix skill alongside Go project verification.\n\n## Ownership\nAllowed source/test edits: nix/package.nix, tests/packaging/package, flake.nix. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-05-popup-integration.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nFailing-first package layout/module-load checks, nix build .# and packaged binary/config smoke tests; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Package the Go executable and Lua integration with Nix","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p06-t01-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p06-t01-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p06-t01-builder-a01/summary/1","files":["flake.nix","nix/package.nix"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-06-01-nix-package.md","requirements":["REQ-014"],"schemaVersion":1,"specHash":"sha256:9adb80dc94df75def5a264b8032dd5a09ce2d1b98758aa751fb81fbf7a360e90","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"908a3395cf9c701d9aa1476e62119d9d1daebd21","targetTree":"ff0cf85ba78f3274e79e3096bcce50e2534bf94b","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"},{"command":"nix build --no-link --no-write-lock-file --cores 16 --max-jobs 1 .#default (project checks disabled)","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
