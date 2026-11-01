@@ -1,4 +1,161 @@
-# Popup endpoint and preparation contract
+# Popup launch, endpoint and preparation contract
+
+## Ordinary startup and one-time setup
+
+Run `rex-whichkey` inside the originating Rex terminal. No arguments and no
+hand-authored JSON are needed. `rex-whichkey --help` (or `-h`) describes the public
+`rex-whichkey [options]` entrypoint without contacting Rex. Public options are:
+
+- `--server ENDPOINT`: a concrete execution-host endpoint override.
+- `--client FULL_ID`: an exact `client:UUID` attached to this terminal's session.
+- `--action NAME`: an installed configuration launch action, default `whichkey`.
+  Names contain only lowercase ASCII letters, digits and underscores.
+
+The root parser rejects unexpected positional arguments, unknown flags, missing
+flag values and an explicitly empty action before Rex calls. An explicitly empty
+server/client is invalid, not an instruction to default. Existing private `menu`,
+`prepare`, `controller` and `popup` modes remain compatible; they are not the
+ordinary startup interface. Root launch does not read resolved configuration
+from the terminal's stdin or run the standalone menu in place of a Rex popup.
+
+Install the matching server-host helper, Rex CLI and Lua modules first. In the
+server's **user-owned** `init.lua`, perform ordinary Rex configuration setup once:
+
+```lua
+local popup = require("rex_whichkey")
+popup.register_completion("whichkey_complete")
+local menu = popup.new(require("rex_whichkey.defaults"))
+menu.setup() -- or menu.setup(inline_options, "my_whichkey")
+menu.register_launch("whichkey") -- omitted name also defaults to whichkey
+-- Optional normal key binding: rex.bind("ctrl+space", "whichkey")
+```
+
+This registers a genuine `rex.action` whose `run(ctx, args)` receives the actual
+fresh context in the original server configuration Lua VM. The named action also
+works from keys/palette without an origin envelope; existing direct
+`menu.launch(ctx)` calls remain supported. Completion and launch names must be
+distinct; duplicate module launch registration fails. Use another registered name
+with public `--action NAME`. The constructor's optional second endpoint override
+remains available and must agree with the public caller's resolved endpoint.
+Modules never edit or reload `init.lua`. Remote Control must permit CLI activation
+on the selected client; installing/registering these pieces is not automatic.
+
+Missing helper/CLI/modules, registration, successful setup or Remote Control can
+make activation fail. The public caller reports fixed prerequisite guidance,
+without forwarding raw child stdout/stderr or private handoffs. Nonzero/timeout/
+output-limit failures are uncertain and never retried. A zero exit status means
+**activation was accepted**, not proof that a popup appeared or a callback ran.
+
+## Exact terminal origin and client selection
+
+[`LaunchPopup`](../launch.go) captures execution-host `REX_SESSION` and `REX_BLOCK`
+as full typed `session:UUID` and `block:UUID` IDs. Missing/malformed IDs fail with
+instructions to run in the original Rex terminal. There is no focus/current-block
+fallback, session label lookup, ID suffix or graphical-client filesystem lookup.
+Resolve one canonical endpoint by the policy below, then use it explicitly for
+all read-only preflight and activation calls.
+
+Client precedence is present `--client`, then present `REX_CLIENT`, otherwise a
+relationship lookup of **only the captured session's attached clients**. Present
+empty, label/suffix, malformed and duplicate IDs fail. Every nonlost attachment
+must have a nonblank UTF-8 `connected_at` generation of at most 1024 bytes without
+control characters. Rex's documented missing/unknown connection state counts as
+connected; only `lost` is disconnected. Without a selector, require exactly one
+eligible attachment. Zero/several eligible attachments fail with instructions to
+supply an exact full attached client ID. A supplied selector must match exactly
+one eligible attachment; no global or arbitrary-first client selection is used.
+
+The launch route reuses `popupRequest.originBlock` and `popupOriginConnection`:
+recheck the selected connection generation, inspect the exact session and require
+the exact block to be uniquely placed there. The delivered Rex resource client
+rejects malformed/duplicate window/layer/block placement. A wrong endpoint or
+stale origin fails before named-action activation, without changing focus or
+creating resources. The Lua action and detached controller independently validate
+again rather than treating preflight as enduring authority.
+
+## Go-owned launch origin envelope
+
+`launch.go` owns a small fixed `launchOrigin` DTO, separate from mapping options
+and the authenticated completion protocol. Go validates each field before strict
+`encoding/json` serialization; a single bounded object is emitted, never unknown,
+missing, null or duplicate fields. Its five string fields are:
+
+| Field | Meaning and validation |
+| --- | --- |
+| `server` | Already canonical concrete endpoint; no ambient defaulting in the envelope |
+| `session_id` | Captured full typed session ID |
+| `block_id` | Captured full typed block ID, uniquely placed in that session |
+| `client_id` | Exact full typed attached client ID |
+| `connected_at` | Captured nonlost connection generation, compared byte-for-byte, never renewed |
+
+The envelope is at most 64 KiB, encoded as the string argument `origin` inside the
+outer JSON argument object. Only stdin carries it. The caller makes one installed
+configuration-action activation using an argument array equivalent to:
+
+```text
+rex --server CANONICAL_ENDPOINT --client FULL_CLIENT --autostart=false --timeout 10s do ACTION --session FULL_SESSION --block FULL_BLOCK --args -
+```
+
+There is no shell, `do -e`, Lua file, second VM, fake/token-only command, daemon or
+uncertain retry. Preflight/activation share a 20-second context; individual
+preflight CLI calls are bounded to three seconds and activation to ten seconds,
+with earlier cancellation/deadlines taking precedence. Activation stdout/stderr
+share a discarded 64 KiB total output budget and a 250 ms pipe shutdown allowance.
+Errors are fixed safe text; top-level diagnostics quote errors against terminal
+escape injection. No private completion/capability data is exposed.
+
+`menu.register_launch` declares `origin` as an optional string, rejects other
+arguments, and passes the **actual ctx unchanged** to `menu.launch`. Lua consumes
+only the five documented fields, rejecting missing/unknown fields, wrong types,
+malformed full IDs, blank generation and oversized envelope data. It compares
+session/block/client with actual ctx and checks live `connected_at` **before**
+issuing/evaluating a reservation. Opaque `ctx.server` is retained by identity,
+never stringified, serialized or replaced by `server`.
+
+Across yielding issue/evaluation, connection inspection, preparation and bind
+calls, the launcher rechecks actual IDs/opaque server identity, connection and
+configuration generation and original finite lifetime. Before controller start,
+Go's canonical preparation `server` must exactly equal the expected envelope
+endpoint. A detected mismatch cancels any newly issued reservation without
+starting a controller or dispatching/focusing a selected action. The action also
+rechecks after the yielding controller-start call and cancels on failure. As in
+the retained bridge, no API provides an atomic check-and-start/focus/dispatch
+transaction: external disconnects/moves can race a final check. The controller
+therefore performs its own exact-origin checks before mutation and completion
+still requires a live authenticated retained reservation. No failed reservation
+is reopened; no selected action is retried.
+
+This envelope is transport context, **not** executable Lua, a capability,
+authority to fabricate ctx, or a second mapping schema. Other callers supplying
+it cannot change the actual action activation or bypass retained registry checks.
+
+## Complete production route (source trace)
+
+1. [`cmd/main.go`](../cmd/main.go) parses no arguments/public flags through
+   `runLaunch`, then calls `LaunchPopup`, not private-mode usage or a JSON demo.
+2. [`launch.go`](../launch.go) resolves/fixes endpoint, validates the exact
+   session/block/client connection and invokes the installed named CONFIG action.
+3. [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) registers that action in the
+   original VM; its real `run(ctx,args)` calls `menu.launch(ctx, optional_origin)`.
+   [`config.lua`](../lua/rex_whichkey/config.lua) setup previously resolves
+   defaults/import/inline options transactionally and compiles the raw mappings.
+   [`defaults/init.lua`](../lua/rex_whichkey/defaults/init.lua) supplies the shipped
+   menu; no new hard-coded demo or mapping schema is involved.
+4. [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua) `issue` reserves and evaluates
+   the retained mapping snapshot in the original VM. The launcher encodes actual
+   resolved configuration, captures private Go `prepare` output, validates endpoint
+   and origin again, binds the secret capability, then starts the detached finite
+   controller with a private stdin handoff.
+5. [`popup.go`](../popup.go) `RunPopupController` verifies the frozen origin before
+   mutation, creates the owned popup terminal layer and invokes `RunPopupTerminal`.
+   [`terminal.go`](../terminal.go) `RunTerminal` uses real `RenderMenu` redraws and
+   `HandleKey` navigation/selection; terminal cleanup succeeds before result commit.
+6. The independent controller closes only its owned popup, revalidates/focuses the
+   exact origin and sends authenticated fresh completion to the installed action.
+   The original VM checks one-shot capability, connection/configuration generation,
+   snapshot, expiry, confirmation and focus; original closures remain there and
+   named/client actions use the actual completion activation. No popup-origin or
+   fabricated-context dispatch is substituted.
 
 ## Execution-host routing
 
@@ -126,6 +283,7 @@ contracts, not a claim that every CLI version has been exercised.
 No exact undocumented Linux/macOS path formula is asserted here. This change has
 not been compiled or run by its builder: project tests/TDD, product execution,
 live identity queries, GUI/remote trials and configuration reloads are prohibited.
-Formatting and source checks do not verify runtime or Darwin behavior. Ordinary
-no-argument launch wiring and public help are separate Phase07 delivery work; the
-private preparation mode is not the normal user entrypoint.
+Formatting and source checks do not verify runtime or Darwin behavior. The route
+above is a source trace, not a claimed popup/runtime/Remote Control pass. Combined
+compilation and independent mixed Go/Lua source review remain coordinator gates;
+the private preparation mode is not the normal user entrypoint.

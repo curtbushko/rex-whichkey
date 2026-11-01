@@ -99,7 +99,7 @@ func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 	server, serverErr := rex.CanonicalEndpoint(request.Server)
 	if ValidateInvocationCapability(request.Capability) != nil || serverErr != nil ||
 		!popupResourceID(request.SessionID, "session") || !popupResourceID(request.BlockID, "block") ||
-		!popupResourceID(request.ClientID, "client") || strings.TrimSpace(request.ConnectedAt) == "" ||
+		!popupResourceID(request.ClientID, "client") || !popupConnectionGeneration(request.ConnectedAt) ||
 		request.Completion == "" || strings.Trim(request.Completion, "abcdefghijklmnopqrstuvwxyz0123456789_") != "" {
 		return popupRequest{}, Config{}, errors.New("whichkey: popup requires exact origin and completion identities")
 	}
@@ -148,10 +148,11 @@ func popupBounds(position string) rex.Bounds {
 	}
 }
 
-// originBlock validates the connection generation independently of the Lua
-// registry. This also guards focus restoration after dismissal, for which the
-// cancellation handler deliberately performs no focus operation.
-func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.Block, error) {
+// popupOriginConnection inspects only the captured session's attachments. An
+// absent selector requires exactly one eligible connection; it never delegates
+// selection to Rex's implicit current/single-app-client behavior. Missing/unknown
+// state is connected per Rex's contract; only lost is disconnected.
+func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, requested string) (string, string, error) {
 	var result struct {
 		Clients []struct {
 			ID          string `json:"client_id"`
@@ -159,26 +160,53 @@ func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.
 			State       string `json:"connection_state"`
 		} `json:"clients"`
 	}
-	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": r.SessionID}, &result); err != nil {
-		return rex.Block{}, errors.New("whichkey: origin client inspection failed")
+	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": sessionID}, &result); err != nil || result.Clients == nil {
+		return "", "", errors.New("whichkey: cannot inspect origin session clients; check the endpoint and captured REX_SESSION")
 	}
-	matches := 0
+	seen := make(map[string]bool, len(result.Clients))
+	matches, id, generation := 0, "", ""
 	for _, connection := range result.Clients {
-		if connection.ID == r.ClientID {
-			if connection.State == "lost" || connection.ConnectedAt != r.ConnectedAt {
-				return rex.Block{}, errors.New("whichkey: origin client connection changed")
-			}
+		if !popupResourceID(connection.ID, "client") || seen[connection.ID] {
+			return "", "", errors.New("whichkey: origin session returned malformed or duplicate client IDs")
+		}
+		seen[connection.ID] = true
+		if connection.State == "lost" {
+			continue
+		}
+		if !popupConnectionGeneration(connection.ConnectedAt) {
+			return "", "", errors.New("whichkey: origin session returned a client without a valid connection generation")
+		}
+		if requested == "" || requested == connection.ID {
 			matches++
+			id, generation = connection.ID, connection.ConnectedAt
 		}
 	}
 	if matches != 1 {
-		return rex.Block{}, errors.New("whichkey: origin client is missing or ambiguous")
+		return "", "", errors.New("whichkey: origin session has zero or several eligible clients, or the selected client is not attached; supply --client with an exact full attached client ID")
+	}
+	return id, generation, nil
+}
+
+// originBlock validates the connection generation independently of the Lua
+// registry. This also guards focus restoration after dismissal, for which the
+// cancellation handler deliberately performs no focus operation.
+func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.Block, error) {
+	_, generation, err := popupOriginConnection(ctx, client, r.SessionID, r.ClientID)
+	if err != nil {
+		return rex.Block{}, err
+	}
+	if generation != r.ConnectedAt {
+		return rex.Block{}, errors.New("whichkey: origin client connection changed; relaunch from the original terminal")
 	}
 	session, err := client.Session(ctx, r.SessionID)
 	if err != nil {
-		return rex.Block{}, errors.New("whichkey: origin session is unavailable")
+		return rex.Block{}, errors.New("whichkey: origin session is unavailable; relaunch inside the original Rex terminal")
 	}
-	return session.Block(ctx, r.BlockID)
+	block, err := session.Block(ctx, r.BlockID)
+	if err != nil {
+		return rex.Block{}, errors.New("whichkey: origin block is missing, detached or ambiguously placed in REX_SESSION; relaunch inside the original Rex terminal")
+	}
+	return block, nil
 }
 
 // complete invokes the installed CONFIG action, never a new Lua script VM. It

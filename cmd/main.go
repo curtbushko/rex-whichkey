@@ -17,7 +17,7 @@ import (
 // All action execution remains in the originating Rex configuration Lua VM.
 func run(ctx context.Context, args []string, input io.Reader, output, diagnostics io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: rex-whichkey menu|prepare|controller|popup")
+		return runLaunch(ctx, args, output)
 	}
 	switch args[0] {
 	case "prepare":
@@ -62,7 +62,7 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		return whichkey.RunPopupTerminal(ctx, *directory, expires, *noColor, *ascii)
 	case "menu":
 	default:
-		return errors.New("usage: rex-whichkey menu|prepare|controller|popup")
+		return runLaunch(ctx, args, output)
 	}
 	flags := flag.NewFlagSet("rex-whichkey menu", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -91,6 +91,61 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		return err
 	}
 	return whichkey.WriteMenuResult(output, event)
+}
+
+const publicHelp = `usage: rex-whichkey [options]
+
+Launch the installed which-key popup from this Rex terminal.
+
+Options:
+  --server ENDPOINT  Execution-host socket path, unix URI or host:port override
+  --client FULL_ID   Exact attached client ID (otherwise REX_CLIENT or the only
+                     eligible client attached to this terminal's session)
+  --action NAME      Registered configuration launch action (default: whichkey)
+  --help, -h         Show help without contacting Rex
+
+Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
+server-host Rex CLI/helper/Lua modules, successful menu.setup, completion action
+registration and menu.register_launch("whichkey") in user-owned init.lua, and
+client Remote Control permission. Nothing edits or reloads your configuration.
+
+Endpoint: --server > nonempty REX_SERVER > Rex native Linux/macOS default.
+Missing, stale or ambiguous origin context fails; no focused/current-client or
+alternate-server fallback. Activation is not proof that the popup was displayed.
+See docs/launch-contract.md for setup and routing details.
+`
+
+func runLaunch(ctx context.Context, args []string, output io.Writer) error {
+	flags := flag.NewFlagSet("rex-whichkey", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	server := flags.String("server", "", "execution-host endpoint override")
+	client := flags.String("client", "", "exact attached client ID")
+	action := flags.String("action", "whichkey", "registered configuration launch action")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			if _, writeErr := io.WriteString(output, publicHelp); writeErr != nil {
+				return fmt.Errorf("write help: %w", writeErr)
+			}
+		}
+		return err
+	}
+	if flags.NArg() != 0 {
+		return errors.New("whichkey: expected rex-whichkey [options]; use --help for normal launch and setup")
+	}
+	if *action == "" {
+		return errors.New("whichkey: --action must name the registered configuration launch action")
+	}
+	options := whichkey.LaunchOptions{Action: *action}
+	flags.Visit(func(option *flag.Flag) {
+		switch option.Name {
+		case "server":
+			options.Server = server
+		case "client":
+			options.Client = client
+		}
+	})
+	// Parsing, including help/errors, finishes before any Rex lookup or call.
+	return whichkey.LaunchPopup(ctx, options)
 }
 
 func main() {
