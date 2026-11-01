@@ -148,29 +148,41 @@ func popupBounds(position string) rex.Bounds {
 	}
 }
 
-// popupOriginConnection inspects only the captured session's attachments. An
-// absent selector requires exactly one eligible connection; it never delegates
-// selection to Rex's implicit current/single-app-client behavior. Missing/unknown
-// state is connected per Rex's contract; only lost is disconnected.
+// popupOriginConnection uses Rex's native info.kind classification on the
+// captured session's attachments: only app is eligible, never CLI/automation or
+// an unknown kind. This keeps classification and membership in one response.
+// An absent selector requires exactly one live app; an explicit selector cannot
+// bypass that eligibility. Missing/unknown state is connected per Rex's contract;
+// only lost is disconnected. See docs/launch-contract.md for the schema source.
 func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, requested string) (string, string, error) {
 	var result struct {
-		Clients []struct {
-			ID          string `json:"client_id"`
-			ConnectedAt string `json:"connected_at"`
-			State       string `json:"connection_state"`
-		} `json:"clients"`
+		Clients json.RawMessage `json:"clients"`
 	}
-	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": sessionID}, &result); err != nil || result.Clients == nil {
+	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": sessionID}, &result); err != nil {
 		return "", "", errors.New("whichkey: cannot inspect origin session clients; check the endpoint and captured REX_SESSION")
 	}
-	seen := make(map[string]bool, len(result.Clients))
+	var connections []struct {
+		ID          string `json:"client_id"`
+		ConnectedAt string `json:"connected_at"`
+		State       string `json:"connection_state"`
+		Info        struct {
+			Kind string `json:"kind"`
+		} `json:"info"`
+	}
+	// Rex permits null for an empty attachment list. Missing/malformed data is
+	// not an empty list: decoding the required raw field distinguishes the two.
+	if err := json.Unmarshal(result.Clients, &connections); err != nil {
+		return "", "", errors.New("whichkey: origin session returned malformed client attachments")
+	}
+	seen := make(map[string]bool, len(connections))
 	matches, id, generation := 0, "", ""
-	for _, connection := range result.Clients {
-		if !popupResourceID(connection.ID, "client") || seen[connection.ID] {
+	for _, connection := range connections {
+		identity := strings.ToLower(connection.ID)
+		if !popupResourceID(connection.ID, "client") || seen[identity] {
 			return "", "", errors.New("whichkey: origin session returned malformed or duplicate client IDs")
 		}
-		seen[connection.ID] = true
-		if connection.State == "lost" {
+		seen[identity] = true
+		if connection.Info.Kind != "app" || connection.State == "lost" {
 			continue
 		}
 		if !popupConnectionGeneration(connection.ConnectedAt) {
@@ -181,8 +193,14 @@ func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, r
 			id, generation = connection.ID, connection.ConnectedAt
 		}
 	}
-	if matches != 1 {
-		return "", "", errors.New("whichkey: origin session has zero or several eligible clients, or the selected client is not attached; supply --client with an exact full attached client ID")
+	if requested != "" && matches == 0 {
+		return "", "", errors.New("whichkey: supplied client selector is not a live graphical app attached to the origin session; use --client with an exact full attached app ID or correct REX_CLIENT")
+	}
+	if matches == 0 {
+		return "", "", errors.New("whichkey: origin session has no attached live graphical Rex app; connect the app to this session and relaunch")
+	}
+	if matches > 1 {
+		return "", "", errors.New("whichkey: origin session has several attached live graphical Rex apps; supply --client with the exact full app client ID")
 	}
 	return id, generation, nil
 }

@@ -109,16 +109,20 @@ the public options without contacting Rex:
 | Option | Meaning |
 | --- | --- |
 | `--server ENDPOINT` | Concrete execution-host endpoint override. |
-| `--client FULL_ID` | Exact full `client:UUID` attached to this terminal's session. |
+| `--client FULL_ID` | Exact full `client:UUID` of a live graphical app attached to this terminal's session. |
 | `--action NAME` | Installed configuration launch action; default `whichkey`. |
 
 The command captures this terminal's full `REX_SESSION` and `REX_BLOCK`. Client
-selection is `--client`, then a present `REX_CLIENT`, otherwise **exactly one**
-eligible client attached to that captured session, with a live `connected_at`
-generation. Rex terminals are not assumed to export `REX_CLIENT`. Zero or several
-eligible clients require an exact attached client ID; labels/suffixes are not
-accepted. Missing/stale origins fail rather than selecting the focused block,
-current client or arbitrary first match. A successful command means activation
+selection is `--client`, then a present `REX_CLIENT`, otherwise **exactly one live
+graphical app** attached to that captured session, with a valid `connected_at`
+generation. Rex's native attachment `info.kind == "app"` classification excludes
+CLI/automation connections and unknown kinds; labels/names/platforms are not kind
+heuristics. `REX_CLIENT` is normally absent and is not required for the single-app
+case, even with other CLI connections. No attached live app requires connecting
+the app to that session; several attached apps require an exact full app client
+ID. Explicit selectors must also identify an attached live app; labels/suffixes,
+stale IDs and non-app clients are rejected. Missing/stale origins fail rather than
+selecting the focused block, current client or arbitrary first match. A successful command means activation
 was accepted, not proof that a popup displayed or a callback completed. Failed or
 uncertain activation is never retried automatically.
 
@@ -249,11 +253,16 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   `--action`). `REX_BIN_DIR`, if set, must name an absolute execution-host directory
   containing the matching `rex`. Raw child diagnostics are suppressed to avoid
   leaking capability data.
-- **Missing/stale origin or ambiguous client:** launch inside the original Rex
-  terminal with its real full `REX_SESSION`/`REX_BLOCK`. If several clients attach
-  there, use `--client` with the exact full attached ID; correct a stale or empty
-  `REX_CLIENT` rather than using focus/current-client selection. A reconnect's
-  changed connection generation requires a new invocation.
+- **Missing/stale origin or client-selection failure:** launch inside the original
+  Rex terminal with its real full `REX_SESSION`/`REX_BLOCK`. No attached live app
+  means the graphical app must connect to that session; several attached live apps
+  require `--client` with the exact full app ID. CLI/automation connections do not
+  cause ambiguity. An invalid supplied selector requires correcting `--client` or
+  a stale/empty `REX_CLIENT`; an absent `REX_CLIENT` is normal, not a setup failure.
+  Never substitute focus/current-client selection. A reconnect's changed
+  connection generation requires a new invocation. This selection correction is
+  source-documented; actual user attachment counts and popup behavior remain
+  runtime-unverified.
 - **Discovery/endpoint failure:** check the already-running execution-host server,
   Rex runtime/home settings and CLI compatibility. Fix malformed explicit or
   `REX_SERVER` values; a custom/shared endpoint may need both a public override and

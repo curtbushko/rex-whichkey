@@ -14,7 +14,8 @@ floating popup, not a greeting, demo or standalone terminal menu.
 entrypoint without contacting Rex. Public options are:
 
 - `--server ENDPOINT`: a concrete execution-host endpoint override.
-- `--client FULL_ID`: an exact `client:UUID` attached to this terminal's session.
+- `--client FULL_ID`: an exact `client:UUID` of a live graphical app attached to
+  this terminal's session.
 - `--action NAME`: an installed configuration launch action, default `whichkey`.
   Names contain only lowercase ASCII letters, digits and underscores.
 
@@ -71,15 +72,30 @@ Resolve one canonical endpoint by the policy below, then use it explicitly for
 all read-only preflight and activation calls.
 
 Client precedence is present `--client`, then present `REX_CLIENT`, otherwise a
-relationship lookup of **only the captured session's attached clients**. Present
-empty, label/suffix, malformed and duplicate IDs fail. Every nonlost attachment
-must have a nonblank UTF-8 `connected_at` generation of at most 1024 bytes without
-control characters. Rex's documented missing/unknown connection state counts as
-connected; only `lost` is disconnected. Without a selector, require exactly one
-eligible attachment. Rex terminals are not assumed to export `REX_CLIENT`.
-Zero/several eligible attachments fail with instructions to supply an exact full
-attached client ID. A supplied selector must match exactly one eligible
-attachment; no global or arbitrary-first client selection is used.
+relationship lookup of **only the captured session's attached graphical apps**.
+`session.list_clients` provides both exact session membership and Rex's native
+`info.kind` classification in one response. Only the documented kind `app` is
+eligible: `cli`, `agent`, `other`, missing and unknown kinds do not contribute to
+automatic cardinality and cannot be explicitly selected. No label/name/platform
+heuristics or unscoped global app list are used.
+
+Present empty or malformed selectors and labels/suffixes fail. Malformed or
+duplicate attached client IDs fail even for non-app/lost records; UUID case
+variants cannot hide a duplicate. Each nonlost app attachment must have a nonblank
+UTF-8 `connected_at` generation of at most 1024 bytes without control characters.
+Rex's documented missing/unknown connection state counts as connected; only `lost`
+is disconnected. The documented null/empty attachment list means no candidates;
+a missing/malformed list is an inspection error, not a successful empty lookup.
+
+Without a selector, exactly one live attached app succeeds, even when CLI or
+automation connections are also attached. Rex terminals normally need not export
+`REX_CLIENT`; its absence is not a prerequisite failure. No live attached app
+produces guidance to connect the graphical app to the origin session. Several
+live attached apps produce distinct guidance to supply an exact full app client
+ID. A supplied selector must match a live app in that exact session; stale,
+non-app or unattached selectors produce a separate selector error even if another
+app could have been selected automatically. No global, current-client or
+arbitrary-first fallback is used.
 
 The launch route reuses `popupRequest.originBlock` and `popupOriginConnection`:
 recheck the selected connection generation, inspect the exact session and require
@@ -290,6 +306,26 @@ Rex CLI, original-server Lua modules, explicit user-owned action registration an
 app Remote Control policy remain prerequisites.
 
 ## Source evidence and verification limits
+
+The native attachment classification is documented in the retained Rex
+`session.list_clients` method schema at
+`.mtn-tmp/remaining-delivery/rex-whichkey-p03-t04-builder-a02/session-list-clients-schema.json`
+in the authoritative delivery checkout. Its output has `clients[].client_id`,
+`connected_at`, `connection_state` and `info.kind`; kind is documented as `app`,
+`cli`, `agent` or `other`, with unknown kinds treated as other. The schema's
+example explicitly uses `info.kind = "app"`. Its validation notes limit results
+to that session's `session.attach`/`session.bootstrap` attachments (not
+`session.attach_all`). Reading this already-retained schema is source evidence,
+not a new live API request. This same-response classification avoids a second
+global `client.list` call and a cross-response membership intersection.
+
+Installed Rex `0.0.1792609031-gc465ec` read-only `client ls --help` confirms that
+ordinary text hides command-line clients while JSON includes the full server
+reply. Counting all JSON attachments therefore does not implement graphical-app
+selection. Actual user-side attachment counts were not inspected; neither this
+source mismatch nor its correction establishes a runtime root-cause cardinality.
+The selection correction uses source/format checks only; the historical review
+and compilation results below do not establish verification of later revisions.
 
 The published [CLI contract](https://www.superlogical.com/rex/docs/automate/cli)
 documents execution-host `REX_SERVER`, `REX_BIN_DIR`, explicit server selectors and

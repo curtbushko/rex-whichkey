@@ -106,11 +106,18 @@ REXWHICHKEY-20261101-015342 only as to default routing; its explicit overrides,
 opaque-identity separation and fail-closed origin safeguards remain.
 
 The public caller first validates captured full terminal session/block IDs and
-selects an exact `--client`, present `REX_CLIENT`, or exactly one eligible attached
-client of that session with a valid `connected_at` generation. Stale origin,
-wrong realm, missing/ambiguous attachment and changed generation fail rather than
-using focus/current-client selection. Lua checks the actual fresh ctx and live
-generation before evaluating mappings, then compares preparation's canonical
+selects an exact `--client`, present `REX_CLIENT`, or exactly one live graphical
+app attached to that session with a valid `connected_at` generation. The native
+`session.list_clients` response supplies exact attachment membership and
+`info.kind`: only `app` is eligible, not CLI/automation, missing or unknown kinds.
+Labels, names and platforms are not kind heuristics, and a global app list alone
+is not session membership. `REX_CLIENT` need not be exported in the ordinary
+single-app case, even with other CLI connections. Explicit selectors must also
+name a live attached app. No-app, multiple-app and ineligible-selector errors are
+distinct; stale origin, wrong realm and changed generation still fail rather than
+using focus/current-client selection. The controller reuses the same classified
+resolver for preflight, completion and focus-restoration checks. Lua checks the
+actual fresh ctx and live generation before evaluating mappings, then compares preparation's canonical
 endpoint with the caller's envelope before starting the controller. Independently,
 the controller finds that exact session, uniquely placed block and connection
 through its explicit endpoint before mutation or deferred focus/cancellation.
@@ -253,6 +260,13 @@ the popup endpoint nor attaches to a remote host.
   Network failure, SIGKILL or server exit can also prevent cleanup/completion.
   No retry, scavenging daemon or label search compensates for this. Lua's lazy
   expiry retains bounded state until a later registry operation or VM teardown.
+- **Graphical-app selection (07-04):** native `info.kind` and exact session
+  membership come from the retained `session.list_clients` schema cited in the
+  [launch contract](launch-contract.md#source-evidence-and-verification-limits).
+  Only static source/format checks were performed for this correction; no client
+  enumeration, product execution or compilation was performed by its builder.
+  Actual user-side attachment counts and popup behavior remain unobserved.
+  Earlier review/compilation evidence does not verify later revisions.
 - **Trust and identity (03-04, 03-05, 04-05):** the implementation relies on Rex
   supplying a consistent opaque server identity and a meaningful `connected_at`
   generation for a client across activations. These semantics, real queued

@@ -80,7 +80,7 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 		}
 	}
 	if selector != nil && !popupResourceID(*selector, "client") {
-		return errors.New("whichkey: --client or REX_CLIENT must be an exact full client ID, not a label or suffix")
+		return errors.New("whichkey: --client or REX_CLIENT must be an exact full client ID for an attached live graphical app, not a label or suffix")
 	}
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
@@ -101,6 +101,8 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	if selector != nil {
 		requested = *selector
 	}
+	// Absence of REX_CLIENT is normal: the shared resolver counts only live
+	// graphical apps attached to this session, excluding CLI/automation clients.
 	origin.ClientID, origin.ConnectedAt, err = popupOriginConnection(ctx, client, origin.SessionID, requested)
 	if err != nil {
 		return err
