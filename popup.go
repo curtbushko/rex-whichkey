@@ -7,17 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/sys/unix"
@@ -31,6 +27,13 @@ const popupMessageLimit = 64 << 10
 // action, never for display. Resolving this executable here keeps both later
 // processes on the server host, independent of a graphical client's paths.
 func PreparePopup(input io.Reader, output io.Writer) error {
+	return PreparePopupWithServer(context.Background(), input, output, nil)
+}
+
+// PreparePopupWithServer adds an optional immutable endpoint override to the
+// captured preparation. A nil override uses the execution-host endpoint policy;
+// a present empty override is invalid. Secret output must remain on a pipe.
+func PreparePopupWithServer(ctx context.Context, input io.Reader, output io.Writer, server *string) error {
 	if file, ok := output.(*os.File); ok {
 		info, err := file.Stat()
 		if err != nil || info.Mode()&os.ModeCharDevice != 0 {
@@ -41,6 +44,10 @@ func PreparePopup(input io.Reader, output io.Writer) error {
 		return errors.New("whichkey: invalid prepared popup configuration")
 	}
 	if _, err := popupRexExecutable(); err != nil {
+		return err
+	}
+	endpoint, err := rex.ResolveEndpoint(ctx, server)
+	if err != nil {
 		return err
 	}
 	capability, err := NewInvocationCapability()
@@ -54,7 +61,8 @@ func PreparePopup(input io.Reader, output io.Writer) error {
 	return json.NewEncoder(output).Encode(struct {
 		Capability string `json:"capability"`
 		Executable string `json:"executable"`
-	}{capability, executable})
+		Server     string `json:"server"`
+	}{capability, executable, endpoint})
 }
 
 // popupRequest is private launcher plumbing, not a second mapping schema. The
@@ -86,12 +94,16 @@ func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 	if err := decoder.Decode(&request); err != nil {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup handoff")
 	}
-	if ValidateInvocationCapability(request.Capability) != nil || !popupServer(request.Server) ||
+	// Handoffs validate directly, never ResolveEndpoint: missing transport data
+	// must not acquire an ambient endpoint. Freeze the canonical spelling here.
+	server, serverErr := rex.CanonicalEndpoint(request.Server)
+	if ValidateInvocationCapability(request.Capability) != nil || serverErr != nil ||
 		!popupResourceID(request.SessionID, "session") || !popupResourceID(request.BlockID, "block") ||
 		!popupResourceID(request.ClientID, "client") || strings.TrimSpace(request.ConnectedAt) == "" ||
 		request.Completion == "" || strings.Trim(request.Completion, "abcdefghijklmnopqrstuvwxyz0123456789_") != "" {
 		return popupRequest{}, Config{}, errors.New("whichkey: popup requires exact origin and completion identities")
 	}
+	request.Server = server
 	now := time.Now()
 	deadline := time.Unix(request.Expires, 0)
 	if !deadline.After(now) || deadline.After(now.Add(InvocationLifetimeSeconds*time.Second)) {
@@ -102,31 +114,6 @@ func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup configuration")
 	}
 	return request, config, nil
-}
-
-// Require the server owner's constructor-bound endpoint, not a mutable host
-// label or any conversion of opaque ctx.server. Syntax is validated before Rex
-// calls; originBlock then checks the captured tuple through this exact endpoint
-// before resources, focus or completion can mutate anything there.
-func popupServer(server string) bool {
-	if !utf8.ValidString(server) || strings.IndexFunc(server, func(char rune) bool {
-		return unicode.IsSpace(char) || unicode.IsControl(char)
-	}) >= 0 {
-		return false
-	}
-	if strings.HasPrefix(server, "unix://") {
-		address, err := url.Parse(server)
-		return err == nil && address.Host == "" && filepath.IsAbs(address.Path) &&
-			address.Path != "/" && address.Path == strings.TrimPrefix(server, "unix://") &&
-			address.RawQuery == "" && !address.ForceQuery && address.Fragment == "" && address.User == nil
-	}
-	host, port, err := net.SplitHostPort(server)
-	if err != nil || host == "" || port == "" || strings.Trim(port, "0123456789") != "" ||
-		strings.ContainsAny(host, "/\\?#@%") {
-		return false
-	}
-	value, err := strconv.ParseUint(port, 10, 16)
-	return err == nil && value != 0
 }
 
 func popupResourceID(id, kind string) bool {

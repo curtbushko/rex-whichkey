@@ -21,10 +21,22 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 	}
 	switch args[0] {
 	case "prepare":
-		if len(args) != 1 {
-			return errors.New("whichkey: prepare accepts no arguments")
+		flags := flag.NewFlagSet("rex-whichkey prepare", flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		server := flags.String("server", "", "optional execution-host endpoint override")
+		if err := flags.Parse(args[1:]); err != nil {
+			return err
 		}
-		return whichkey.PreparePopup(input, output)
+		if flags.NArg() != 0 {
+			return errors.New("whichkey: prepare accepts only an optional --server endpoint and private stdin configuration")
+		}
+		var override *string
+		flags.Visit(func(option *flag.Flag) {
+			if option.Name == "server" {
+				override = server // Preserve the distinction between absent and empty.
+			}
+		})
+		return whichkey.PreparePopupWithServer(ctx, input, output, override)
 	case "controller":
 		if len(args) != 1 {
 			return errors.New("whichkey: controller accepts only its private stdin handoff")

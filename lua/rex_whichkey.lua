@@ -36,16 +36,6 @@ local function configuration(options, records)
     return display:sub(1, -2) .. ',"spec":[' .. table.concat(values, ",") .. "]}"
 end
 
-local function endpoint(value)
-    -- This is explicit server-owned transport configuration, NOT ctx.server.
-    -- The latter remains Rex's opaque identity, untouched in the original ctx.
-    -- Go is the authoritative endpoint validator; this only rejects obviously
-    -- missing/label-only bindings without guessing or discovering an endpoint.
-    return type(value) == "string"
-        and not value:find("[%z%s]")
-        and (value:match("^unix:///.") ~= nil or value:match("^.+:%d+$") ~= nil)
-end
-
 local function connection(ctx)
     local result, err = rex.session.list_clients({ session_id = ctx.session_id })
     if err ~= nil or type(result) ~= "table" or type(result.clients) ~= "table" then
@@ -71,10 +61,10 @@ end
 -- or reloads it. Use the SAME installed module/VM for launch and completion:
 --   local popup = require("rex_whichkey")
 --   popup.register_completion("whichkey_complete")
---   local menu = popup.new(defaults, "unix:///absolute/server/socket")
---   -- Supply THIS server's fixed endpoint, not ctx.server or a host label.
---   -- The defaults owner supplies the resolved baseline; setup cannot replace
---   -- the transport binding. There is no environment/current-server fallback.
+--   local menu = popup.new(defaults)
+--   -- Optional second argument: THIS server's immutable endpoint override,
+--   -- never ctx.server or a host label. Go resolves execution-host defaults.
+--   -- The defaults owner supplies the baseline; setup cannot replace routing.
 --   menu.setup(inline_options, optional_user_module_name)
 --   rex.action{ name="whichkey", title="Which key", run=function(ctx) menu.launch(ctx) end }
 -- The completion action is NOT a script file or a popup-origin action.
@@ -90,11 +80,12 @@ end
 -- Setup uses the delivered transactional loader/compiler and only then replaces
 -- the installed invocation registry. Failure retains the last working setup.
 function M.new(defaults, server_endpoint)
-    if not endpoint(server_endpoint) then
-        fail("an explicit server-owned endpoint is required")
+    if server_endpoint ~= nil and type(server_endpoint) ~= "string" then
+        fail("the optional server-owned endpoint override must be a string")
     end
-    -- Strings are immutable; retain this constructor-only binding separately
-    -- from mapping options and the actual action context for the menu's lifetime.
+    -- Retain the optional immutable constructor binding outside mapping options
+    -- and the actual action ctx. Only Go owns endpoint syntax/default policy;
+    -- even an explicitly empty string is forwarded for fail-closed validation.
     local loader = config.new(defaults, function(candidate)
         return mapping.compile(candidate.spec)
     end)
@@ -126,13 +117,23 @@ function M.new(defaults, server_endpoint)
             fail("wall clock is unavailable")
         end
         local records, ticket = generation.issue(ctx)
+        local failure = "popup launch failed; invocation cancelled"
         local ok = pcall(function()
             local connected_at = connection(ctx)
             local resolved = configuration(options, records)
             -- rex.exec resolves the installed helper on THIS server's PATH.
             -- Only captured stdout contains the random capability. Never return
             -- it to the invoking action, print it, or propagate child errors.
-            local prepared, prepare_err = rex.exec({ "rex-whichkey", "prepare" }, {
+            local prepare_argv = { "rex-whichkey", "prepare" }
+            if server_endpoint ~= nil then
+                prepare_argv[#prepare_argv + 1] = "--server"
+                prepare_argv[#prepare_argv + 1] = server_endpoint
+            end
+            -- Only fixed guidance crosses the pcall boundary, including when
+            -- exec/decode throws; never forward child output or error objects.
+            failure =
+                "server-side preparation failed; check the execution-host rex-whichkey helper, matching Rex CLI, running server/runtime environment and endpoint override or REX_SERVER; invocation cancelled"
+            local prepared, prepare_err = rex.exec(prepare_argv, {
                 timeout = 3,
                 stdin = resolved,
                 stderr = false,
@@ -150,14 +151,17 @@ function M.new(defaults, server_endpoint)
                 or type(secret.executable) ~= "string"
                 or secret.executable:sub(1, 1) ~= "/"
                 or secret.executable:find("%z")
+                or type(secret.server) ~= "string"
+                or secret.server == ""
             then
                 fail("invalid server-side invocation preparation")
             end
+            failure = "popup launch failed; invocation cancelled"
             generation.bind(ticket, ctx, secret.capability)
             local handoff = encode({
                 configuration = resolved,
                 capability = secret.capability,
-                server = server_endpoint,
+                server = secret.server,
                 session_id = ctx.session_id,
                 block_id = ctx.block_id,
                 client_id = ctx.client_id,
@@ -186,7 +190,7 @@ function M.new(defaults, server_endpoint)
             generation.cancel(ticket)
             -- Neither raw process diagnostics nor arbitrary user-code errors can
             -- expose a capability-bearing handoff. No fallback or retry.
-            fail("popup launch failed; invocation cancelled")
+            fail(failure)
         end
         -- Never return a ticket, capability, handle or callback to the caller.
     end
