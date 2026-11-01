@@ -22,13 +22,13 @@ title: Implement inline and imported Lua configuration
 mtnCreateRetry:
   key: rex-whichkey/draft-task/03-01-lua-config/1
   intent: 83009c5611c704597de2303f7fd22e27e12260478540f1121d6f78fcf54cfe44
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:17.390Z'
-dateModified: '2026-10-31T19:58:26.659Z'
+dateModified: '2026-11-01T01:01:54.143Z'
 tags:
   - task
 type: task
@@ -38,6 +38,7 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -85,8 +86,8 @@ Implement remote-safe integration/user-module lookup and explicit precedence in 
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjE0LjM2NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDMtMDEtbHVhLWNvbmZpZy5tZCIsImludGVudCI6ImUwN2RmYTg1NmExMDI5N2ZkMzhhMTBlOWE5OWU4YzNiMDU4YWQzZDFhYzk0MjM1ZThlYTdmYzA4Y2I4NDAyZDEifQ -->
-### 2026-10-31T11:25:14.364Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAxOjAxOjU0LjEzMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDEtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiY2U1OTUzYjcxYWY1MjFmZGZkZmYyN2NmZjgyNTgyNmRmNjRkZGNmN2I4ZjMyYzg0MWM0YjkwOGUxZDNiNTBlMiJ9 -->
+### 2026-11-01T01:01:54.131Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-03-01-lua-config.md","kind":"historical","recordRef":"tasks/rex-whichkey-03-01-lua-config.md","specHash":"sha256:e89b65fb4bd0e984a566fcd52004974464ce3e6f6bc927054b4f6d768b1be5bb","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement the approved setup/config loader with collision-free integration/user module names, absent-value defaults and explicit precedence/replacement behavior. Keep executable configuration functions in Rex Lua.\n\n## Requirement criteria\nREQ-003, REQ-004, REQ-013\nInline and sibling-module paths work in real server init.lua; duplicate/invalid setup is handled per approved contract without corrupting the last working configuration. Server-side paths work without client-local absolute assumptions.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/config.lua, tests/lua/config, examples. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: none beyond parent phase barriers. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nFailing-first Lua fixtures for defaults, inline/imported equivalence and errors; rex config check plus isolated-server load; Lua-specific harness and root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement inline and imported Lua configuration","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t01-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t01-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p03-t01-builder-a01/summary/1","files":["examples/README.md","examples/my_whichkey.lua","lua/rex_whichkey/config.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-01-lua-config.md","requirements":["REQ-003","REQ-004","REQ-013"],"schemaVersion":1,"specHash":"sha256:334b767966694c3f7940807254c3f04d071d8b10369f125331351aa93d4f1dfb","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"6109ffff2935711a2d53fe641d18ed185a7e0ef3","targetTree":"15dbd5c7a99edb9186b46cf747550a3fa23abd87","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

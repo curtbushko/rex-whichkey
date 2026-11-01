@@ -34,7 +34,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:33.418Z'
-dateModified: '2026-10-31T19:58:32.104Z'
+dateModified: '2026-11-01T01:23:21.249Z'
 tags:
   - task
 type: task
@@ -92,6 +92,14 @@ Consume mapping.go and docs/mapping-format.md from tasks/rex-whichkey-03-05-mapp
 Own server-side popup executable/config resolution and propagation of exact originating server/session/block/client identities in config.go and cmd/main.go, with only required launcher glue in lua/rex_whichkey.lua. Use the execution host's installed executable/module paths, not a client-local absolute path; 03-01 owns user module loading, 03-04 owns callback/action validation and Phase 2 owns CLI/resource targeting. Preserve no-fallback origin behavior and cleanup only resources returned as owned. 05-05 documents these source paths; it cannot supply missing implementation.
 
 Keep workflowLanguage go for this mixed task. Independent source review must explicitly cover lua/rex_whichkey.lua and its loading/argv/origin/lifetime behavior alongside all owned Go files and the Lua config/dispatch boundary. No Lua work may be omitted because the primary route is Go; no Go TDD/runtime gates are authorized.
+
+
+## Explicit producer/consumer delivery boundary
+Composition owns final source wiring of 04-03 theme producer, 04-02 rendering and 04-04 terminal palette/input lifecycle. Require actual semantic Style/Decoration callers, ordered palette-reply decoding before key handling and metadata application in the assembled popup source. No token callers or claims of graphical/runtime passes; Phase4 cannot complete before this wiring is integrated and source-reviewed.
+
+
+## Explicit frame producer and loop/composition consumers
+Own real executable composition invoking the delivered terminal render/input loop, not an unused helper. The assembled source must reach RenderMenu for initial/navigation/resize/theme refresh, consume frame placements/Lines and pass frame.Pages into Menu.HandleKey. Verify these actual callers along with palette decoder ordering and semantic theme use in the frozen combined source before Phase4 completion. No graphical/runtime execution or test passes may be inferred.
 
 <!-- mtn:evidence:v1 -->
 

@@ -20,19 +20,20 @@ title: 'Implement terminal palette, fallbacks and accessible output'
 mtnCreateRetry:
   key: rex-whichkey/draft-task/04-03-theme/1
   intent: ab2e6c567e0b75332fc5eb4d91e2c84f6dc7b375de302fd27e08cfa419b355da
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:29.409Z'
-dateModified: '2026-10-31T19:58:10.431Z'
+dateModified: '2026-11-01T00:49:32.008Z'
 tags:
   - task
 type: task
 id: 83e020be-7ac6-416b-a38b-e970cb2f5848
 projects:
   - '[[phases/rex-whichkey-04-menu-ui.md]]'
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -66,10 +67,14 @@ Use native product-task dependencies, not Phase1/final-RFC gates. Proposed IF-* 
 
 No tests or experiments are scheduled or authorized by this plan revision. Do not silently reinstate old TDD/live-Rex/final-matrix commands. Source review and documentation may describe implementation and residual risks, but cannot claim runtime verification. Preserve source and necessary current state; completed tasks/phases retain concise delivery summaries. Only actual delivered implementation counts as product progress; cancelled research does not count as successful delivery. Independent source review is required before delivery; no runtime verification is claimed. Follow the current execution and completion policy in projects/rex-whichkey.md.
 
+
+## Explicit producer/consumer delivery boundary
+This is the independently reviewable theme/terminal-palette producer, owning theme.go and its listed paths. Deliver usable palette query/reply decoding, metadata-to-theme interpretation, semantic styles and accessible ASCII decorations without undefined future symbols. Production invocation of these APIs belongs to downstream source owners, not token callers or out-of-scope theme edits: 04-04 routes ordered terminal input through PaletteDecoder before key handling, acquires palette metadata and applies it; 04-02 routes rendered text/decorations through semantic Style/Decoration; 04-05 composes the application. Producer completion is not a claim that those consumers are already integrated or runtime-verified. Phase4 completion requires their actual production wiring and independent source review. Preserve every accepted palette/focus/accessibility behavior; no execution probes or tests are authorized.
+
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjI5LjIyMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDQtMDMtdGhlbWUubWQiLCJpbnRlbnQiOiJmY2FjY2NlODVmMmI4NzU3OWVlMmE3NDc4ZGFmODJjZjM5NDIyNjQ3ZDNmNTM1MzFlNzI4NDQ4NzY0MDczMGU5In0 -->
-### 2026-10-31T11:25:29.221Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAwOjQ5OjMxLjk5NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNC10MDMtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiYmYzNGI2ZDBhYjJiOWMyMzhkMjRiMTU4Y2Y1MWRkYjNiMDYxMGY3NDNlZWQ0Mzc3NDYzMDA4NDZmNzQ1Yjg3NiJ9 -->
+### 2026-11-01T00:49:31.995Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-04-03-theme.md","kind":"historical","recordRef":"tasks/rex-whichkey-04-03-theme.md","specHash":"sha256:d0402a8c52f0deb56a9a44024379bd27088297c2e40e93d8620aa46510c70fef","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement foreground/background/palette resolution and contrast fallbacks, NO_COLOR and ASCII behavior according to the approved terminal contract.\n\n## Requirement criteria\nREQ-009\nReal colored output is tested: NO_COLOR emits no color SGR; ASCII avoids non-ASCII decorations; absent/malformed palette data falls back safely. Delayed OSC palette replies are terminal messages rather than Escape/cancel input.\n\n## Ownership\nAllowed source/test edits: theme.go, theme_test.go, testdata/theme. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: none beyond parent phase barriers. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN palette, fallback, contrast, NO_COLOR and ASCII fixtures; PTY OSC-response checks; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement terminal palette, fallbacks and accessible output","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p04-t03-reviewer-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p04-t03-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p04-t03-builder-a02/summary/2","files":["theme.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-04-03-theme.md","requirements":["REQ-009"],"schemaVersion":1,"specHash":"sha256:0930fff81840797161d2bd2d279314b1eb5621469a1843fe83c9b3b31cde017a","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"f71fd4710a283165ea5b5a091ad7104ff18124de","targetTree":"5fe9049f5d11a330efa7351e766bdbbe7321270d","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

@@ -19,13 +19,13 @@ title: 'Compile key sequences, groups and inherited scopes'
 mtnCreateRetry:
   key: rex-whichkey/draft-task/03-02-mapping-keys/1
   intent: 95e0eae9f536611a4c99352a126ef0e3555c0d7f2124caead5e05c09ce7a47ff
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:19.386Z'
-dateModified: '2026-10-31T19:58:27.563Z'
+dateModified: '2026-11-01T01:12:11.685Z'
 tags:
   - task
 type: task
@@ -37,6 +37,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -84,8 +85,8 @@ lua/rex_whichkey/mapping.lua compiles the user-facing Lua notation into the Go-o
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjE2Ljg0MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDMtMDItbWFwcGluZy1rZXlzLm1kIiwiaW50ZW50IjoiZjg2ZWVkMDdkYzgyOGIyMWEwMGEzZmNkZjVlNWFmZGFmMTIyMTc4YjFiNzEyODk3M2E5ODcxZWY2YTA0OWU4MCJ9 -->
-### 2026-10-31T11:25:16.842Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAxOjEyOjExLjY3NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDItYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiODVhZGE0NzhlMjZlZDY2Nzc2NzViZWYxN2M1OTljOGY2ZTE2ZGIxY2E1YjY4MGMzNDE4NWE1ZDMwNGMxNDM3MiJ9 -->
+### 2026-11-01T01:12:11.674Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-03-02-mapping-keys.md","kind":"historical","recordRef":"tasks/rex-whichkey-03-02-mapping-keys.md","specHash":"sha256:fad42bbe0f95b3f622121ca98ea472005aa04aac5a8779a92beec06baba57300","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nCompile full sequences, implicit groups and nested inherited attributes into the approved data-only mapping contract. Preserve behavior, not the old compiler architecture.\n\n## Requirement criteria\nREQ-004\nSupport arbitrary depth, named actions/args, labels/icons and <Space>/<lt>; reject duplicate action mappings, group/action conflicts and unsupported key notation with actionable errors.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/mapping.lua, tests/lua/mapping. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-03-01-lua-config.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN positive and negative baseline fixtures, including deeply nested scopes and conflicts; Lua harness and root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Compile key sequences, groups and inherited scopes","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t02-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t02-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p03-t02-builder-a01/summary/1","files":["lua/rex_whichkey/mapping.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-02-mapping-keys.md","requirements":["REQ-004"],"schemaVersion":1,"specHash":"sha256:ce55b445d2d930d8eca0d2b32cd57fca97a8034e6087cfedb70b45dec0fb3f6d","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"39ca52f3eace66a0a3a4df41b1fb6ac6d0efff3c","targetTree":"dd387e23de1f397a7dfe8a145085874fceef9659","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

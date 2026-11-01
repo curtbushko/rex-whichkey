@@ -21,13 +21,13 @@ title: Evaluate conditional and dynamic mapping metadata safely
 mtnCreateRetry:
   key: rex-whichkey/draft-task/03-03-dynamic-mappings/1
   intent: 5031bd3f7f72bc035a76bb5e95482332acf752755738f6405538ee8cc88f06ef
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:21.389Z'
-dateModified: '2026-10-31T19:58:28.468Z'
+dateModified: '2026-11-01T01:21:47.154Z'
 tags:
   - task
 type: task
@@ -39,6 +39,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -86,8 +87,8 @@ lua/rex_whichkey/evaluate.lua evaluates configuration functions in the originati
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjE5LjI5OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDMtMDMtZHluYW1pYy1tYXBwaW5ncy5tZCIsImludGVudCI6IjEwMmExM2UzYTM1MGEyOTc5MDYwNGQ4NmJkMjgzZmVhOWJjYzJjMDkyNDNmYjYzMmI2Y2JlYjc2NDE4N2E2MmIifQ -->
-### 2026-10-31T11:25:19.299Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAxOjIxOjQ3LjE0MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDMtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiZWY2NWQ4YTVhZDhjMjVkZWUzNWUwMmY5N2YxMTYwOTE3NGVkYzIwOGI0NTY1MThkNWUxMTdkNTVmYjc3ZWZjNyJ9 -->
+### 2026-11-01T01:21:47.142Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-03-03-dynamic-mappings.md","kind":"historical","recordRef":"tasks/rex-whichkey-03-03-dynamic-mappings.md","specHash":"sha256:a8fc90f36652a6cf376cece2a39eb042a370bbf25d24298be4816c45a401c369","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nEvaluate boolean/function conditions and string-valued description/group/icon functions at the approved lifecycle point; retain hidden-but-active entries and opaque executable callback identities.\n\n## Requirement criteria\nREQ-004, REQ-005, REQ-007\nHidden entries dispatch through keys without appearing in views; dynamic/conditional fixtures inherit attributes correctly. Callback functions never enter JSON. Stale conditions, callback references and evaluation errors follow the RFC, including confirmation flags.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/evaluate.lua, tests/lua/evaluate. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-03-02-mapping-keys.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN condition, hidden-entry, dynamic-label, callback-reference and evaluation-failure fixtures; real Rex callback metadata check; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Evaluate conditional and dynamic mapping metadata safely","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t03-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t03-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p03-t03-builder-a01/summary/1","files":["lua/rex_whichkey/evaluate.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-03-dynamic-mappings.md","requirements":["REQ-004","REQ-005","REQ-007"],"schemaVersion":1,"specHash":"sha256:cc1e5010665b1432299c5f8709d039cf697cd8a30f278abb06c09594c41b9fdc","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"44f22c10e22abc2c5d354ff7c74530a6985cffe1","targetTree":"bfd0b846865e7dca6617c2dcda53b6317aee5d76","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

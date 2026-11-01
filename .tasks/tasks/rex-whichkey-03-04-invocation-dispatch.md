@@ -22,13 +22,13 @@ title: Implement origin-aware invocation registry and dispatch
 mtnCreateRetry:
   key: rex-whichkey/draft-task/03-04-invocation-dispatch/1
   intent: 87ba5fc64c398c84e93f03101eaad0ca1c9f6c7bc7b23af9839a0d8b86a93c64
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:23.380Z'
-dateModified: '2026-10-31T19:58:29.374Z'
+dateModified: '2026-11-01T01:33:48.262Z'
 tags:
   - task
 type: task
@@ -40,6 +40,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -87,8 +88,8 @@ lua/rex_whichkey/dispatch.lua owns binding and checking the originating server/s
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjIxLjc2M1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDMtMDQtaW52b2NhdGlvbi1kaXNwYXRjaC5tZCIsImludGVudCI6IjBhMWI2YzFlMWY5NzkxZTE1NTFjMzdjYTEzYmYyYjQ2NTI5NWVkNDE3ZDc5M2Q5Mjk5YzIwZTgxMjIzZjI1YjQifQ -->
-### 2026-10-31T11:25:21.763Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAxOjMzOjQ4LjI0OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy10MDQtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiZTAzYzcxZjAzYWJlOWQ5YWI0ZWU2YTM0ZjRjMDg2N2RhZGNhNjNhZjQ5ODZmZTE0MzEzOWU2Y2E5YTJlYTNjNSJ9 -->
+### 2026-11-01T01:33:48.249Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-03-04-invocation-dispatch.md","kind":"historical","recordRef":"tasks/rex-whichkey-03-04-invocation-dispatch.md","specHash":"sha256:baa597540e2fe5f69e7acc9fbaa8200e6c311e49a49d74e5316fa9563654b86d","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement approved IF-DISPATCH registry and data-only selection validation; retain executable callbacks in the persistent Rex runtime and route named actions through the correct client/server mechanism.\n\n## Requirement criteria\nREQ-005, REQ-007, REQ-011, REQ-013\nTest overlapping invocations in reverse order, replay, invalid/expired capabilities, wrong origin/client, reload invalidation, missing/moved origins, confirmation, cancellation, stale conditions, callback failures and reentrancy. State is bounded. Focus origin before execution; never automatically retry a timed-out destructive action.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/dispatch.lua, tests/lua/dispatch. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-03-03-dynamic-mappings.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN registry fixtures and isolated-server callback/action round trips using production capabilities rather than fixture IDs; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement origin-aware invocation registry and dispatch","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p03-t04-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p03-t04-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p03-t04-builder-a01/summary/1","files":["lua/rex_whichkey/dispatch.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-03-04-invocation-dispatch.md","requirements":["REQ-005","REQ-007","REQ-011","REQ-013"],"schemaVersion":1,"specHash":"sha256:55c89a8a5f8acfd7db30fca2fcf69d0454b67507613eb5f10a1c5cd5e6ddce73","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"c3a0b28435d00e675876f7f846492ce4b480f6f9","targetTree":"e752514be4bc43b9a46588be859e866cc4244874","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

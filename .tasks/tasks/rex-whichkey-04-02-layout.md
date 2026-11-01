@@ -15,7 +15,9 @@ workflowOwnership:
     - render.go
     - render_test.go
     - testdata/render
-  sharedPaths: []
+  sharedPaths:
+    - go.mod
+    - go.sum
   resources: []
   interfaces:
     - menu-layout
@@ -23,13 +25,13 @@ title: Implement constrained Unicode-aware layout and paging
 mtnCreateRetry:
   key: rex-whichkey/draft-task/04-02-layout/1
   intent: 7268f8b6ef3d4ebd79893dee3b777c4a552bd616c12b2539e8133a51d35acd1d
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:27.393Z'
-dateModified: '2026-10-31T19:58:31.188Z'
+dateModified: '2026-11-01T01:29:51.297Z'
 tags:
   - task
 type: task
@@ -41,6 +43,9 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-04-03-theme.md]]'
+    reltype: FINISHTOSTART
+completedDate: '2026-10-31'
 ---
 # Product implementation task
 
@@ -78,10 +83,22 @@ No tests or experiments are scheduled or authorized by this plan revision. Do no
 
 Consume mapping.go and docs/mapping-format.md from tasks/rex-whichkey-03-05-mapping-format.md after its native producer prerequisite is delivered. These Go-owned files define the shared mapping/configuration standard; do not define or copy an independent Lua/Nix/consumer schema. Executable configuration and callbacks remain in the originating Rex Lua runtime. Follow the existing functional requirements; raise a consequential new public interface or dependency choice for user approval instead of silently selecting it.
 
+
+## Explicit producer/consumer delivery boundary
+Consume theme.go from 04-03 after its actual native producer prerequisite. Actual production rendering must route styled text and optional icons/ASCII fallback decorations through the theme's semantic Style/Decoration APIs, rather than merely documenting future use. Keep rendering/layout ownership here, not in the theme producer. Preserve existing Unicode, width, paging, plain-output and accessibility criteria; source review must verify real callers before this task and Phase4 complete.
+
+
+## Routine Unicode dependency authority
+Current user delegates routine implementation fixes within REQ-008. Shared go.mod/go.sum are reserved exclusively here while this task runs; terminal ownership is naturally serialized by its existing prerequisite. A pinned github.com/rivo/uniseg dependency may implement real grapheme segmentation/display widths after checking its versioned documentation/source, license and Go compatibility. Record actual pin/checksums and evidence, not an unverified selection. This does not authorize a Go–Lua dependency, new public product contract, tests/experiments or handwritten Unicode approximations. Ordinary dependency fetching is build preparation, not product execution.
+
+
+## Explicit frame producer and loop/composition consumers
+This is the frame-producing layout/rendering component. Its complete RenderMenu API must perform the accepted geometry, Unicode segmentation/width, theme Style/Decoration and paging behavior against the actual menu/theme inputs; no placeholders or token callers. The source owning the live render/input loop is 04-04 terminal.go, and 04-05 cmd/main.go composes that loop into the executable. They are downstream native consumers, not prerequisites of this producer. This task may complete after its usable implementation and independent source review, without falsely claiming those future consumers or graphical/runtime verification. Phase4 cannot complete without their real production callers.
+
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjI2Ljc0M1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDQtMDItbGF5b3V0Lm1kIiwiaW50ZW50IjoiOWE0OTBhNmM1ODU0M2RmNjVkMjA1ZGEyYTlhZDBhZDQyOTVhM2YxOTFiZTdkZWU2ZDYzMTQ2YjA1MTNmNjZmMSJ9 -->
-### 2026-10-31T11:25:26.743Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDAxOjI5OjUxLjI4NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNC10MDItYnVpbGRlci1hMDMvc3VtbWFyeS8zIiwiaW50ZW50IjoiZTc0MzU0ZWQwNzM2MjY2M2U3NDc4MzcxOTc0MTVhMTIxMWJiMjJjZThjODc1ZjQzZDY0OWRjYmIwMDVhZDgxNCJ9 -->
+### 2026-11-01T01:29:51.285Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-04-02-layout.md","kind":"historical","recordRef":"tasks/rex-whichkey-04-02-layout.md","specHash":"sha256:c4ce7a8a2e41e5ff71c79d6863db1485b82631fb98dfba5092092590d2622b38","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nRender menu state using the accepted terminal approach, adaptive columns and Unicode display/grapheme widths; compute stable paging with icons, breadcrumbs, help and footer.\n\n## Requirement criteria\nREQ-006, REQ-008\nCombining marks, wide characters and icons are preserved; no out-of-bounds cells for narrow/tiny/zero-resize transitions. All five positions have constrained layouts and stable Tab page navigation. Strict Unicode tests must assert product success, not merely record observations.\n\n## Ownership\nAllowed source/test edits: layout.go, layout_test.go, render.go, render_test.go, testdata/render. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-01-navigation.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN golden/property-style geometry fixtures and strict Unicode regression through actual renderer output; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement constrained Unicode-aware layout and paging","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p04-t02-reviewer-a03/review/3 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p04-t02-builder-a03/integration/integration.json"],"attempt":3,"eventId":"rex-whichkey-p04-t02-builder-a03/summary/3","files":["go.mod","go.sum","layout.go","render.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-04-02-layout.md","requirements":["REQ-006","REQ-008"],"schemaVersion":1,"specHash":"sha256:0daf24062f07dc13a93994ce177553cc48a27d79ccb6f10c64e7fc55ce73b0c2","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"43c62df85e946a05fed2458db7ad4eedd51399ed","targetTree":"7bdcac0637671cabc50878bc5d28a97b24689c4e","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
