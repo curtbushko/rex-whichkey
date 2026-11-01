@@ -312,11 +312,12 @@ or rewrite of historical evidence.
 Endpoint task 07-01 and launch task 07-02 have recorded independent mixed Go/Lua
 APPROVED source reviews and coordinator `go build ./...`/Git integration evidence
 at `d1164e7` and `69078fc`, respectively; see the [delivery inventory](acceptance.md)
-for exact identities and artifact refs. These are supplied prior results, not
-commands run by this documentation builder. The final documentation revision
-still needs independent source-consistency review, and the coordinator must run
-the existing `task build` on the final combined candidate and record actual
-integration/ancestry before Phase07 completion. No such final gate is claimed here.
+for exact identities and artifact refs. The six-file usage documentation received
+independent source-consistency review and was integrated at `1af28738`; the
+inventory also records coordinator Go compilation and Nix package builds of the
+delivered source. These are supplied revision-bound results, not commands run by
+this documentation builder or approval of later corrections. No unrecorded
+`task build` result or runtime acceptance is inferred.
 
 No project tests/TDD, example/product execution, new live identity queries,
 GUI/remote trials or configuration reloads were performed for this revision.

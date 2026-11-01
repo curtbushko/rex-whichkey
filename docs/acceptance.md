@@ -9,12 +9,15 @@ The original Phase06 inventory described baseline commit
 subsequently reviewed and integrated at `40c4f53` as recorded below. Those completed
 phase/task identities and historical limitations are preserved.
 
-The Phase07 documentation revision describes the integrated endpoint/launch
-baseline `69078fcee3dc0bbd9598e1b58e33920934e82497` (tree
-`82dc432f715295a3b82829be8be509e83aa0197a`), plus the six Markdown files owned by
-task 07-03. It does not approve its own review, complete task 07-03/Phase07 or
-establish functional acceptance. Final assembled-target compilation and Git
-integration remain coordinator gates.
+Phase07 endpoint/launch baseline `69078fcee3dc0bbd9598e1b58e33920934e82497`
+(tree `82dc432f715295a3b82829be8be509e83aa0197a`) and the six Markdown files
+owned by task 07-03 were independently reviewed and integrated at
+`1af28738a79fe20f2634c21a3405d8d1f5ff7bc2` (tree
+`a256fa6e761d1f5cf160b448829d332f7cded754`). Subsequent metadata checkpoints
+`a50ab6d8` and `673b2f28` record that delivery. Coordinator Go compilation and
+Nix package-build results are recorded below. These are revision-bound results,
+not approval of later edits or functional acceptance; this inventory cannot
+approve its own changes or complete a managed task/phase.
 
 Requirements come from `.tasks/prds/rex-whichkey.md`, with stable REQ-001–REQ-015.
 `.tasks/prds/rex-whichkey-usability.md` adds REQ-016/017 without renumbering or
@@ -34,18 +37,24 @@ checks. The duplicated-path planning proposal **REXWHICHKEY-20261101-100106** is
 coordinator's recorded lineage under delegated authority, not a new decision by
 this documentation task. Historical draft IF-* signatures are not adopted contracts.
 
-**Not executed under current delivery authority:** project tests, TDD, experiments,
-Nix package builds/checks, Home Manager evaluation/activation, graphical checks,
-live API probes, remote trials, disconnected-origin exercises and configuration
-reloads. No graphical-client or remote-test-server resource is reserved. No new
-acceptance runner or runtime verification is scheduled here. Existing test files
-and historical evidence are preserved, not converted into current passes.
+**Not delivery gates under the retained policy:** project tests, TDD, experiments,
+Nix package checks/install checks, Home Manager evaluation/activation, graphical
+checks, live API probes, remote trials, disconnected-origin exercises and
+configuration reloads. Go compilation and Nix package builds did run, as recorded
+below; they are not test or runtime passes. No new acceptance runner or runtime
+verification is scheduled here. Existing test files and historical evidence are
+preserved, not converted into current passes.
 
-The new documentation work uses source inspection and whitespace checks only;
-compilation is not authorized for its leaf builder. Earlier coordinator compilation
-is recorded separately below. Reading source/docs, compilation and independent
-source review do not establish runtime compatibility, installed configuration
-success, exact graphical geometry or end-to-end behavior.
+Historical exception: metadata commit `7d4cff8` inadvertently ran pre-commit
+build/lint/unit/race hooks. The coordinator disclosed those runs; they are not
+acceptance evidence for subsequent delivery. Later commits disabled hooks per
+invocation without changing hook definitions.
+
+Documentation leaves use source inspection and whitespace checks only;
+compilation is not authorized for this leaf builder. Supplied coordinator
+compilation is recorded separately below. Reading source/docs, compilation and
+independent source review do not establish runtime compatibility, installed
+configuration success, exact graphical geometry or end-to-end behavior.
 
 ## Requirement-to-source inventory
 
@@ -70,8 +79,8 @@ Phase07 startup/default-endpoint paths.
 | REQ-011 — origin/focus/cleanup | [`rex/block.go`](../rex/block.go)/[`layer.go`](../rex/layer.go), [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua), [`popup.go`](../popup.go), Lua launcher: captured server/session/block/client/connection generation, current placement lookup, origin focus and returned-owned-terminal cleanup. Reviews 02-03/03-04/04-05 and documentation 05-05. | Moved-block, reconnect, focus, error/dismissal cleanup and disconnected-origin behavior are runtime-unverified, not passes. No local/current-client fallback or broad cascading cleanup is intended. L2/L3/L4. |
 | REQ-012 — known hosts | [`rex/hosts.go`](../rex/hosts.go) decodes `rex hosts --json`; [`hosts.go`](../hosts.go)/[`terminal.go`](../terminal.go), [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) expand explicit known-hosts provider groups once per invocation. IDs, labels, home metadata and warnings remain distinct; generated rows are non-executable. Reviews 02-04/05-04. | No current discovery or reachability trial. A failed listing produces a warning, not successful empty inventory. Execution-host inventory differs from origin-server selection. L6. |
 | REQ-013 — remote compatibility | Captured targeting in [`rex/`](../rex), server-local loading/launch in Lua/config/popup paths, and [remote-compatibility.md](remote-compatibility.md). Reviews 02-01–02-04/03-01/03-04/04-05/05-05. | No remote deployment/trial. Helper/controller/child must share the Rex server host's executable and temporary filesystem; client-local installation does not install remotely. L1/L2/L3/L4/L6. |
-| REQ-014 — packaging/config ownership | [`flake.nix`](../flake.nix), [`nix/package.nix`](../nix/package.nix), [`nix/home-manager.nix`](../nix/home-manager.nix) package the executable/Lua and opt-in sibling links. User init/mapping files are not managed; links are non-forcing. Reviews 06-01/06-02. | No Nix package build/evaluation, Home Manager activation or existing-file byte-preservation trial. Declared four-system outputs are not certification. L7. |
-| REQ-015 — integrated delivery/docs | [README](../README.md), this inventory, [mapping standard](mapping-format.md), [remote compatibility](remote-compatibility.md), [configuration examples](../examples/README.md) and [Home Manager cases](../tests/packaging/home-manager/README.md) describe the delivered source and retained limits. Prior deliveries, including 06-03, have recorded reviews below; current 07-03 documentation still requires independent review. | No acceptance runner, final GUI matrix, remote/disconnected-origin test or inferred functional pass. Historical evidence is not current execution. L8. |
+| REQ-014 — packaging/config ownership | [`flake.nix`](../flake.nix), [`nix/package.nix`](../nix/package.nix), [`nix/home-manager.nix`](../nix/home-manager.nix) package the executable/Lua and opt-in sibling links. User init/mapping files are not managed; links are non-forcing. Reviews 06-01/06-02. | Recorded Nix package builds passed with checks/install checks disabled; no Home Manager evaluation/activation or existing-file byte-preservation trial. Declared four-system outputs are not certification. L7. |
+| REQ-015 — integrated delivery/docs | [README](../README.md), this inventory, [mapping standard](mapping-format.md), [remote compatibility](remote-compatibility.md), [configuration examples](../examples/README.md) and [Home Manager cases](../tests/packaging/home-manager/README.md) describe the delivered source and retained limits. Recorded reviews below include 06-03 and the 07-03 revision integrated at `1af28738`; approvals apply only to their frozen revisions. | No acceptance runner, final GUI matrix, remote/disconnected-origin test or inferred functional pass. Historical evidence is not current execution. L8. |
 
 ### Usability extension: REQ-016/017
 
@@ -80,7 +89,7 @@ Phase07 startup/default-endpoint paths.
 | REQ-016 — ordinary popup launch | [`cmd/main.go`](../cmd/main.go) routes no arguments/public flags to [`launch.go`](../launch.go) `LaunchPopup`; it captures terminal session/block, selects an exact or unique eligible attached client/generation, preflights placement and activates the installed named action once. [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) `menu.register_launch` uses the actual original-VM ctx, then the delivered defaults/evaluation/prepare/controller/terminal/completion route. Review 07-02; integrated `69078fc`. [Launch contract](launch-contract.md) traces the full path. | No installed no-argument run, popup display, Remote Control or callback exercise. Source reachability/compilation is not a runtime pass. Missing/stale/ambiguous origins fail; activation acceptance is not display success. L1–L5/L9. |
 | REQ-017 — native platform endpoints | [`rex/endpoint.go`](../rex/endpoint.go) owns explicit override > nonempty execution-host REX_SERVER > bounded no-autostart native Linux/macOS Rex identity discovery, capturing/validating a concrete endpoint. [`popup.go`](../popup.go) preparation and the public caller consume it; Lua permits `popup.new(defaults)` and forwards preparation's canonical server. Private controller handoffs never ambient-default. Review 07-01, later composition review 07-02; integrated `d1164e7`/`69078fc`. | No live default discovery, custom-server or Darwin runtime exercise. Exact native socket algorithms belong to Rex; no guessed path formula or platform certification. CLI identity shape requires compatible installed Rex; no autostart, scan or alternate-server retry. L1/L2/L4/L9. |
 
-### Phase07 intent, source traces and remaining gates
+### Phase07 intent and implemented source traces
 
 The accepted usability PRD/design define the intended product path; they are not
 implementation evidence by themselves. The following traces were inspected in
@@ -101,15 +110,13 @@ the actual integrated baseline:
    or `rex.client.queue`, with unchanged replay/expiry/generation/snapshot/
    confirmation safeguards.
 
-These are source-consistency observations, not a new independent review of this
-documentation. The supplied coordinator records below establish earlier producer
-review/compilation/integration only. Task 07-03 still needs fresh independent
-review of all six Markdown changes against the integrated Go/Lua path, followed
-by coordinator `task build` on the exact final combined candidate under its gate
-allocation, reviewed-diff/commit/tree/ancestry verification and actual main
-integration. The coordinator alone records phase delivery/completion. No final
-`task build`, integration of this revision or Phase07 completion is claimed here;
-no runtime gate or example execution is scheduled.
+These traces are source-consistency observations, not runtime results. The
+coordinator records below bind producer and documentation reviews to frozen
+revisions and actual integration/compilation evidence. Later documentation
+corrections require fresh independent review and coordinator integration; prior
+approvals do not cover them. The coordinator alone records phase
+delivery/completion. No runtime gate or example execution is scheduled, and no
+unsupplied `task build` result is inferred from the recorded Go/Nix commands.
 
 ## Recorded independent source-review outcomes
 
@@ -151,14 +158,15 @@ in each record's compact delivery summary.
 | [06-03 release documentation](../.tasks/tasks/rex-whichkey-06-03-release-acceptance.md) | `rex-whichkey-p06-t03-tasks-a01/review/1` | `40c4f53` |
 | [07-01 endpoint policy](../.tasks/tasks/rex-whichkey-07-01-endpoint-policy.md) | `rex-whichkey-p07-t01-reviewer-a02/review/2` | `d1164e7` |
 | [07-02 ordinary launch](../.tasks/tasks/rex-whichkey-07-02-direct-launch.md) | `rex-whichkey-p07-t02-reviewer-a01/review/1` | `69078fc` |
+| [07-03 usage documentation](../.tasks/tasks/rex-whichkey-07-03-usage-assembly.md) | `rex-whichkey-p07-t03-tasks-a01/review/1` | `1af28738` |
 
 The 02-03 summary explicitly records cleanup-race finding `P02-T03-R1` resolved
 before its approved second review; it retains refusal of unsafe remaining-layer
 removal. The later final approvals do not relabel earlier blocked attempts as
 successful. Endpoint task 07-01's earlier actionable-error finding
 `REXWK-P07-T01-R1` was resolved before its approved second review; the earlier
-blocked attempt is not relabeled a pass. The current 07-03 documentation candidate
-is outside this prior-review ledger and is not self-approved by inclusion here.
+blocked attempt is not relabeled a pass. The 07-03 row covers only its earlier
+frozen revision, not later corrections; inclusion here is not self-approval.
 
 ### Historical compilation versus current checks
 
@@ -166,10 +174,11 @@ The Phase 2 summaries record coordinator `go build ./rex` on their combined
 integration candidates. Later task summaries record coordinator
 `GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...` plus source/identity checks on
 combined candidates, including 06-03 and the two Phase07 producer records below.
-Those are **supplied earlier compilation records**, not commands rerun by this
-task. They do not compile Lua, evaluate Nix, exercise existing tests or prove that
-the packaged program starts correctly. No Nix package-build success is inferred
-from Go compilation or Nix source review.
+Those are **supplied earlier Go compilation records**, not commands rerun by
+this task. Go compilation does not compile Lua, evaluate Nix, exercise existing
+tests or prove that the packaged program starts correctly. Separately recorded
+Nix package builds below are actual build results, not inferences from Go
+compilation or Nix source review.
 
 For Phase07, the authoritative completed-task summaries and these coordinator
 integration events report `GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...` passed
@@ -180,17 +189,38 @@ and verified target identity/ancestry:
 | --- | --- | --- |
 | `rex-whichkey-p07-t01-builder-a02/integration/2` | `d1164e75028760421446a926421d50750ddade28` / `07f7faabe9248e41c94a6d9e05ede573301273cc` | `.mtn-tmp/usability/rex-whichkey-p07-t01-builder-a02/integration/integration.json` |
 | `rex-whichkey-p07-t02-builder-a01/integration/1` | `69078fcee3dc0bbd9598e1b58e33920934e82497` / `82dc432f715295a3b82829be8be509e83aa0197a` | `.mtn-tmp/usability/rex-whichkey-p07-t02-builder-a01/integration/integration.json` |
+| `rex-whichkey-p07-t03-builder-a01/integration/1` | `1af28738a79fe20f2634c21a3405d8d1f5ff7bc2` / `a256fa6e761d1f5cf160b448829d332f7cded754` | `.mtn-tmp/usability/rex-whichkey-p07-t03-builder-a01/integration/integration.json` |
 
 The corresponding fresh mixed Go/Lua review artifacts are
 `.mtn-tmp/usability/rex-whichkey-p07-t01-reviewer-a02/review.json` and
 `.mtn-tmp/usability/rex-whichkey-p07-t02-reviewer-a01/review.json`. They approve
 frozen worker trees matching the integrated trees above. These ignored transport
 files are coordinator-retained evidence, not installed package files; durable
-compact summaries remain in the linked authoritative task records. Neither
-producer record asserts a final Phase07 `task build` pass or runtime acceptance.
-The documentation leaf uses source inspection and whitespace checks only; its
-actual static results and exact revision are returned in its build payload,
-separate from these historical results.
+compact summaries remain in the linked authoritative task records. Documentation
+review `rex-whichkey-p07-t03-tasks-a01/review/1` approved frozen head `3189ebbf`
+with the same tree as integrated `1af28738`; its artifact is
+`.mtn-tmp/usability/rex-whichkey-p07-t03-tasks-a01/review.json`.
+
+The 06-01 package delivery at `908a3395` records a passing
+`nix build --no-link --no-write-lock-file --cores 16 --max-jobs 1 .#default`
+with project checks disabled. The later coordinator project summary
+`rex-whichkey-p03-coordinator-a01/project/summary/2`, anchored at metadata commit
+`a50ab6d86039d3d4a1fa674fc9289936a8ca1ccc` (tree
+`436fde5c9c5ccd08fddd5e08a0e6312d3cb2d416`), records these final delivered-source
+results:
+
+| Recorded command | Result | Retained log relative to parent checkout |
+| --- | --- | --- |
+| `GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...` | Passed | `.mtn-tmp/usability/project-final/go-build.log` |
+| `nix build --no-link --no-write-lock-file --cores 16 --max-jobs 1 .#default` | Passed; checks/install checks disabled | `.mtn-tmp/usability/project-final/nix-build.log` |
+
+The matching summary is retained in
+`.mtn-tmp/usability/project-final/summary.json` and the authoritative project
+record; metadata commit `673b2f28` checkpoints it. These supplied results do not
+claim a later documentation correction was reviewed or built, a `task build`
+command ran, or tests, Darwin builds, Home Manager activation or runtime trials
+passed. The documentation leaf's actual static results and exact revision are
+returned separately in its build payload.
 
 ### Preserved earlier experiments
 
@@ -265,9 +295,10 @@ delivery.
   require/setup wiring; users must account for that themselves.
 - **L8 — delivery is not acceptance:** recorded reviewed/integrated tasks,
   coordinator compilation and this inventory do not assert a working installed
-  release. This task still needs independent source review and coordinator
-  integration. There is no runtime acceptance pass, coverage claim or outstanding
-  instruction to execute a final matrix under the current stop policy.
+  release. Reviews and compilation apply to their recorded frozen revisions;
+  later edits require fresh evidence. There is no runtime acceptance pass,
+  coverage claim or outstanding instruction to execute a final matrix under the
+  current stop policy.
 - **L9 — ordinary launch/native defaults:** REQ-016/017 are implemented and the
   producer revisions have recorded review/compilation/integration, not live
   startup or platform verification. A reachable already-running default server,
@@ -278,9 +309,9 @@ delivery.
   Full captured session/block and an exact/unique eligible attached client with
   unchanged connection generation are mandatory; no focus/current-client/server
   substitution is authorized. No-argument activation may be accepted without
-  popup display, and uncertainty is not retried. Current documentation still
-  needs independent review and the coordinator's final assembled `task build`/
-  integration gate; skipped tests/runtime gates are not passing usability criteria.
+  popup display, and uncertainty is not retried. Recorded documentation review,
+  integration and Go/Nix compilation do not convert skipped tests/runtime gates
+  into passing usability criteria.
 
 ## Usage and published contracts
 

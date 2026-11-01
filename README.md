@@ -5,14 +5,14 @@ Go owns navigation and terminal rendering; a small server-side Lua integration
 loads your mappings and executes actions/callbacks in the originating Rex runtime.
 There is no daemon.
 
-**Delivery status:** implementation has recorded independent source reviews, not
-runtime acceptance. Project tests, package builds, graphical checks, remote trials
-and disconnected-origin behavior were **not executed under current authority**.
-See the [delivery inventory and limitations](docs/acceptance.md) for REQ-001–REQ-017,
-review/compilation records and historical evidence. The no-argument launch and
-endpoint sources have been reviewed and integrated; this documentation revision
-still needs independent review and final coordinator assembly. No minimum tested
-Rex build is claimed.
+**Delivery status:** implementation has recorded independent source reviews,
+Git integration, Go compilation and Nix package builds—not runtime acceptance.
+Project tests and graphical/remote trials were not delivery gates; installed
+startup, disconnected-origin behavior, Darwin runtime compatibility and Home
+Manager activation remain unverified. See the
+[delivery inventory and limitations](docs/acceptance.md) for REQ-001–REQ-017,
+revision-bound evidence and historical caveats. No minimum tested Rex build is
+claimed.
 
 ## Install on the Rex server host
 
