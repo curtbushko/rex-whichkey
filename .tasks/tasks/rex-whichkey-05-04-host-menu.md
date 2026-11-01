@@ -10,24 +10,34 @@ workflowDocuments:
     hash: 'sha256:7ea834417c1b09142a3f8f9877ae6fc34b4500d7a8841d7460edb74ed97553d1'
 workflowOwnership:
   paths:
+    - docs/mapping-format.md
     - hosts.go
     - hosts_test.go
+    - lua/rex_whichkey/defaults/hosts.lua
+    - lua/rex_whichkey/defaults/init.lua
+    - lua/rex_whichkey/evaluate.lua
+    - lua/rex_whichkey/mapping.lua
+    - mapping.go
+    - popup.go
+    - terminal.go
     - testdata/host-menu
   sharedPaths: []
   resources: []
   interfaces:
     - known-host-menu
+    - known-host-provider
+    - resolved-default-composition
 title: Present Rex-known hosts and inventory warnings
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-04-host-menu/1
   intent: eecf6aef9cb5c5b70d0734b67aecc7029d71e26772ff4447e5d59e6f5e891876
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:41.477Z'
-dateModified: '2026-10-31T19:58:35.750Z'
+dateModified: '2026-11-01T07:36:28.651Z'
 tags:
   - task
 type: task
@@ -41,6 +51,9 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-05-03-pane-actions.md]]'
+    reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product implementation task
 
@@ -78,10 +91,14 @@ No tests or experiments are scheduled or authorized by this plan revision. Do no
 
 Consume mapping.go and docs/mapping-format.md from tasks/rex-whichkey-03-05-mapping-format.md after its native producer prerequisite is delivered. These Go-owned files define the shared mapping/configuration standard; do not define or copy an independent Lua/Nix/consumer schema. Executable configuration and callbacks remain in the originating Rex Lua runtime. Follow the existing functional requirements; raise a consequential new public interface or dependency choice for user approval instead of silently selecting it.
 
+
+## Accepted delegated production composition — REXWHICHKEY-20261101-022635
+The previous pure formatter build is incomplete because it has no real UI caller. Literal ownership now includes the canonical Go field/docs, Lua forwarding adapters, actual terminal/popup caller, and defaults host/aggregation modules. Read .mtn-tmp/remaining-delivery/host-composition-guidance.md for the narrow chosen contract. Implement a single Go-owned provider=known-hosts marker and bounded real rex.Hosts acquisition/expansion before NewMenu; no marker (especially explicit empty/replaced spec) means no insertion/request. Validate collisions, keep every generated host row non-executable and all callbacks in the original VM. Add actual resolved-default aggregation of delivered session/tab/pane/app/host modules. Preserve endpoint binding/origin/expiry/privacy/owned-only cleanup. No independent Lua schema, generic framework, host attach/WOL/SSH or tests/experiments. This is approved under delegated technical authority, not another approval request. Mixed Go/Lua assembled source review is required.
+
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjQ0LjE0M1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDUtMDQtaG9zdC1tZW51Lm1kIiwiaW50ZW50IjoiYmEyNjAwM2QxODJkOGRhYTk4ZTI5MDI3ZmM4OGYwZDU4ZmQ4NTgwNTY4NDc4ZGIzZGRlMjg2MGIxNDQ4ZmRlYiJ9 -->
-### 2026-10-31T11:25:44.143Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjM2OjI4LjY0MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNS10MDQtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiYzBhZTYyMjgyYmE1NDY5NjYyYjg3MWE2ZDA0YjY4Njg2NmM5MDU0Mzc2ZDZlOWZjN2Q2Y2Q5Y2NiYjY0MjcxOCJ9 -->
+### 2026-11-01T07:36:28.640Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-05-04-host-menu.md","kind":"historical","recordRef":"tasks/rex-whichkey-05-04-host-menu.md","specHash":"sha256:6d6b283df5c98f24626b29317123b75be4baaa5d573d1a035bc7d17497510891","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nPresent the effective Rex inventory in the menu according to approved IF-HOSTS ownership, preserving labels/IDs and warnings without implementing remote attach/bootstrap.\n\n## Requirement criteria\nREQ-012, REQ-013\nEmpty, cached/held-home, warning and duplicate-label fixtures are intelligible and stable. No independent registry, proactive endpoint probes, host mutation, remote attach, WOL or SSH is introduced. Host selection behavior stays within the approved listing-only contract.\n\n## Ownership\nAllowed source/test edits: hosts.go, hosts_test.go, testdata/host-menu. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-02-04-host-inventory.md, tasks/rex-whichkey-04-05-popup-integration.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN menu fixtures and actual read-only Rex-known host display; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Present Rex-known hosts and inventory warnings","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p05-t04-reviewer-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p05-t04-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p05-t04-builder-a02/summary/2","files":["docs/mapping-format.md","hosts.go","lua/rex_whichkey/defaults/hosts.lua","lua/rex_whichkey/defaults/init.lua","lua/rex_whichkey/evaluate.lua","lua/rex_whichkey/mapping.lua","mapping.go","terminal.go"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-05-04-host-menu.md","requirements":["REQ-012","REQ-013"],"schemaVersion":1,"specHash":"sha256:005489f744ce0c3785fab4cf9d901e690599ce6501e83348bd92a362e2abd626","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"cfba4cfd3e9a4192d52bdaa0cb9c4449c645964d","targetTree":"a61ab07fd504a43f6f1bb0bab9af78f591d29153","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

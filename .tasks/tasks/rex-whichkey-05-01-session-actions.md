@@ -20,13 +20,13 @@ title: Implement session actions and delegated picker parity
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-01-session-actions/1
   intent: 95e42491c8cd1226409e06aa37f1fe7d32281d17c6429a44e475f203e91447a6
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:35.431Z'
-dateModified: '2026-10-31T19:58:33.007Z'
+dateModified: '2026-11-01T07:12:11.581Z'
 tags:
   - task
 type: task
@@ -38,6 +38,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product implementation task
 
@@ -81,8 +82,8 @@ Intended workflowLanguage: lua. Use the supported matching language/documentatio
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjM2LjY4NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDUtMDEtc2Vzc2lvbi1hY3Rpb25zLm1kIiwiaW50ZW50IjoiN2RhY2Y0ODU4MzVhN2FmMWU0YmQwNmJkZjAyMzEwZTk4MWViNGY5NzgxYjU2ZDMyZDU2MTkyNzU4MGQ1ODIwNiJ9 -->
-### 2026-10-31T11:25:36.684Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjEyOjExLjU3MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNS10MDEtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiMGZjMWQxNmIzNWNhMWZjMzZkMTA3MjY5YmEwYmFlOGNlNWM4ZDQzYWUxZjExOTVjZjRkNWRlMTBjNmVjMDA2MCJ9 -->
+### 2026-11-01T07:12:11.570Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-05-01-session-actions.md","kind":"historical","recordRef":"tasks/rex-whichkey-05-01-session-actions.md","specHash":"sha256:bd2379ebfe7e1de45609655e6548ba4d3aeda2b6b1352d6ce9d76c6730ab6492","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nAdd session new/switch/previous/next/rename/close mappings with correct app routing and confirmation/context behavior. Preserve the observed delegated Rex session picker rather than adding an unrequested enumerated submenu.\n\n## Requirement criteria\nREQ-010, REQ-011\nEach action matches approved current API/action arguments and old functional behavior; picker opens in the originating client and cancellation is safe. Destructive close requires confirmation. Mutate only disposable test sessions.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/defaults/sessions.lua, tests/integration/sessions. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-05-popup-integration.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nFailing-first mapping/argv fixtures and actual app session action/picker checks with focus and cleanup evidence; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement session actions and delegated picker parity","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p05-t01-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p05-t01-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p05-t01-builder-a01/summary/1","files":["lua/rex_whichkey/defaults/sessions.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-05-01-session-actions.md","requirements":["REQ-010","REQ-011"],"schemaVersion":1,"specHash":"sha256:6b6cbd9e0bdd99a96126c60ffd0ba6704db2553273ad6924e7f37664f3bcc9f1","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"647b29b91a05aaa1ccb6cdf3aa520e1c90f961b0","targetTree":"e3d2848eb5145df3331ce5167204ec0955432226","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

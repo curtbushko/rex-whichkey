@@ -21,13 +21,13 @@ title: Implement pane and application action mappings
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-03-pane-actions/1
   intent: f839c8e11280684c6dfa28c19820fe7bd9551a1ff6f19705edc92453e1741934
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:39.458Z'
-dateModified: '2026-10-31T19:58:34.850Z'
+dateModified: '2026-11-01T07:25:23.355Z'
 tags:
   - task
 type: task
@@ -39,6 +39,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product implementation task
 
@@ -82,8 +83,8 @@ Intended workflowLanguage: lua. Use the supported matching language/documentatio
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjQxLjY1NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDUtMDMtcGFuZS1hY3Rpb25zLm1kIiwiaW50ZW50IjoiNWIzZjRkMDhhYTJlYTQxNzM2Nzk4NTI1ZTZlOWQ5NjQ5NDZlYmQ0NmEyZmEwMDM1NjdlMTJkYTljODZmMWYyNiJ9 -->
-### 2026-10-31T11:25:41.654Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjI1OjIzLjM0NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNS10MDMtYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiYjY4MWU3MzQ3MzYwNDUxZjFhNDA5YjU5NTU5ZjQ2OWJmMDRiMDRlY2Y1NmVlZWU1ZTkxYTNiZDY5MGRlYzQ1ZSJ9 -->
+### 2026-11-01T07:25:23.344Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-05-03-pane-actions.md","kind":"historical","recordRef":"tasks/rex-whichkey-05-03-pane-actions.md","specHash":"sha256:0c48b1afe0c74452c1b08e1e4b5f44d3e2353ce364a34e889e0ddf5f091039a5","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement split, directional focus, zoom, sidebar, command palette and pane close with origin-aware action dispatch.\n\n## Requirement criteria\nREQ-010, REQ-011\nDo not confuse pane.split up/down action arguments with CLI above/below. Verify split/focus/window behavior and destructive close cancellation/confirmation in isolated app resources.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/defaults/panes.lua, lua/rex_whichkey/defaults/app.lua, tests/integration/panes. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-05-popup-integration.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN argument/default mapping tests plus real-app split/focus/zoom/sidebar/palette/close evidence; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement pane and application action mappings","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p05-t03-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p05-t03-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p05-t03-builder-a01/summary/1","files":["lua/rex_whichkey/defaults/app.lua","lua/rex_whichkey/defaults/panes.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-05-03-pane-actions.md","requirements":["REQ-010","REQ-011"],"schemaVersion":1,"specHash":"sha256:408a2a984b8ebc2d0920517f141a5c31186221e4f94fbb955466a459aa99fb41","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"7525b2c7ff0a135e50c7af593faaf37fd7f8082f","targetTree":"73bc5b9986b8d3fb178a254e58e5558384e305ec","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

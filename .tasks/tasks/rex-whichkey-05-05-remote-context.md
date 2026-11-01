@@ -20,13 +20,13 @@ title: Document remote-context implementation and limitations
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-05-remote-context/1
   intent: 8f0038b537789d88bcbdadbce533286b75c4345d06c3535ecd212a9bd9a483a3
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:43.485Z'
-dateModified: '2026-10-31T19:58:40.268Z'
+dateModified: '2026-11-01T07:51:14.461Z'
 tags:
   - task
 type: task
@@ -48,6 +48,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-04-invocation-dispatch.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product documentation task
 
@@ -90,8 +91,8 @@ Reference mapping.go and docs/mapping-format.md when describing shared data. Do 
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjQ2LjYyNVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDUtMDUtcmVtb3RlLWNvbnRleHQubWQiLCJpbnRlbnQiOiI0OTlkNmVjMTgxNjU0YjJjMzJjMTBkNTBjNzllZTA1MzFiZjNhYTM1YjNkMDA0ZTEzMGEyODk3NDI5MDJmY2QzIn0 -->
-### 2026-10-31T11:25:46.625Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjUxOjE0LjQ0OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNS10MDUtYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiMjhkZmVmOTIwYmY5NTljYTA2YmI0MzFiMmM2OWFiOWNkMzY5YjM4OTE4MDE0YmU0YmY2ZTE0ZWE3MDM2NmFkZCJ9 -->
+### 2026-11-01T07:51:14.449Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-05-05-remote-context.md","kind":"historical","recordRef":"tasks/rex-whichkey-05-05-remote-context.md","specHash":"sha256:b66ff7ea8f5cc13d5651fab2541fed3fa1f4b292da57cd27cb34ceb2a19e0af8","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nAdd a reproducible real remote-server acceptance harness for installed binary/module resolution, inline/imported configuration and popup-to-origin callback/action targeting. Own remote-specific fixes only in this scope; changes to other components require coordinator reassignment.\n\n## Requirement criteria\nREQ-003, REQ-005, REQ-011, REQ-013\nNo client-local absolute paths are needed; menu runtime/inventory ownership and original server/session/block/client IDs remain correct. Verify moved-block, dismissal and error cleanup remotely. Unavailable remote infrastructure is explicitly unmet, not a mock-only pass. Do not add attach/bootstrap workflows.\n\n## Ownership\nAllowed source/test edits: tests/integration/remote, docs/remote-compatibility.md. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-05-popup-integration.md, tasks/rex-whichkey-02-04-host-inventory.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nFailing-first remote-context fixtures plus real remote popup/callback/app-routing checks with version/ID evidence and owned-resource cleanup; root quality gates. Own phase-final parity/remote acceptance matrix. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Document remote-context implementation and limitations","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p05-t05-tasks-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p05-t05-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p05-t05-builder-a02/summary/2","files":["docs/remote-compatibility.md"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-05-05-remote-context.md","requirements":["REQ-003","REQ-005","REQ-011","REQ-013"],"schemaVersion":1,"specHash":"sha256:290e7d31b1345a3311d9148cb6c745bb8f193d2d32793080efd973a8a23ac167","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"cddf43711feeb2625be8f3ba5e719dde3bafab28","targetTree":"3f93623363683776bf507a2192558ba69aae4f54","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

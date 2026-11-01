@@ -20,13 +20,13 @@ title: Implement tab navigation and lifecycle mappings
 mtnCreateRetry:
   key: rex-whichkey/draft-task/05-02-tab-actions/1
   intent: 21cc59b6ed2729ec237e3e458ce76a7c1a8a9da970a37c9f1bee87e3a4de6e79
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T13:56:37.435Z'
-dateModified: '2026-10-31T19:58:33.933Z'
+dateModified: '2026-11-01T07:12:40.979Z'
 tags:
   - task
 type: task
@@ -38,6 +38,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-03-05-mapping-format.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-01'
 ---
 # Product implementation task
 
@@ -81,8 +82,8 @@ Intended workflowLanguage: lua. Use the supported matching language/documentatio
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTEwLTMxVDExOjI1OjM5LjE2NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3doaWNoa2V5LWZpcnN0L3ByZXNlcnZlL3Rhc2tzX19yZXgtd2hpY2hrZXktMDUtMDItdGFiLWFjdGlvbnMubWQiLCJpbnRlbnQiOiIwODU1N2YwZWQ2OTgzNGYyMTZiNzhlN2E4YmYzNzJhMWFiY2JjODY4Zjc5N2ZjZmI1ZTk1OWJmOWJlOTliZmY1In0 -->
-### 2026-10-31T11:25:39.165Z · historical · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAxVDA3OjEyOjQwLjk2OFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwNS10MDItYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiMWFiNDczYWY3YjQ2ZGMzOWYxMGNmYjI0NTgyMDNjYTE0N2IxZWE1NDBjYTMzNWQ3ZTE4NjAwZjY1MjgwNDYwNSJ9 -->
+### 2026-11-01T07:12:40.968Z · summary · unspecified
 
-{"schemaVersion":1,"eventId":"rex-whichkey/whichkey-first/preserve/tasks__rex-whichkey-05-02-tab-actions.md","kind":"historical","recordRef":"tasks/rex-whichkey-05-02-tab-actions.md","specHash":"sha256:8b775e9482d06dc339f2b25b2066858c0ff75c1b9e4eec861a55d76f156dea5f","attempt":1,"content":"# Draft task\n\nDRAFT ONLY: user approved creation of this decomposition, not final interfaces or implementation dispatch. Governing decision REXWHICHKEY-20261030-094737 is Accepted for draft creation. PRD evidence repair and fingerprint-bound design approval remain gates. Paths and contracts below are provisional planning reservations, not accepted public APIs; reassess them after the RFC and republish fingerprints before dispatch. Follow the accepted flat concrete Go architecture, not generic hexagonal defaults. Go workflow language denotes this Go project; Lua/Nix work also requires its specialist checks. Workers never edit .tasks; coordinator alone publishes design/approval evidence.\n\n## Deliverable and scope\nImplement tab new/previous/next/rename/goto/close, retaining the old numbered-tab behavior within the approved mapping model.\n\n## Requirement criteria\nREQ-010, REQ-011\nTab arguments are grounded in actual actions, numbering is tested, and dispatch targets the original app context. Close confirmation/cancel is verified without touching user tabs.\n\n## Ownership\nAllowed source/test edits: lua/rex_whichkey/defaults/tabs.lua, tests/integration/tabs. Paths are literal reservations; changes outside them require coordinator replanning. Shared dependency/flake files serialize; no lint/Taskfile weakening or architecture layering.\n\n## Inputs, outputs and prerequisites\nConsume the approved RFC and relevant frozen producer contracts. Output the behavior and tests above. Explicit task prerequisites: tasks/rex-whichkey-04-05-popup-integration.md. Check native parent-phase dependencies too; membership alone does not confer readiness.\n\n## TDD and verification\nRED/GREEN default mapping fixtures and real disposable-session tab lifecycle/navigation checks; root quality gates. Each code change includes its own failing-first tests, GREEN evidence and refactor checks; do not split tests into a separately completed task. Root Go gates are task build, task test (unit and race), task lint. Lua requires its isolated real-Rex/config fixtures; Nix requires package/module evaluation.\n\n## Integration and completion\nRequire independent Go-project combined specification/quality review plus relevant Lua/Nix expertise. Coordinator integrates reviewed results serially, runs affected checks on the combined target and publishes evidence. Final-phase gates belong to the parent milestone; unavailable GUI/remote infrastructure remains unmet. No implementation, dispatch, completion or interface adoption is authorized by this draft.","provenance":"Exact description before user-directed implementation-first replanning REXWHICHKEY-20261031-072107; previous evidence remains untouched.","gateEligible":false}
+{"acceptedScope":"Implement tab navigation and lifecycle mappings","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p05-t02-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/remaining-delivery/rex-whichkey-p05-t02-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p05-t02-builder-a01/summary/1","files":["lua/rex_whichkey/defaults/tabs.lua"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-05-02-tab-actions.md","requirements":["REQ-010","REQ-011"],"schemaVersion":1,"specHash":"sha256:6f9f9ea12cdaffdbeb80624f7112b60ae7cf299c41d053df832937f4562aff1b","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"c8c810f863fd38034aa8312bf6abc3b4b656fd04","targetTree":"30ae6228fe55bbfe4e07ccbe0348a3ae407ca73e","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
