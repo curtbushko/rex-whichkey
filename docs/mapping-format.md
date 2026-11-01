@@ -3,8 +3,9 @@
 `mapping.go`, in the root Go package `whichkey` (module `temp`), owns these data
 values and validation rules. This document explains that source, not a parallel
 Lua schema. It covers REQ-003/004/005/013 and the confirmation data used by REQ-007.
-No Lua interpreter, reflection mapper, dependency, launch transport or new public
-setup API is selected here.
+The post-return completion/cancellation data below implements accepted bridge
+REXWHICHKEY-20261031-220348. No Lua interpreter, reflection mapper, dependency,
+CLI invocation syntax or new public setup API is selected here.
 
 ## Configuration, defaults and replacement
 
@@ -177,12 +178,13 @@ reflection mapper or JSON encoding can reproduce its closure or runtime context.
 Only data-only evaluated values reach the menu.
 
 The dispatch owner must bind references and selected mappings to the particular
-invocation, originating server/client/session/block and current runtime/config
-lifetime. This file does not specify a wire envelope, launcher arguments, registry
-API or capability transport. Those are separate integration work, not invented
-fields on user mappings. Independent invocations must not overwrite each other's
-callback identity. Reload/replacement invalidates stale selections/references;
-dismissal, completion and errors release invocation-owned references and resources.
+invocation, originating server/client/session/block, client connection generation
+and current runtime/config lifetime. `Completion` below is the authoritative
+post-return wire data; launcher arguments, registration API and secure handoff
+plumbing belong to the composition owner, not user mapping fields. Independent
+invocations must not overwrite each other's callback identity. Reload/replacement
+invalidates stale selections/references; dismissal, completion and errors release
+invocation-owned references and resources.
 
 Dispatch resolves the selected record from the retained originating invocation,
 not from caller-supplied replacement code/action/args. Recheck conditions in Rex
@@ -195,6 +197,163 @@ executing a confirm-marked action; cancellation dispatches nothing. Restore orig
 focus before dispatch. Invoke Lua callbacks as `callback(ctx, args)` there, with
 origin context and retained args (or an empty object), never popup context. Do not
 automatically retry an uncertain destructive operation.
+
+## Canonical post-return bridge data
+
+`Completion`, `CompletionSelection`, their JSON tags and validation in `mapping.go`
+are the single shared standard for Go popup and server-Lua completion consumers.
+They are internal integration data, not additional configuration attributes. The
+original action may return after launch; a **fresh explicitly origin-targeted Rex
+configuration action in the same server Lua VM** authenticates completion and
+resolves the retained ticket. Do not require the original action's table identity
+or a suspended original action. Conversely, copying context fields into a Lua
+table does not change the ambient Rex action identity: composition must actually
+target the captured server/session/block/client when invoking that fresh action.
+Never route through the popup, a current-client default or a local-server fallback.
+
+The exact JSON field sets are:
+
+- Complete: required `version`, `capability`, `kind`, `selection`.
+  `version` is the integer `1`; `kind` is the string `"complete"`.
+- Cancel: required `version`, `capability`, `kind` only.
+  `version` is `1`; `kind` is `"cancel"`. `selection` must be absent, not null.
+- Selection: required string `keys` and boolean `confirmed`; optional string
+  `callback_ref`. `keys` must already equal `NormalizeKeys(keys)`, not merely
+  normalize to the selected sequence. `callback_ref` must be absent for a named
+  action and must exactly match the retained opaque reference for a callback.
+  An explicitly empty callback reference is invalid; omit it instead.
+  `confirmed` must be present even when false; no strings, numbers or nulls.
+
+Complete example (the all-zero capability is illustrative, never generate it):
+
+```json
+{"version":1,"capability":"0000000000000000000000000000000000000000000000000000000000000000","kind":"complete","selection":{"keys":"wn","confirmed":false}}
+```
+
+Cancellation has no selection or confirmation:
+
+```json
+{"version":1,"capability":"0000000000000000000000000000000000000000000000000000000000000000","kind":"cancel"}
+```
+
+No action, args, Lua source, origin identifiers, expiry, confirmation requirement
+or configuration/connection generation may be supplied as replacement authority
+in these messages. Unknown fields, case aliases, duplicate fields (including
+escaped equivalents), nulls, missing required fields, invalid UTF-8, unpaired
+UTF-16 surrogate escapes, wrong types, unsupported versions/kinds and trailing
+JSON values are invalid. Object field order, whitespace and valid JSON string
+escaping are immaterial. Supplementary Unicode characters encoded as valid
+surrogate pairs are supported. These are data encodings, never executable Lua.
+Lua must enforce the same rules on raw JSON before a permissive decoder could
+collapse duplicate fields or coerce nulls. Do not stringify unexpected values.
+
+For Go, use `json.Unmarshal(data, &completion)` on one complete input value;
+`Completion.UnmarshalJSON` enforces the boundary rules and leaves the receiver
+unchanged on failure. If using a streaming decoder, independently require EOF
+after its one message and bound transport input allocation. `json.Marshal` invokes
+`Completion.MarshalJSON`, which validates structure and emits only the fields
+above. Neither operation authenticates a caller. Direct Go struct construction
+also requires `Validate()` or `ValidateSelection(snapshot)` before use. Do not
+independently decode an untrusted selection into `CompletionSelection` and assume
+its zero values prove required-field presence.
+
+`Completion.ValidateSelection(snapshot)` checks the complete message against
+validated, retained evaluated mappings: the selected normalized sequence must
+identify an enabled actionable record, the callback reference must match exactly,
+and `confirmed` must equal the retained `Mapping.Confirm`. Thus a confirm-marked
+selection requires true and an ordinary action requires false. Hidden actions are
+eligible; groups, missing/disabled records, mismatched references and spurious
+confirmation are rejected. A structurally valid cancel needs no mapping and
+selects nothing. The popup builds selection identity from `Selection.Mapping()`
+and confirmation from `Selection.Confirmed()`, never copies that mapping's action
+or args into a completion. The Lua dispatcher performs these checks independently
+against its own snapshot and rechecks original condition guards before execution.
+A boolean is an authenticated popup assertion of y, not cryptographic evidence of
+a physical keypress or a way to change the retained confirmation requirement.
+
+### Capability and trusted retained state
+
+`NewInvocationCapability()` uses Go `crypto/rand` for 32 random bytes and encodes
+exactly 64 lowercase ASCII hex characters (256 bits). Abort invocation preparation
+on RNG failure; never substitute a counter, timestamp, callback reference, Lua
+`math.random`, empty token or other fallback. `ValidateInvocationCapability` checks
+only that canonical spelling, not entropy or authorization.
+`InvocationCapabilityMatches(presented, expected)` validates both spellings and
+uses a constant-time comparison. Its expected value must come from trusted state,
+not the incoming message. Do not case-fold or otherwise normalize capabilities.
+
+The composition owner must generate the capability with this Go helper during
+trusted invocation preparation, before exposing the popup, and associate it with
+the issuing Lua registry entry. The helper is Go source, not a claim that Lua can
+call it without process plumbing. The original Lua VM keeps the opaque ticket,
+callbacks, original args and guards. The popup receives the capability, data-only
+evaluated configuration and explicit origin routing data through a restricted
+handoff. Routing data tells Go where to send completion; it is not replacement
+authority for the registry's independently captured origin. No ticket, closure or
+VM identity is serialized. Callback references are identifiers, not secrets or
+standalone bearer authority. Keep capability-bearing handoffs/messages out of
+logs, terminal output, diagnostics, filenames and publicly readable files. The
+composition owner must restrict transport access and release temporary handoff
+resources on every exit path; this producer does not implement that transport.
+
+One live registry entry binds the capability to ALL of:
+
+- The exact originating server/runtime identity and session/block/client IDs.
+  Window placement is not identity: a block may move within its session.
+- The captured client **connection generation**, not just a reused client ID
+  (for the delivered Rex consumer this is the server-provided `connected_at`
+  connection value). Missing, lost, detached, ambiguous or changed connection
+  information fails closed; do not adopt the new generation on completion.
+- The installed configuration generation and retained invocation snapshot,
+  including callback references, original functions/args, condition guards and
+  confirmation requirements. Never rebuild a snapshot from current configuration
+  or trust an incoming mapping as the retained one.
+- Reservation time, expiry and single-use state. `InvocationLifetimeSeconds` is
+  30 elapsed wall-clock seconds, starting before evaluation/launch; completion,
+  redraws and validation never renew it. At `now >= expires` it is expired.
+  `MaxPendingInvocations` is 64 per installed registry, including reserved and
+  in-progress entries. Reject a new reservation at capacity, never evict another
+  invocation to make room. A backwards wall-clock jump invalidates the registry;
+  unavailable/invalid time fails closed. Lua may expire lazily on each registry
+  operation because its configuration runtime has no scheduled timer here.
+
+Neither the capability string nor Go's `Validate`/`ValidateSelection` enforces
+these bindings, elapsed time or replay protection. Those checks and resource
+ownership are the server-Lua registry/composition consumers' responsibility.
+Reserve entries before any yielding evaluation/launch work. On successful setup
+replacement/reload/teardown, invalidate the old generation, including pending and
+in-progress entries; failed candidate setup leaves the working generation intact.
+
+### Completion, cancellation and races
+
+For either kind, strictly decode first, look up the live capability and compare
+the fresh action's actual origin with the captured origin. Claim its open state
+**before** condition evaluation or any yielding call, then validate the current
+client connection/config generation and expiry. Reentrant, expired, cancelled,
+consumed, wrong-origin or stale-generation requests cannot execute. An
+unknown/malformed capability must not consume an unrelated entry.
+Once an authenticated entry is claimed, a later selection/check/API error still
+consumes it; never reopen or retry it. Completion and cancellation race for the
+same one-shot claim. Cancellation only releases the retained entry: no selected
+action, condition/callback execution or origin focus change.
+
+For completion, resolve identity and confirmation solely against the retained
+snapshot, recheck condition guards, inspect the originating session's current
+placement and exact client connection, then focus the stable origin block in that
+session. Execute only in the fresh action genuinely targeted at that origin,
+using retained action/args or `callback(ctx, args)` in the original Lua VM. Recheck
+expiry, generation, registry state and origin after every yielding boundary and
+immediately before side effects. If a configuration change invalidates a ticket
+while evaluation returns a new invocation handle, release that handle as well.
+Never fall back to another server/session/block/client or restart missing Lua
+state. Release references on all success, cancellation, expiry and failure paths.
+
+Rex calls are not an atomic inspect/focus/execute transaction; concurrent external
+moves/disconnections may race execution after the last check. Do not describe the
+bridge as an atomic transaction or a runtime-verified guarantee. Explicit targeting,
+connection binding, fail-closed guards and no retry remain required despite that
+API limitation. Transport/API invocation and registry integration belong to
+03-04/04-05; defining these Go values does not deliver those consumers.
 
 ## Ownership and verification limits
 
