@@ -14,6 +14,7 @@ local attributes = {
     hidden = true,
     confirm = true,
     args = true,
+    provider = true,
 }
 
 local function fail(path, message)
@@ -241,6 +242,11 @@ local function raw_attributes(entry, path)
                 if kind ~= "function" then
                     text(value, path .. "." .. key)
                 end
+            elseif key == "provider" then
+                text(value, path .. ".provider")
+                if value ~= "" and value ~= "known-hosts" then
+                    fail(path .. ".provider", "unknown mapping provider")
+                end
             elseif key == "cond" then
                 if kind ~= "boolean" and kind ~= "function" then
                     fail(path .. ".cond", "must be a boolean or function")
@@ -284,6 +290,19 @@ function M.compile(spec)
                     fail(path .. "[2]", "named action must not be blank")
                 end
             end
+            if own.provider ~= nil and own.provider ~= "" then
+                if
+                    node.target ~= nil
+                    or effective.group == nil
+                    or effective.args ~= nil
+                    or effective.confirm == true
+                then
+                    fail(
+                        path,
+                        "known-hosts provider requires a group without action, callback, args or confirm"
+                    )
+                end
+            end
             -- Dynamic values and conditions are resolved by the evaluator before
             -- active-key conflict checks; do not execute them during setup.
             if node.target ~= nil then
@@ -302,6 +321,9 @@ function M.compile(spec)
                 end
             end
         else
+            if own.provider ~= nil then
+                fail(path, "provider belongs to a mapping, not an inherited attribute scope")
+            end
             node.children = {}
             for i = 1, count do
                 node.children[i] = entry(rawget(value, i), path .. "[" .. i .. "]", effective)
@@ -335,13 +357,14 @@ function M.compile(spec)
                 target = node.target,
                 path = node.path,
                 group = effective.group,
+                provider = effective.provider,
             }
         end
     end
     for _, node in ipairs(template.children) do
         check(node, {}, true)
     end
-    local claims, prefixes, groups = {}, {}, {}
+    local claims, prefixes, groups, providers = {}, {}, {}, {}
     for _, node in ipairs(known) do
         local prefix = ""
         for i, token in ipairs(node.tokens) do
@@ -359,12 +382,21 @@ function M.compile(spec)
             end
             claims[node.keys] = node.path
         end
+        if node.provider ~= nil and node.provider ~= "" then
+            providers[node.keys] = node.path
+        end
         -- A dynamic group might resolve to absence; defer that case.
         if type(node.group) == "string" then
             groups[node.keys] = node.path
         end
     end
     for _, node in ipairs(known) do
+        if providers[node.keys] and prefixes[node.keys] then
+            fail(
+                node.path,
+                "provider " .. node.keys .. " reserves its subtree; explicit children are not allowed"
+            )
+        end
         if claims[node.keys] and (prefixes[node.keys] or groups[node.keys]) then
             fail(
                 node.path,
@@ -399,6 +431,7 @@ function M.coalesce(records)
                 or key == "icon"
                 or key == "action"
                 or key == "callback_ref"
+                or key == "provider"
             then
                 record[key] = text(value, path .. "." .. key)
             elseif key == "hidden" or key == "confirm" or key == "cond" then
@@ -422,6 +455,17 @@ function M.coalesce(records)
         end
         if record.action and record.action ~= "" and record.callback_ref and record.callback_ref ~= "" then
             fail(path, "action and callback_ref are mutually exclusive")
+        end
+        if record.provider ~= nil and record.provider ~= "" then
+            if record.provider ~= "known-hosts" then
+                fail(path, "unknown mapping provider")
+            end
+            if actionable or record.group == nil or record.args ~= nil or record.confirm == true then
+                fail(
+                    path,
+                    "known-hosts provider requires a group without action, callback_ref, args or confirm"
+                )
+            end
         end
         if actionable then
             if record.group ~= nil or not record.desc or not nonblank(record.desc) then
@@ -469,6 +513,19 @@ function M.coalesce(records)
     end
     -- Prefix conflicts are order independent, including implicit groups.
     for _, record in ipairs(result) do
+        if record.provider ~= nil and record.provider ~= "" then
+            if
+                targets[record.keys]
+                or record.group == nil
+                or record.args ~= nil
+                or record.confirm == true
+            then
+                fail(
+                    origins[record.keys],
+                    "coalesced known-hosts provider must remain a non-executable group"
+                )
+            end
+        end
         if targets[record.keys] and (record.group ~= nil or not record.desc or not nonblank(record.desc)) then
             fail(
                 origins[record.keys],
@@ -479,6 +536,12 @@ function M.coalesce(records)
         local prefix = ""
         for i = 1, #tokens - 1 do
             prefix = prefix .. literal(tokens[i])
+            if nodes[prefix].provider ~= nil and nodes[prefix].provider ~= "" then
+                fail(
+                    origins[record.keys],
+                    "provider " .. prefix .. " reserves its subtree; explicit children are not allowed"
+                )
+            end
             if targets[prefix] then
                 fail(targets[prefix], "action " .. prefix .. " is also a submenu prefix of " .. record.keys)
             end

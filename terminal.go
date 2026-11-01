@@ -42,16 +42,20 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	if err := ctx.Err(); err != nil {
 		return MenuEvent{}, err
 	}
-	if err := config.Validate(); err != nil {
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT,
+		syscall.SIGTERM, syscall.SIGPIPE, syscall.SIGTSTP)
+	defer stop()
+	// Both the direct menu and popup child enter here on the execution/server
+	// host. Resolve inventory once before menu construction or terminal mutation;
+	// generated groups cannot add or replace a retained executable selection.
+	config, err := resolveHostMenu(ctx, config)
+	if err != nil {
 		return MenuEvent{}, err
 	}
 	menu, err := NewMenu(config.Spec)
 	if err != nil {
 		return MenuEvent{}, err
 	}
-	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT,
-		syscall.SIGTERM, syscall.SIGPIPE, syscall.SIGTSTP)
-	defer stop()
 	resize := make(chan os.Signal, 1)
 	signal.Notify(resize, syscall.SIGWINCH, syscall.SIGCONT)
 	defer signal.Stop(resize)

@@ -84,7 +84,9 @@ function M.evaluate(template)
                 effective[key] = value
             end
         end
-        for _, key in ipairs({ "hidden", "confirm", "args" }) do
+        -- provider is the Go-owned data marker, never a target or callback.
+        -- The compiler permits it only on a mapping, not an inherited scope.
+        for _, key in ipairs({ "hidden", "confirm", "args", "provider" }) do
             if own[key] ~= nil then
                 effective[key] = own[key]
             end

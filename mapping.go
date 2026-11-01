@@ -60,6 +60,9 @@ type Mapping struct {
 	Args        json.RawMessage `json:"args,omitempty"`
 	Hidden      bool            `json:"hidden,omitempty"`
 	Confirm     bool            `json:"confirm,omitempty"`
+	// Provider is absent or "known-hosts": an inventory-only group expanded by
+	// the terminal owner before NewMenu, never an executable target.
+	Provider string `json:"provider,omitempty"`
 	// Cond is an evaluated boolean, never a function. Nil means absent/enabled.
 	// A Lua condition function returning nil is disabled: encode it as a pointer
 	// to false (or omit the disabled record), never as Cond == nil.
@@ -200,6 +203,7 @@ func NormalizeKeys(sequence string) (string, error) {
 func ValidateMappings(mappings []Mapping) error {
 	seen := make(map[string]bool)
 	actions := make(map[string]bool)
+	providers := make(map[string]bool)
 	prefixes := make(map[string]bool)
 	for i, mapping := range mappings {
 		keys, err := ParseKeys(mapping.Keys)
@@ -224,6 +228,9 @@ func ValidateMappings(mappings []Mapping) error {
 			return fmt.Errorf("whichkey: duplicate compiled mapping %q", canonical)
 		}
 		seen[canonical] = true
+		if mapping.Provider != "" {
+			providers[canonical] = true
+		}
 		if mapping.Action != "" || mapping.CallbackRef != "" {
 			actions[canonical] = true
 		}
@@ -240,6 +247,9 @@ func ValidateMappings(mappings []Mapping) error {
 		if actions[canonical] && prefixes[canonical] {
 			return fmt.Errorf("whichkey: mapping %q cannot be both an action and submenu", canonical)
 		}
+		if providers[canonical] && prefixes[canonical] {
+			return fmt.Errorf("whichkey: provider %q reserves its subtree; explicit children are not allowed", canonical)
+		}
 	}
 	return nil
 }
@@ -249,6 +259,14 @@ func (m Mapping) validate() error {
 		return errors.New("action and callback_ref are mutually exclusive")
 	}
 	actionable := m.Action != "" || m.CallbackRef != ""
+	if m.Provider != "" {
+		if m.Provider != "known-hosts" {
+			return errors.New("unknown mapping provider")
+		}
+		if actionable || m.Group == nil || len(m.Args) != 0 || m.Confirm {
+			return errors.New("known-hosts provider requires a group without action, callback_ref, args or confirm")
+		}
+	}
 	if (m.Action != "" && strings.TrimSpace(m.Action) == "") ||
 		(m.CallbackRef != "" && strings.TrimSpace(m.CallbackRef) == "") {
 		return errors.New("action and callback_ref must not be blank")

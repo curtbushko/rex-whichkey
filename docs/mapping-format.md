@@ -27,8 +27,11 @@ value types are errors, not silently ignored extensions.
 
 `DefaultConfig()` supplies display defaults: center position, title `Rex`, icon
 ``, breadcrumb `»` and group marker `+`. It intentionally does not define built-in
-actions. The built-in-action owner supplies the default spec before resolving user
-options; no fabricated action or undefined future Go symbol is required here.
+actions. `rex_whichkey.defaults` supplies the default spec before resolving user
+options, aggregating the delivered sessions, tabs, panes, application and known-hosts
+fragments in that order. It returns the required resolved baseline table using
+these Go-owned display defaults; no action runs or inventory is acquired on
+import. No fabricated action or undefined future Go symbol is required.
 
 `ResolveConfig(defaults, imported, inline)` implements fieldwise precedence:
 **defaults < imported values < inline values**. A present `spec` or `icons`
@@ -77,9 +80,10 @@ prefixes. A mapping's second positional value is absent, a nonblank named action
 string, or a Lua callback function. Other positional values, malformed/sparse
 lists, mixed child/mapping forms and unsupported attribute names are errors.
 
-Allowed attributes are `desc`, `group`, `icon`, `cond`, `hidden`, `confirm`, `args`.
-Each child inherits the nearest explicitly supplied value of each attribute;
-child values override that attribute only. In particular, `false` and `""` are
+Allowed attributes are `desc`, `group`, `icon`, `cond`, `hidden`, `confirm`, `args`
+and `provider`. `provider` belongs only to a mapping, never an attribute scope;
+it is not inherited. Each child inherits the nearest explicitly supplied value
+of every other attribute; child values override that attribute only. In particular, `false` and `""` are
 real overrides, not absence. `args` replaces the whole inherited argument table.
 The key sequence and action/callback are positional and never inherited.
 
@@ -121,6 +125,7 @@ of executable functions. Its JSON names come directly from `mapping.go`:
 | `group` | Optional resolved label; absent differs from explicit empty string. |
 | `action` | Nonblank Rex action name, or absent. |
 | `callback_ref` | Opaque Rex-runtime-owned callback reference, or absent. |
+| `provider` | Absent/empty, or exactly `known-hosts` on a non-executable explicit group; see below. |
 | `args` | Optional UTF-8 JSON object, never null/array/function. |
 | `hidden`, `confirm` | Booleans, default false. |
 | `cond` | Optional evaluated boolean; absent means true. A nil Lua function result becomes false, not absent. Never Lua source. |
@@ -168,6 +173,77 @@ and coalescing must not depend on Go executing Lua. Go struct methods do not
 validate unknown JSON fields or coercions performed by an external decoder;
 a boundary decoder must reject unknown fields and invalid field types, including
 null for required strings/booleans, rather than relying on Go zero values.
+
+## Known-hosts provider and resolved defaults
+
+`provider = "known-hosts"` is the one Go-owned provider value, not a generic
+plugin mechanism or an action. In raw Lua, for example:
+
+```lua
+{ "h", group = "Rex-known hosts (listing only)", provider = "known-hosts" }
+```
+
+The marker must declare a group (including an explicitly empty group label) and
+must not have an action, callback, args or true confirmation flag. Provider is a
+literal string, not a function. Unknown values/types fail closed; empty is the
+same as absence. An enabled marker reserves its entire subtree: any other enabled
+mapping below it is an error, even if hidden or an informational group. Multiple
+markers at disjoint prefixes share one inventory read. Disabled records still
+require valid structure, but neither acquire inventory nor claim active keys.
+Lua compilation/evaluation forward this canonical field and apply these rules;
+they do not define another schema or create executable provider callbacks.
+
+`RunTerminal` expands enabled markers before `NewMenu`, on both the direct menu
+path and the popup child path. Only an explicit marker triggers one bounded
+`rex.Hosts` call, with a three-second process timeout and the existing invocation
+context/deadline; redraws do not refresh it. No marker means no inventory request
+or inserted records, including an explicit empty or replaced user spec. The
+provider replaces only each marker in source order, preserving its group label,
+description, icon and visibility. Hidden is display-only: a hidden marker still
+acquires inventory and opens its details when its key is typed; its generated
+rows are informational groups, not inherited hidden bindings. The assembled
+records are validated again; collisions are errors, never silent overwrites.
+
+Inventory belongs to the execution host and its Rex-configured home, not to the
+graphical client or to the origin endpoint selected with `--server`. Rex owns the
+effective inventory merge, cached-home status, held changes and label resolution.
+The menu preserves IDs separately from labels, structured warnings and opaque
+home metadata, sorting host rows by ID (then owner) for stable duplicate-label
+presentation. Empty inventory and warning lists are explicit. Endpoints are data,
+not reachability results. No separate registry, endpoint probes, retargeting,
+host mutation, attach, WOL or SSH behavior is added. The existing Rex inventory
+command may itself contact home and forward previously held changes; the menu
+does not implement or retry that behavior.
+
+A failed, timed-out or invalid listing produces a persistent warning group, not
+a successful empty inventory or a reachability claim. Raw CLI diagnostics are
+not displayed. Invocation cancellation/expiry still aborts the menu. Every
+generated row is non-executable and cannot produce a selection or bridge action.
+The popup controller continues to validate selections against the original
+retained mapping snapshot, and callbacks remain in the originating Lua VM.
+Existing endpoint binding, origin checks, privacy, expiry and owned-only cleanup
+are unchanged.
+
+Opt-in initialization in the **user-owned** Rex configuration can consume the
+resolved composer; substitute that server's fixed configured endpoint, never
+convert opaque `ctx.server` into an address:
+
+```lua
+local popup = require("rex_whichkey")
+local defaults = require("rex_whichkey.defaults")
+popup.register_completion("whichkey_complete")
+local menu = popup.new(defaults, "unix:///absolute/server/socket")
+menu.setup() -- or menu.setup(inline_options, optional_user_module_name)
+rex.action{
+  name = "whichkey", title = "Which key",
+  run = function(ctx) menu.launch(ctx) end,
+}
+```
+
+This is an opt-in fragment, not an installed/reloaded user `init.lua`. Imported
+and inline `spec` overrides still replace the whole default spec. No defaults
+are silently reinserted after setup; retaining the listing in a custom spec
+requires retaining an explicit provider marker.
 
 ## Callback ownership, lifetime and dispatch
 
@@ -359,8 +435,10 @@ API limitation. Transport/API invocation and registry integration belong to
 
 The consumers are the Lua config/compiler/evaluator/dispatcher, Go menu/popup and
 built-in/default-menu code. They reference `mapping.go` and this document instead
-of maintaining separate schemas. At this producer revision only these two files
-are delivered; a documented consumer responsibility is not a claim that its
-implementation or transport already exists. No tests, compilation, runtime Rex,
-remote, reload or graphical experiments were run under current project authority.
-Source formatting and diff checks do not establish runtime compatibility.
+of maintaining separate schemas. The provider composition described above is
+implemented in `hosts.go`, `terminal.go` and the Lua mapping/evaluation/defaults
+consumers. Other consumer
+responsibilities remain with their respective owners; documenting them is not
+runtime verification. No tests, compilation, runtime Rex, remote, reload or
+graphical experiments were run for this provider revision under current project
+authority. Source formatting and diff checks do not establish runtime compatibility.
