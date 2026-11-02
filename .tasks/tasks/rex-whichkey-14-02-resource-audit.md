@@ -20,13 +20,13 @@ title: Verify resource actions and document matrix
 mtnCreateRetry:
   key: rex-whichkey-phase14-task2-v1
   intent: 09ff9cce860438cc474f709a2134cfe2836b2dbfd36a2c810aedbf7e2c33a891
-status: done
+status: open
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:04.253Z'
-dateModified: '2026-11-02T21:01:57.838Z'
+dateModified: '2026-11-02T22:40:55.184Z'
 tags:
   - task
 type: task
@@ -38,15 +38,18 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-14-04-selected-window-splits.md]]'
     reltype: FINISHTOSTART
-completedDate: '2026-11-02'
+  - uid: '[[tasks/rex-whichkey-14-06-client-perform.md]]'
+    reltype: FINISHTOSTART
 ---
-# Audit every native default honestly and document observed effects
+# Refresh complete 25-row action audit with API-driven evidence
 
-REQ030, depends on completed late-targeting repair and later selected-window split correction. User explicitly requests verification of all25. Actual evidence disproved original planning assumption that shared server active_window_id certifies selected-app tab navigation. It does not (tab-navigation-before/after/probe.json); current app tab state is client-local/unobservable through installed API. Later selected-window design and observability-correction.md refine earlier18/7 partition without waiving any verification.
+Same REQ030 documentation scope, revision after new real API evidence and native numbered/NewTab repairs. Reopen preserves prior reviewed baseline/history, no all25 requirement waiver. Depends on completed Task14-06 (including mandatory actual7 resource effects) and existing Task14-05. Source ownership docs/actions.md ONLY. Document source baseline exact commits/hashes and every binding's actual evidence/status, not broad lack-screenshot blocker.
 
-Coordinator native resource-runtime/frozen-a01 verified effects for six bindings v s x tx wn wx; tn exited0 but no new server window/session was observed, so UNVERIFIED rather than passing or conclusively broken. Native selected-window s/v must be rerun after newest explicit user correction; original launcher-only split evidence is historical, not desired selected-window proof. Other19 bindings tn th tl tr t1..t9 ws wh wl wr e c require native app observation; registration/RPC receipts do not count as behavioral pass.
+Expected evidence sources (read actual results; do NOT assume pass): original6 resource checks; new Source6 candidate all7 v/s/tn/x/tx/wn/wx; Source5 actual all9 fresh-hidden target t1..t9 and final-main refreshed gate; actual th previous and tl INTERIOR next (not assumed boundary wrap), wl/wh fresh adjacent owned-session Work report; e actual124x86->158x84->124x86. Derive verified binding count from actual data and source identity, target21 if all final gates pass, not automaticpass. Original bogus constant-row/sidebar and wrap assumptions retained as failed assessments. Numeric native opaque requests acknowledged but no expected target; exact ID adapter proved fresh rendering. Native transport-only a01 FAILED NewTab despiteexplicitRPC, retained; final NativeNewTab adapter creates exactlyone parent-owned captured-session defaultwindow then exact ID activation. No retry/rollback; activationfailure retains createdtabID. Explain parent-owned intent compilation, not fake originalnativeverb execution.
 
-Builder documents coordinator's frozen final-source evidence in docs/actions.md: all25 binding/action/args/contracts on both live apps, expected result, actual source revision/observations/status/evidence, strict distinction verified effect versus acknowledged/unobserved/pending. Source audit confirms matrix matches native defaults/Lua defaults and directions correct. No fake full all-action/phase/project completion; GUI-only task remains blocked separately and native chrome remains blocked. No live trials/build/tests/compiler-heavy checks by leaves; coordinator only disposable IDs, never user/worker/coordinator resources or settings/fonts/config. Full frozen independent review/combined compilation for documentation completion, no remote GUI certificate.
+Current still unresolved native interactions ws(session picker),wr(sessionrename),tr(tabrename),c(palette) unless new genuine evidence supports strongerstatus. Palette direct+menu toggles acknowledged and focus traces observed, but popup focus transitions/multipleclient reports do NOT identify exact native paletteopen/close state. RenameUI text test failed labels unchanged and audit/ESC bytes went to owned terminalreader; pane.send_key is terminal input not modalcontroller. Nevercall thosepassed or GUI screenshotsrequiredforall actions. UserexplicitlyaskscontinueAPIverification:four individualoutcomes unresolved, no blanket19 observerblocker. Task14-03 stays required/inprogress until all25 actuallyverified. NewTab originaltnzeroeffect and task6a01failure historicalnotpass. Current/Historicalappregistry captures scopes explicit; no unrecorded cross-app/platformcertificate.
+
+No leaf builds/tests/TDD/general/unit/race/RPC/nativeUI/clipboard/fonts/config/settings/remoteOS trials, managed mutations or agents. Independent source/manual-spec/whitespace review + coor combined compile required before doccompletion. Full protocol-v1 build exacttask/spec/attempt2/base/head/tree/dispatchEventId/outcome ready-for-review; validation actualpassARRAY, limitations skippedgates. Commit docs/actions.md only hooksdisabled; copyFULLtoMTN_REX_RESULT_FILE, finalpointer. Whole phase/project incomplete, independent chromeREQ026 unresolved.
 
 <!-- mtn:evidence:v1 -->
 

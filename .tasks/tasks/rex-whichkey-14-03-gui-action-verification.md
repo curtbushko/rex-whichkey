@@ -16,7 +16,7 @@ workflowOwnership:
   resources: []
   interfaces:
     - native-action-audit-3
-title: Verify seven native GUI-only action outcomes
+title: Verify remaining native UI interactions
 mtnCreateRetry:
   key: rex-whichkey-phase14-task3-v1
   intent: 3b03b5f0d4d2b1e22b21b2a2334d54f215d29bb407ce36a6c17911328047b56e
@@ -26,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:08.762Z'
-dateModified: '2026-11-02T21:26:22.303Z'
+dateModified: '2026-11-02T22:40:54.264Z'
 tags:
   - task
 type: task
@@ -37,11 +37,13 @@ blockedBy:
   - uid: '[[tasks/rex-whichkey-14-02-resource-audit.md]]'
     reltype: FINISHTOSTART
 ---
-# Verify nineteen native GUI-local action outcomes
+# Finish remaining native UI interaction verification
 
-REQ030 remains incomplete until all25 verified. After real resource probes, six resource effects can be observed (v/s/x/tx/wn/wx);19 remaining bindings need genuine GUI observability: tn, th/tl/tr/t1..t9, ws/wh/wl/wr, e/c. This corrects unverified initial18-resource/7-UI planning assumption, not scope waiver. Evidence .mtn-tmp/action-audit/observability-correction.md: client.tab.goto null result leaves server active_window_id unchanged; server field is not chosen app's selected tab. Native tn exited0 but no server window or session appeared; may be native UI/client-local tab, not certified working or conclusively broken.
+REQ030 all25 still required. Latest API-driven research corrects blanket observer/screenshot blocker: native app reporting fresh target geometry, ordered resources and focus/input controls can verify functional behavior. Source5 explicit-ID numbered intent and Source6 newtab/resource transport repairs are separate reviewed code scopes; Task14-02 refreshed 25-row matrix documents actual evidence. Derive actual verified count from final-source gates, anticipated21 but no assumedpass.
 
-Need actual selected tab/session, sidebar/palette, picker/rename modal and completed rename/new-tab behavior. client.inspect exposes metadata/actions/attached IDs only; terminal send-key drives block PTY, not native app dialogs. Investigate documented capability before pass. If none, BLOCKED recovery approved genuine GUI observation/control or explicit observed user evidence, not invented screenshot/action/args, not stale server focus/palette state or RPC acknowledgment. Do not open unclosable prompts or pretend user deferred requirement. No general tests/settings/font/config/reload/remote/Darwin trials, no destructive user resources. Depends on resource documentation; reserved ownership docs/gui-action-verification.md for future real evidence. Preserve independent native chrome blocker. Source repair can complete while this and entire phase/project stay incomplete.
+Outstanding interactions requiring genuine evidence: ws native session picker, wr native session rename including successful own-session rename, tr native tab rename including own-tab rename, c native paletteopen/close. Source-only, registration, performed_by acknowledgments, unrelated popupFocus transitions or unlabelled multi-app focus bytes are insufficient. Existing palette direct+menu toggles/focus traces are evidence of invocation but not yet exact UI state. Existing rename attempt typed audit/ESC into terminal logger, did NOT change label; pane.send_key documented terminalinput, NOT modal keystrokeAPI. No invented textargs/getters/screenshot/actions, no clipboard/debug export/userinit/client-script takeover, nativeOS or remoteMac trials/config/fonts/reloads without new explicit authority. All experiments confined to exact own resources; never blind input/split probes when native context could leave fixtures. Investigate documented API path; if genuinely absent record specific four-case capability gap/recovery, not blanket19 cannotbeverified or requirementwaiver.
+
+Depends on refreshed resource/audit document Task14-02. Reserved source ownership docs/gui-action-verification.md only for future final interaction proof; coor owns actual bounded experiments, leaves no builds/tests/nativeactions. Do not complete task/all25/phase/project while any bindingoutcome unresolved. Independent chromeREQ026 remains blocked separately. Existing accepted scope/history preserved and explicit latercorrections take precedence.
 
 <!-- mtn:evidence:v1 -->
 
