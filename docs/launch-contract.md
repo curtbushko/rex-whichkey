@@ -218,8 +218,8 @@ seconds and deferred cleanup to five. These operation limits are not native user
 idle limits. Removing the Focus group does not remove exact origin-focus safety.
 
 The shared lifecycle creates 0700 invocation-owned directories and exclusive
-0600 config/result files, the native-only lifetime pipe, and private preferred-row
-hint files described below. The child returns
+0600 config/result files and the native-only lifetime pipe. There are no
+preferred-row hint files or geometry IPC. The child returns
 only keys, optional opaque callback identity and explicit confirmation (or null
 dismissal). The strict canonical
 completion decoder rejects replacement action/args and checks confirmation and
@@ -229,8 +229,8 @@ the parent; transport/config/result paths contain no action credentials.
 
 After successful child exit (which follows terminal restoration), the controller
 closes only its returned owned terminal, confirms its layer vanished, restores
-exact origin focus and removes private config/result files, `size.json`/`size.tmp`,
-the native lifetime pipe when present and their empty directory **before**
+exact origin focus and removes private config/result files, the native lifetime
+pipe when present and their empty directory **before**
 selected dispatch or any native app lookup. The parent's lifetime-pipe writer is closed in that cleanup
 path too; close failure prevents dispatch. Native owned close inspects the exact
 returned terminal in the captured session and can clean it even if the origin
@@ -284,10 +284,12 @@ A usable origin measurement requires the existing `TerminalSize` current-owner,
 matching applied/desired rows/columns and timestamp provenance. Dividing the
 origin rectangle by those cells estimates normalized units per cell. Estimated
 popup columns reserve two cells for native horizontal insets; natural rows are
-capped to estimated available rows, reserving two inset cells and half a row of
-rounding vertically. Height is those rows plus that cell-level headroom, clamped
-to the position maximum. Origins and new panes can have different fonts/chrome;
-this is not a pixel-accurate claim. Optional valid paired cell pixels are startup
+capped to estimated available rows, reserving four inset cells and half a row of
+rounding vertically. The extra two vertical cells conservatively protect root
+spacers when the new pane differs, without a later correction. Height is those
+rows plus that cell-level headroom, clamped to the position maximum. Origins and
+new panes can have different fonts/chrome; this is not a pixel-accurate claim.
+Optional valid paired cell pixels are startup
 metadata, not a font preference or a new viewer measurement.
 
 For unavailable/unmeasured geometry, a hypothetical 100×40 window-cell grid and
@@ -305,76 +307,50 @@ A move after final inspection can still race; no atomic placement transaction is
 claimed. There is no hidden/offscreen layer, delayed show/recreate, cross-launch
 calibration, app lookup, font/settings edit or new mapping schema.
 
-## Private preferred-row hints and owned layer sizing
+## Fixed navigation bounds and liveness
 
-Both native and configured popup children use `runTerminal`'s private observer
-after real `RenderMenu` output. Standalone `RunTerminal` has no observer and keeps
-its public API. [`popup_size.go`](../popup_size.go) publishes one data-only object
-with `preferred_rows` from `MenuFrame.PreferredHeight`, plus the child's actual
-`columns` and `rows`. Natural height includes all current-width entries, both
-status borders and both ideal spacers independently of current viewport
-clipping/page. Publication is on change, including redraws for
-navigation/confirmation/resize, not an idle repaint loop. Invalid/zero-size transitions retain the last usable hint.
+REQ-029 retains the one precomputed initial rectangle for the invocation. Neither
+native nor configured popup navigation, paging, back, focus or idle changes layer
+bounds. Larger menus use `RenderMenu`'s existing pagination in current cells, not
+an all-submenu maximum. This supersedes the navigation-driven grow/shrink portion
+of REQ-025, not initial geometry/seed or status/content spacers.
 
-Hints live only inside the existing invocation-owned 0700 directory. The child
-exclusively creates 0600 `size.tmp` with no-follow semantics, then atomically
-renames it to `size.json`. The parent accepts at most 512 bytes, rejects nonregular,
-wrong-owner/mode, oversized, hard-linked, malformed/duplicate/unknown-field data,
-and bounds preferred rows to 1…1,048,576 and dimensions to 1…65,535. No-follow,
-nonblocking reads prevent substituted symlinks/FIFOs from redirecting/blocking
-this channel. Hints carry no credentials and can influence only clamped geometry,
-never configuration, actions/args, selection, identity, capability or expiry.
-Cleanup unlinks exactly `config.json`, `result.json`, `lifetime`, `size.json` and
-`size.tmp` through the private root, then removes the empty directory. It does not
+Both popup routes call public `RunTerminal` with a local top-positioned config:
+the layer already carries the requested placement, so content starts at row zero
+instead of being centered twice. Standalone callers retain their positioning and
+API. SIGWINCH and focus-in still redraw retained menu/page/confirmation normally.
+An external native window/font change can naturally alter terminal cells; content
+adapts without calling `Layer.Resize` or publishing geometry. There is no private
+terminal observer, preferred-row publisher, size-hint file or parent sizer.
+Retired `popup_size.go` is preserved locally in ignored `.trash`, not compiled.
+Generic public Rex bounds/resize/terminal geometry APIs remain available; popup
+production uses origin geometry only before creation. A terminal startup seed
+never acquires viewer-measurement provenance.
+
+The existing one-second watcher now checks only captured resource liveness and,
+for configured mode, the captured app generation. Each check is bounded by three
+seconds and joined before cleanup; it does not sample popup geometry or mutate
+bounds. Native display remains app-independent, parent/FIFO-bound and free of an
+idle deadline. Configured original-VM binding and authenticated 30-second expiry/
+five-second teardown reserve remain unchanged.
+
+Cleanup unlinks exactly `config.json`, `result.json` and native `lifetime` when
+present through the private root, then removes the empty directory. It does not
 follow child symlinks, recursively delete unexpected contents or scavenge by label.
-File/cleanup failure prevents selected dispatch.
+File/cleanup failure prevents selected dispatch. Strict retained selection,
+confirmation, exact targeting and cleanup-before-action remain unchanged; no
+mapping schema, public flag, daemon or renewed authority is added.
 
-The parent alone calls `Layer.Resize` -> `session.resize_layer`, rechecking the
-captured layer is floating and contains exactly its returned terminal in the
-captured session. Current `Layer.Bounds` and that block's `TerminalSize` supply
-normalized bounds/applied dimensions; no graphical-app registry lookup, ownership
-claim, postcreation terminal-size mutation, settings/font change or focus mutation
-is added. The initial size seed above is not a viewer report.
-A measurement requires exactly one current owner's desired report matching
-positive applied rows/columns, with a valid timestamp. Missing provenance
-(including headless seeded dimensions) pauses fitting without canceling native
-display; zero/disagreeing child/server dimensions wait for usable measurements.
-Optional cell pixels detect geometry changes, but measured rows suffice without
-them. Terminal ownership here is measurement provenance, **not** native action
-client selection or configured authorization.
+Historical measured growth/shrinkage is not fixed-navigation evidence. Fresh
+frozen review, coordinator compilation and exact first/root/submenu/paging/back/
+idle bounds, status spacers and Escape exit0/owned cleanup are required for
+REQ-029. Leaves perform source/format/whitespace checks only.
 
-The existing one-second liveness watcher shares its three-second context across
-origin checks and geometry refresh. Initial sizing does not wait for this watcher.
-The sizer learns normalized height per applied row and refines startup estimates
-and later menu/viewer changes from successive measured rectangles, accounting
-for native insets without guessed font pixels. It caps height at the original
-`popupBounds` rectangle: top/bottom H=0.4, center H=0.6, side H=1. Original X/W
-remain fixed; top/bottom edges or center/side vertical center remain anchored.
-The child draws at row zero rather than double-centering while the actual layer
-settles. Oversized natural menus remain capped and paginate.
-
-Half-row headroom, a one-row deadband and damped direction reversals limit rounding
-feedback. After resize, a newer owner report, matching child dimensions and two
-stable geometry samples are required before another correction. The pending
-request has a four-watcher-tick settling allowance; an unchanged geometry/content
-epoch permits at most 12 corrections. Measurement loss pauses adaptation and
-requires scale relearning on return, without discarding pending freshness checks.
-Unsettled/nonconvergent or failed/uncertain mutation ends the lifecycle without
-selected dispatch; it is not retried or replaced. A report timestamp is not a
-native layer-application generation, and this bounded feedback is not a universal
-font/client convergence guarantee. Stable fitted/capped bounds cause no mutation.
-
-This adds no mapping schema, public flag, daemon or renewed authority. Native
-display remains app-independent, parent/FIFO-bound and idle-deadline-free; native
-action binding remains after exact cleanup. Configured original-VM binding and
-authenticated 30-second expiry/five-second teardown reserve remain unchanged.
-
-Native Rex pane/tab/window controls are **not hidden** by this mechanism. REQ-026
-remains blocked: no documented per-popup control option was found in retained
-creation/resize/terminal schemas, app actions or Lua layout docs. No global
-workaround or user deferral is accepted. See [appearance](appearance.md) and the
-[REQ-024–026 inventory](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
-for API evidence, source behavior and revision-bound observations.
+Native Rex pane/tab/window controls are **not hidden**. REQ-026 remains blocked:
+no documented per-popup control option was found in retained creation/resize/
+terminal schemas, app actions or Lua layout docs. No global workaround or user
+deferral is accepted. See [appearance](appearance.md) and the
+[delivery inventory](acceptance.md) for evidence and remaining limits.
 
 ## Go-owned configured launch origin envelope
 
@@ -710,6 +686,9 @@ frames, Escape exit0 and exact owned cleanup. This is not merely cropped text,
 not a runtime result produced by documentation leaves, and not proof of native
 controls hiding or general font/viewport/platform behavior. Task 11-04/Phase11
 own revision-bound final assembly evidence; no later gate is preclaimed here.
+Phase13 decision **REXWHICHKEY-20261102-143748** supersedes navigation-driven
+resizing only: these historical grow/shrink measurements cannot accept REQ-029.
+The current fixed-bounds contract above retains initial sizing and spacers.
 
 Retained `.mtn-tmp/popup-presentation/{new-layer-api.json,resize-layer-api.json,
 terminal-creator.json,client-actions.json,lua-reference.md}` in the authoritative

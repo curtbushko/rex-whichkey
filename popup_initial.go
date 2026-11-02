@@ -9,11 +9,13 @@ import (
 
 const (
 	// Insets are an estimate in terminal cells, not fixed font pixels. Origin
-	// bounds include native chrome; a new pane's chrome/font may differ. Leave
-	// two cells for insets and half a row for rounding, then refine from the
-	// popup's own measured geometry. This does not hide native controls.
-	popupInsetCells = 2
-	popupRounding   = 0.5
+	// bounds include native chrome; a new pane's chrome/font may differ. Allow
+	// two horizontal and four vertical cells plus half a row for rounding.
+	// The extra two vertical cells protect root spacers without later resizing;
+	// they do not hide native controls or guarantee pixel-tight initial fit.
+	popupHorizontalInsetCells = 2
+	popupVerticalInsetCells   = 4
+	popupRounding             = 0.5
 
 	// An unmeasured origin supplies no scale. Use a hypothetical 100x40 window
 	// grid, cap startup height at 30%, and paginate rather than opening at the
@@ -52,8 +54,8 @@ func popupInitialSize(ctx context.Context, origin rex.Block, config Config) (rex
 	// Bound floating-point arithmetic before any integer conversion. Geometry
 	// decoding has rejected nonfinite/zero rectangles; clamp very small splits
 	// and very large terminals to the documented terminal dimension limit.
-	columns := popupCellCount(maximum.W/columnUnit - popupInsetCells)
-	availableRows := popupCellCount(heightCap/rowUnit - popupInsetCells - popupRounding)
+	columns := popupCellCount(maximum.W/columnUnit - popupHorizontalInsetCells)
+	availableRows := popupCellCount(heightCap/rowUnit - popupVerticalInsetCells - popupRounding)
 	menu, err := NewMenu(config.Spec)
 	if err != nil {
 		return rex.Bounds{}, seed, err
@@ -61,7 +63,7 @@ func popupInitialSize(ctx context.Context, origin rex.Block, config Config) (rex
 	frame := RenderMenu(menu, config, NewTheme(TerminalPalette{}, true, false), columns, 0)
 	rows := max(1, min(frame.PreferredHeight, availableRows))
 	seed.Columns, seed.Rows = uint32(columns), uint32(rows)
-	height := min(heightCap, (float64(rows)+popupInsetCells+popupRounding)*rowUnit)
+	height := min(heightCap, (float64(rows)+popupVerticalInsetCells+popupRounding)*rowUnit)
 	return popupHeightBounds(maximum, config.Position, height), seed, nil
 }
 
@@ -75,7 +77,7 @@ func popupCellCount(cells float64) int {
 	return int(math.Floor(cells))
 }
 
-// Initial and later measured sizes retain the position maximum's anchors.
+// Initial bounds retain the position maximum's anchors for the whole invocation.
 func popupHeightBounds(maximum rex.Bounds, position string, height float64) rex.Bounds {
 	next := maximum
 	next.H = height

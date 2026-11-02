@@ -475,10 +475,9 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
 	}
-	sizer := popupSizer{maximum: popupBounds(config.Position), position: config.Position}
-	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock, func(check context.Context) error {
-		return sizer.refresh(check, directory, layer)
-	})
+	// Keep the initial rectangle for this invocation. Navigation and redraws
+	// adapt content to the terminal cells, never change owned layer bounds.
+	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock)
 	if err != nil {
 		if lifetime == popupConfigured && errors.Is(err, context.DeadlineExceeded) &&
 			ctx.Err() == context.DeadlineExceeded && parent.Err() == nil && !time.Now().Before(expires) {
@@ -520,7 +519,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 // mode. Native display survives GUI ambiguity/disconnection. Neither policy
 // checks active-tab visibility: switching tabs must not cancel or refocus it.
 func waitPopup(ctx context.Context, request popupRequest, executable, blockID string,
-	originBlock func(context.Context) (rex.Block, error), refresh func(context.Context) error,
+	originBlock func(context.Context) (rex.Block, error),
 ) error {
 	waitCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
@@ -535,15 +534,11 @@ func waitPopup(ctx context.Context, request popupRequest, executable, blockID st
 			case <-waitCtx.Done():
 				return
 			case <-ticker.C:
-				// One shared deadline bounds liveness plus geometry. Child exit
-				// stops new checks, but lets an in-flight resize finish before
-				// cleanup instead of making its result uncertain. Parent
-				// cancellation still interrupts it through ctx.
+				// Only resource liveness and configured app generation remain.
+				// Child exit stops checks; teardown joins an in-flight bounded
+				// check. Parent cancellation still interrupts it through ctx.
 				check, done := context.WithTimeout(ctx, 3*time.Second)
 				_, err := originBlock(check)
-				if err == nil {
-					err = refresh(check)
-				}
 				done()
 				if err != nil {
 					watcherErr = err
@@ -620,7 +615,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime", "size.json", "size.tmp"} {
+	for _, name := range []string{"config.json", "result.json", "lifetime"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -762,7 +757,11 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 		ctx, cancel = context.WithDeadline(parent, deadline)
 		defer cancel()
 	}
-	event, err := runTerminal(ctx, config, noColor, ascii, popupSizePublisher(root))
+	// The layer already carries the requested position. Anchor popup content
+	// at its top rather than centering it again inside the fixed rectangle.
+	// This local copy does not change standalone RunTerminal positioning.
+	config.Position = "top"
+	event, err := RunTerminal(ctx, config, noColor, ascii)
 	// Only the exact expected deadline error is graceful. Joined terminal
 	// restoration/I/O failures and other child errors must still fail closed.
 	if !deadline.IsZero() && err == context.DeadlineExceeded && ctx.Err() == context.DeadlineExceeded && parent.Err() == nil {

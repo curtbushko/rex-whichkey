@@ -41,8 +41,8 @@ without color; ASCII mode changes decorations, not user labels.
 width: all current entries (or one confirmation/empty message) plus both status
 borders and both ideal spacer rows. It is independent of viewport-height clipping,
 pagination and selected page. `Height`/`Lines` still describe only the constrained
-visible frame. The geometry controller consumes this exact producer value, not
-a second menu measurement or the already-clipped frame height.
+visible frame. Initial sizing consumes this exact producer value, not a second
+menu measurement or the already-clipped frame height.
 
 Before creating the popup, [`popup_initial.go`](../popup_initial.go) calls this
 same renderer at an estimated popup width. The parent computes a content-sized
@@ -55,7 +55,9 @@ scale; documented zoomed origins use the window rectangle. Placement changes
 during sampling or before creation invalidate the measured snapshot.
 
 Initial sizing is an estimate: normalize origin bounds by measured rows/columns,
-reserve two cells for insets, and round height upward by half a row. Optional
+reserve two horizontal and four vertical cells for insets, and round height
+upward by half a row. The two additional vertical cells protect root spacing
+without a later correction; they are conservative headroom, not calibration. Optional
 valid paired cell pixels seed terminal metadata, not font preferences or viewer
 measurement provenance. New-pane font/native chrome can differ from the origin.
 When geometry is missing, malformed or unmeasured, use a hypothetical 100-column,
@@ -64,34 +66,29 @@ The seeded rows are the natural count capped to that estimated available space;
 large menus paginate. This compact fallback is policy, not measured GUI geometry.
 No hidden/offscreen first layer, recreation, cache or app binding is involved.
 
-The popup child then publishes preferred rows and its actual terminal columns/rows
-only when those values change. The existing liveness watcher refines the **same
-owned floating layer**, through `Layer.Resize`, for startup estimation differences
-and later submenu/back or viewer changes. Late shrinking is not the startup
-sizing strategy. Popup frames start at row zero during settling; standalone `RunTerminal` positioning is unchanged. See the
-[launch contract](launch-contract.md#private-preferred-row-hints-and-owned-layer-sizing)
-for private-file validation, ownership and cleanup.
+The initial rectangle stays unchanged for the invocation. Submenu entry, paging,
+back, focus and idle never call `Layer.Resize`. Larger menus paginate inside the
+current cells; the popup does not choose an all-submenu maximum at startup.
+Popup frames start at row zero; standalone `RunTerminal` positioning is unchanged.
+The private preferred-row observer, hint files and live geometry feedback loop
+are retired. The existing one-second watcher checks resource liveness and, in
+configured mode, the captured app generation only. See the
+[launch contract](launch-contract.md#fixed-navigation-bounds-and-liveness).
 
-Sizing uses current normalized layer bounds and applied terminal rows whose
-current owner has exactly one matching, timestamped desired-size report. Seeded
-80×24 defaults alone are not measurements. Missing provenance pauses adaptation
-without canceling native display; zero or child/server-disagreeing dimensions do
-not drive a resize. Optional cell-pixel dimensions help detect geometry changes;
-applied rows suffice when pixels are absent. No fixed font pixels are guessed and
-no font preference is changed.
-Owner, width, row/cell-geometry and natural-content changes trigger reevaluation.
+The original position rectangle still caps initial height: top/bottom use at most
+40% of the window height, center 60%, and left/right 100%. Initial placement keeps
+the original top edge, bottom edge, or vertical center (center/side positions).
+External native window/font changes may naturally change terminal cells;
+SIGWINCH and focus-in repaint/adapt retained content without application-driven
+layer-bound changes. No font preference is changed. Startup terminal seeds are
+not viewer measurements, and later reports do not trigger fitting.
 
-The original position rectangle caps height: top/bottom use at most 40% of the
-window height, center 60%, and left/right 100%. Width and horizontal placement
-stay unchanged. Shrinking/growing preserves the original top edge, bottom edge,
-or vertical center (center/side positions). Menus too tall for that cap paginate.
-Half-row headroom and a one-row deadband tolerate rounding, so fitting is not a
-promise of pixel-tight native borders. Newer owner reports and stable samples
-bound successive corrections; missing fresh reports after a resize,
-nonconvergence or uncertain resize fail closed rather than looping or dispatching
-a selection. Report timestamps
-are not native layer-application acknowledgements. There is no idle repaint
-timer, replacement popup, daemon, app-action lookup or global font/settings edit.
+This fixed-navigation behavior (REQ-029) supersedes only the navigation-driven
+resize portion of REQ-025. Historical grow/shrink observations do not verify the
+new requirement. Initial sizing/spacers remain; exact first/root/submenu/paging/
+back/idle bounds and cleanup require fresh revision-bound coordinator evidence.
+There is no idle repaint timer, replacement popup, daemon, app-action lookup or
+global font/settings edit.
 
 ### Native controls remain blocked (REQ-026)
 

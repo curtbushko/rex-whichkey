@@ -12,13 +12,16 @@ owned-popup cleanup in one Linux Rex session. That does not verify the later
 idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
 compatibility or Home Manager activation. The coordinator's Phase08 gate adds
 35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
-[delivery inventory](docs/acceptance.md) for REQ-001–REQ-026 and revision-bound
+[delivery inventory](docs/acceptance.md) for REQ-001–REQ-029 and revision-bound
 results. Phase09 adds default Zoom removal and focus-in repaint; earlier runtime
 observations do not verify these changes or native GUI tab-return visibility.
 Phase10 separates native display from deferred app-action targeting; earlier
 observations do not verify that boundary. No minimum tested Rex build or general
 runtime certification is claimed. Phase11 adds compact status borders, conditional
-paging hints and measured content-fitting layer height. **Hiding native Rex
+paging hints and measured content-fitting layer height. Phase12 adds compact
+first-frame sizing and status spacers. The later Phase13 correction retains one
+initial rectangle through navigation, superseding live grow/shrink behavior;
+source changes alone do not verify stable runtime bounds. **Hiding native Rex
 pane/tab/window controls (REQ-026) remains blocked**, not waived or fulfilled;
 Phase11/project delivery is partial while that capability is unresolved.
 
@@ -308,17 +311,19 @@ native controls.
 The parent computes a **content-sized first layer** before its single creation
 RPC and seeds terminal startup rows/columns consistently. It uses renderer natural
 rows (including spacers), the exact origin's window-relative leaf rectangle and
-validated measured terminal dimensions. Two-cell inset headroom and half-row
-rounding estimate new-pane font/chrome differences; they are not fixed font pixels
-or a pixel-tight guarantee. Missing/unmeasured origins use a compact bounded
-fallback (hypothetical 100×40 window-cell grid, at most 30% initial height).
+validated measured terminal dimensions. Two horizontal/four vertical cells of
+inset headroom and half-row rounding estimate new-pane font/chrome differences;
+they are not fixed font pixels or a pixel-tight guarantee. Missing/unmeasured
+origins use a compact bounded fallback (hypothetical 100×40 window-cell grid,
+at most 30% initial height).
 
-The parent then refines the **actual owned floating layer's height**, not just the
-text inside it, using the popup's own measured rows/bounds, including submenu/back
-changes. The original position rectangle remains the maximum; capped menus
-paginate. Unmeasured terminals retain their initial compact bounds until usable
-viewer measurements arrive. No app lookup is added for geometry,
-and no font/settings changes are made. Native controls are **not hidden**: no
+That **initial rectangle stays fixed** through submenu entry, paging, back,
+focus and idle. Larger menus use the current terminal cells and existing
+pagination, not a larger box. External window/font changes can naturally change
+terminal cells; SIGWINCH and focus-in still redraw, without application-driven
+layer resizing. The former preferred-row hint IPC and live resize loop are
+retired. No app lookup is added for geometry, and no font/settings changes are
+made. Native controls are **not hidden**: no
 supported per-popup option was found in the retained Rex API evidence, and no
 global workaround is used. See [appearance](docs/appearance.md) and the
 [compact-presentation evidence](docs/acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
