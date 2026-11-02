@@ -2,6 +2,7 @@ package rex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -18,6 +19,24 @@ type TerminalSize struct {
 	CellHeightPx uint32    `json:"cell_height_px"`
 	Owner        string    `json:"-"`
 	ReportedAt   time.Time `json:"-"`
+}
+
+// TerminalStartSize is a shell creator's startup geometry, not a viewer report
+// or a font preference. Optional cell pixels must be supplied as a valid pair.
+// It deliberately carries no measurement owner or report timestamp.
+type TerminalStartSize struct {
+	Columns      uint32 `json:"columns"`
+	Rows         uint32 `json:"rows"`
+	CellWidthPx  uint32 `json:"cell_width_px,omitempty"`
+	CellHeightPx uint32 `json:"cell_height_px,omitempty"`
+}
+
+func (s TerminalStartSize) valid() error {
+	if s.Columns == 0 || s.Columns > 65535 || s.Rows == 0 || s.Rows > 65535 ||
+		s.CellWidthPx > 65535 || s.CellHeightPx > 65535 || (s.CellWidthPx == 0) != (s.CellHeightPx == 0) {
+		return errors.New("rex: invalid terminal startup dimensions")
+	}
+	return nil
 }
 
 // TerminalSize reads only the captured block in the captured session. It neither

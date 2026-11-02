@@ -14,8 +14,10 @@ type Block struct {
 	WindowID string
 	LayerID  string
 
-	client  *Client
-	blockID string
+	client   *Client
+	blockID  string
+	rect     Bounds // Snapshot of window-relative leaf geometry, never layer-relative.
+	haveRect bool
 }
 
 // Block finds a full block ID in this session's current layout. Detached or
@@ -126,11 +128,13 @@ func (s Session) placedLayers(ctx context.Context) ([]placedLayer, error) {
 	var view struct {
 		ID      string `json:"session_id"`
 		Windows []struct {
-			ID     string `json:"window_id"`
-			Layers []struct {
+			ID            string `json:"window_id"`
+			ZoomedBlockID string `json:"zoomed_block_id"`
+			Layers        []struct {
 				ID     string          `json:"layer_id"`
 				Kind   string          `json:"kind"`
 				Bounds json.RawMessage `json:"bounds"`
+				Layout json.RawMessage `json:"layout"`
 				Blocks []struct {
 					ID string `json:"block_id"`
 				} `json:"blocks"`
@@ -156,14 +160,34 @@ func (s Session) placedLayers(ctx context.Context) ([]placedLayer, error) {
 			}
 			seen[item.ID] = true
 			layer := placedLayer{id: item.ID, kind: item.Kind, bounds: item.Bounds}
+			// Geometry is optional to placement/liveness. Older or malformed
+			// layout metadata must not fabricate a full-window origin or make
+			// native display require a graphical viewer.
+			rectangles, geometryErr := layoutRectangles(item.Layout)
+			if geometryErr != nil || len(rectangles) != len(item.Blocks) {
+				rectangles = nil
+			}
+			for _, block := range item.Blocks {
+				if _, present := rectangles[block.ID]; !present {
+					rectangles = nil
+					break
+				}
+			}
 			for _, block := range item.Blocks {
 				if !resourceID(block.ID, "block") || seen[block.ID] {
 					return nil, errors.New("rex session inspect: invalid or duplicate block placement")
 				}
 				seen[block.ID] = true
+				rect, haveRect := rectangles[block.ID]
+				if window.ZoomedBlockID != "" {
+					rect, haveRect = Bounds{}, false // Hidden normal layouts are not current visible geometry.
+					if window.ZoomedBlockID == block.ID {
+						rect, haveRect = Bounds{W: 1, H: 1}, true
+					}
+				}
 				layer.blocks = append(layer.blocks, Block{
 					ID: block.ID, WindowID: window.ID, LayerID: item.ID,
-					client: s.client, blockID: block.ID,
+					client: s.client, blockID: block.ID, rect: rect, haveRect: haveRect,
 				})
 			}
 			layers = append(layers, layer)

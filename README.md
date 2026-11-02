@@ -299,17 +299,25 @@ remove that safety restoration. Uncertain actions are never retried.
 
 Positions are `top`, `bottom`, `left`, `right` and `center`. The title/breadcrumbs
 and concise key hints occupy separate full-width status-border rows above/below
-the entries, without a `Keys:` prefix or a redundant `Page1/1` row. A real
-multi-page menu retains a counter and Tab hints when space permits; tiny viewports
-omit decoration/status rows before content. These terminal borders are not Rex's
+the entries, with one blank content/status spacer beside each border when room
+permits, without a `Keys:` prefix or a redundant `Page1/1` row. A real multi-page
+menu retains a counter and Tab hints when space permits; tiny viewports drop
+spacers before content or essential hints. These terminal borders are not Rex's
 native controls.
 
-The parent fits the **actual owned floating layer's height**, not just the text
-inside it, to current-width natural menu rows, including submenu/back changes.
-It uses measured terminal rows and normalized bounds, with optional cell-pixel
-metadata, not a guessed font size. The original position rectangle remains the
-maximum; capped menus paginate. Unmeasured terminals keep their current bounds
-until usable viewer measurements arrive. No app lookup is added for geometry,
+The parent computes a **content-sized first layer** before its single creation
+RPC and seeds terminal startup rows/columns consistently. It uses renderer natural
+rows (including spacers), the exact origin's window-relative leaf rectangle and
+validated measured terminal dimensions. Two-cell inset headroom and half-row
+rounding estimate new-pane font/chrome differences; they are not fixed font pixels
+or a pixel-tight guarantee. Missing/unmeasured origins use a compact bounded
+fallback (hypothetical 100×40 window-cell grid, at most 30% initial height).
+
+The parent then refines the **actual owned floating layer's height**, not just the
+text inside it, using the popup's own measured rows/bounds, including submenu/back
+changes. The original position rectangle remains the maximum; capped menus
+paginate. Unmeasured terminals retain their initial compact bounds until usable
+viewer measurements arrive. No app lookup is added for geometry,
 and no font/settings changes are made. Native controls are **not hidden**: no
 supported per-popup option was found in the retained Rex API evidence, and no
 global workaround is used. See [appearance](docs/appearance.md) and the

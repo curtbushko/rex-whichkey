@@ -227,18 +227,7 @@ func (s *popupSizer) refresh(ctx context.Context, directory string, layer rex.La
 	if math.IsNaN(height) || math.IsInf(height, 0) || height <= 0 {
 		return errors.New("whichkey: invalid measured popup geometry")
 	}
-	next := s.maximum
-	next.H = height
-	switch s.position {
-	case "top":
-		// Keep the original top edge.
-	case "bottom":
-		next.Y += s.maximum.H - height
-	default: // Center and side popups keep their original vertical center.
-		next.Y += (s.maximum.H - height) / 2
-	}
-	// Clamp floating point edge rounding before native bounds validation.
-	next.Y = min(next.Y, 1-next.H)
+	next := popupHeightBounds(s.maximum, s.position, height)
 	if math.Abs(next.H-bounds.H) < 1e-9 && math.Abs(next.Y-bounds.Y) < 1e-9 && next.X == bounds.X && next.W == bounds.W {
 		return nil // Already capped, including menus that must paginate.
 	}

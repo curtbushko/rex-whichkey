@@ -262,16 +262,59 @@ created. Inspect/create/focus/dispatch are separate operations: concurrent moves
 disconnects or external focus changes can race the final check; there is no
 claimed atomic transaction or current-client fallback.
 
+## Initial popup geometry and terminal seed
+
+[`popup_initial.go`](../popup_initial.go) computes bounds **before** the single
+`session.new_layer` attempt. It constructs the retained canonical menu and calls
+`RenderMenu` at the estimated popup columns with height zero to obtain natural
+rows, including both ideal content/status spacers. The original `popupBounds`
+rectangle is a maximum, not the initial rectangle.
+
+[`rex/block.go`](../rex/block.go) reads layout metadata from the captured session's
+view; [`rex/geometry.go`](../rex/geometry.go) validates positive, finite rectangles
+and bounded, unambiguous leaf traversal. A leaf `layout.rect` is already in
+**window-relative** fractions, including floating layers: do not multiply it by
+layer bounds, assume the origin fills its window, or use active-window focus.
+The documented zoomed-block ID overrides that block's normal layout with the
+whole-window rectangle; hidden nonzoomed blocks do not supply visible geometry.
+Missing/malformed layout disables geometry only, not resource-only native display.
+`Block.Geometry` rechecks snapshot placement around terminal measurement.
+
+A usable origin measurement requires the existing `TerminalSize` current-owner,
+matching applied/desired rows/columns and timestamp provenance. Dividing the
+origin rectangle by those cells estimates normalized units per cell. Estimated
+popup columns reserve two cells for native horizontal insets; natural rows are
+capped to estimated available rows, reserving two inset cells and half a row of
+rounding vertically. Height is those rows plus that cell-level headroom, clamped
+to the position maximum. Origins and new panes can have different fonts/chrome;
+this is not a pixel-accurate claim. Optional valid paired cell pixels are startup
+metadata, not a font preference or a new viewer measurement.
+
+For unavailable/unmeasured geometry, a hypothetical 100×40 window-cell grid and
+30%-height startup cap (or the smaller position cap) supply a compact fallback.
+No unowned default is treated as a viewer report. Cell counts are bounded to
+1…65,535 before integer conversion; oversized menus paginate. Top/bottom edges
+and center/side vertical center retain the original position anchors.
+
+`Block.NewLayerWithSize` preserves the caller-compatible `NewLayer` wrapper and
+adds documented shell `options.size:{columns,rows,cell_width_px?,cell_height_px?}`
+in the same creation RPC as the estimated bounds. Rows/columns are seeded from
+that calculation, not unrelated 80×24 defaults. This method rechecks the origin
+snapshot before creation and refuses changed placement, without a creation retry.
+A move after final inspection can still race; no atomic placement transaction is
+claimed. There is no hidden/offscreen layer, delayed show/recreate, cross-launch
+calibration, app lookup, font/settings edit or new mapping schema.
+
 ## Private preferred-row hints and owned layer sizing
 
 Both native and configured popup children use `runTerminal`'s private observer
 after real `RenderMenu` output. Standalone `RunTerminal` has no observer and keeps
 its public API. [`popup_size.go`](../popup_size.go) publishes one data-only object
 with `preferred_rows` from `MenuFrame.PreferredHeight`, plus the child's actual
-`columns` and `rows`. Natural height includes all current-width entries and both
-status borders independently of current viewport clipping/page. Publication is
-on change, including redraws for navigation/confirmation/resize, not an idle
-repaint loop. Invalid/zero-size transitions retain the last usable hint.
+`columns` and `rows`. Natural height includes all current-width entries, both
+status borders and both ideal spacers independently of current viewport
+clipping/page. Publication is on change, including redraws for
+navigation/confirmation/resize, not an idle repaint loop. Invalid/zero-size transitions retain the last usable hint.
 
 Hints live only inside the existing invocation-owned 0700 directory. The child
 exclusively creates 0600 `size.tmp` with no-follow semantics, then atomically
@@ -290,7 +333,8 @@ The parent alone calls `Layer.Resize` -> `session.resize_layer`, rechecking the
 captured layer is floating and contains exactly its returned terminal in the
 captured session. Current `Layer.Bounds` and that block's `TerminalSize` supply
 normalized bounds/applied dimensions; no graphical-app registry lookup, ownership
-claim, terminal-size mutation, settings/font change or focus mutation is added.
+claim, postcreation terminal-size mutation, settings/font change or focus mutation
+is added. The initial size seed above is not a viewer report.
 A measurement requires exactly one current owner's desired report matching
 positive applied rows/columns, with a valid timestamp. Missing provenance
 (including headless seeded dimensions) pauses fitting without canceling native
@@ -300,8 +344,9 @@ them. Terminal ownership here is measurement provenance, **not** native action
 client selection or configured authorization.
 
 The existing one-second liveness watcher shares its three-second context across
-origin checks and geometry refresh. The sizer learns normalized height per applied
-row and refines that estimate from successive measured rectangles, accounting
+origin checks and geometry refresh. Initial sizing does not wait for this watcher.
+The sizer learns normalized height per applied row and refines startup estimates
+and later menu/viewer changes from successive measured rectangles, accounting
 for native insets without guessed font pixels. It caps height at the original
 `popupBounds` rectangle: top/bottom H=0.4, center H=0.6, side H=1. Original X/W
 remain fixed; top/bottom edges or center/side vertical center remain anchored.

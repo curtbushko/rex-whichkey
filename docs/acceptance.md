@@ -1,5 +1,34 @@
 # Release delivery inventory and limitations
 
+## First-frame fit and status spacing: REQ-027/028
+
+Accepted **REXWHICHKEY-20261102-141047** under the
+[Phase12 design](../.tasks/designs/rex-whichkey-first-frame-fit.md) refines startup
+and status spacing without waiving REQ-026. This section describes source and
+required evidence, not an inferred review, compilation, runtime or project pass.
+
+| Requirement | Source behavior | Verification boundary |
+| --- | --- | --- |
+| REQ-027 — status/content spacers | [`layout.go`](../layout.go)/[`render.go`](../render.go) include two ideal spacer rows in natural preferred height and render one beside each status border when room permits. Spacers yield before content/essential hints; no single-page counter or extra footer returns. | Source-only formatting/inspection is not a runtime matrix. Revision-bound review and coordinator frame observations belong to [task 12-01](../.tasks/tasks/rex-whichkey-12-01-first-frame-fit.md). |
+| REQ-028 — compact first creation and terminal seed | [`popup_initial.go`](../popup_initial.go) computes natural root rows and content-sized anchored bounds before creation, using validated origin geometry or the documented compact fallback. [`rex/geometry.go`](../rex/geometry.go) consumes window-relative leaf rectangles directly, handles documented zoom, and checks placement around measurement. [`rex/layer.go`](../rex/layer.go) seeds shell startup size in that single creation RPC and rejects stale placement. The existing watcher refines only the same owned layer. | Initial cell-level inset/rounding is an estimate where new-pane font/chrome differs. The fallback is hypothetical, never viewer provenance. Exact frozen revision review, combined compilation and promptly captured first-layer/terminal geometry belong to task 12-01 and [Phase12](../.tasks/phases/rex-whichkey-12-first-frame-fit.md); no runtime pass is asserted here. |
+
+The coordinator gate must sample the **first** owned layer promptly, before the
+one-second resize watcher, and retain its bounds plus initial startup terminal
+rows/columns. A final-small-only observation cannot accept REQ-028. Retain
+root/spacer/status frames, settled bounds, submenu/back, Escape exit0 and exact
+owned-resource/private-file cleanup as well. No general tests/TDD/unit/race suite,
+font/settings/config reload, native/destructive selection, remote trial or GUI
+pixel experiment is authorized for leaves. Leaves perform source/format/whitespace
+checks only; coordinator observations must identify the actual frozen revision.
+
+See [appearance](appearance.md#actual-layer-height-and-measurement-limits) and
+[initial geometry contract](launch-contract.md#initial-popup-geometry-and-terminal-seed)
+for the 100×40 hypothetical fallback grid/30% startup cap, two-cell inset estimate,
+half-row rounding, placement-race limits and later measured fitting. Historical
+Phase11 settled-size observations below are not first-frame or spacer evidence.
+Server bounds/seed/frame observations do not certify native GUI chrome removal.
+REQ-026 remains **BLOCKED**, and Phase11/project completion remains unavailable.
+
 ## Compact popup presentation: REQ-024/025 and blocked REQ-026
 
 Accepted **REXWHICHKEY-20261102-123334** under the
@@ -10,7 +39,7 @@ not fulfilled or waived. Phase11/project completion remains blocked by REQ-026.
 
 | Requirement | Source / capability state | Evidence boundary |
 | --- | --- | --- |
-| REQ-024 — compact status borders / conditional paging | [`render.go`](../render.go)/[`layout.go`](../layout.go) put title/breadcrumbs and key hints in separate full-width horizontal status borders, with no generated `Keys:` prefix, single-page counter or redundant page-footer row. Genuine multipage counters/Tab hints share the bottom border where width permits. Tiny heights yield status rows to content; critical confirmation text remains on the content row. `MenuFrame.PreferredHeight` reports natural current-width content plus both borders independently of clipping/page. | [Task 11-01](../.tasks/tasks/rex-whichkey-11-01-render-frame.md) records fresh APPROVED source review and coordinator Go compilation integrated at `f57dfa00` (tree `0d1a7aa375bc8b099b2100a344b1edf6ff4ef9dd`). Tiny/multipage/grapheme/ASCII/no-color paths are source-reviewed, not a runtime matrix. |
+| REQ-024 — compact status borders / conditional paging | [`render.go`](../render.go)/[`layout.go`](../layout.go) put title/breadcrumbs and key hints in separate full-width horizontal status borders, with no generated `Keys:` prefix, single-page counter or redundant page-footer row. Genuine multipage counters/Tab hints share the bottom border where width permits. Tiny heights yield status rows to content; critical confirmation text remains on the content row. `MenuFrame.PreferredHeight` reports natural current-width content plus both borders independently of clipping/page, now including the REQ-027 ideal spacers. | [Task 11-01](../.tasks/tasks/rex-whichkey-11-01-render-frame.md) records fresh APPROVED source review and coordinator Go compilation integrated at `f57dfa00` (tree `0d1a7aa375bc8b099b2100a344b1edf6ff4ef9dd`). Tiny/multipage/grapheme/ASCII/no-color paths are source-reviewed, not a runtime matrix. |
 | REQ-025 — actual content-fitting owned layer | [`terminal.go`](../terminal.go)/[`popup_size.go`](../popup_size.go) publish bounded private natural-row hints on change. [`popup.go`](../popup.go) refreshes measured geometry through the existing watcher; [`rex/terminal.go`](../rex/terminal.go) requires current-owner matching applied/desired rows and timestamp provenance. [`rex/layer.go`](../rex/layer.go) reads/resizes only the exact owned floating layer. Position/max rectangle, bounded settling, cleanup and action/lifetime boundaries remain intact. | [Task 11-02](../.tasks/tasks/rex-whichkey-11-02-popup-height.md) records fresh APPROVED source review, combined Go compilation/`task build`, integration at `3c68b784bc0c90be94b0c4604040406f603557d3` (tree `7f6054689d0b505d5ed951b6c7f3e87b61eee4f0`) and the actual one-context coordinator gate below. Font-change generality, all positions and failure/transient paths are not runtime-certified. |
 | REQ-026 — hide native controls for this popup only | **BLOCKED / not implemented.** Inspected Rex schemas/actions/docs provide no documented per-popup pane/tab/window control-hiding capability. Terminal text borders and resized bounds do not hide native chrome. | [Task 11-03](../.tasks/tasks/rex-whichkey-11-03-popup-chrome.md) owns blocker `rex-whichkey/presentation/native-chrome-blocker/1`. No hidden flag/global setting workaround or explicit user deferral is accepted. A supported Rex capability/update or explicit deferral is needed; source delivery cannot complete the phase/project. |
 

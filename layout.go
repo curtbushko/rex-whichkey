@@ -3,12 +3,13 @@ package whichkey
 // menuLayout uses terminal cells, never bytes or Unicode code-point counts.
 // Status borders yield to at least one content row, even in a one-line viewport.
 type menuLayout struct {
-	x, y, width, height int
-	preferredHeight     int
-	columns, rows       int
-	capacity            int
-	page, pages         int
-	header, help        bool
+	x, y, width, height   int
+	preferredHeight       int
+	columns, rows         int
+	capacity              int
+	page, pages           int
+	header, help          bool
+	topSpace, bottomSpace bool
 }
 
 const menuColumnGap = 2
@@ -31,9 +32,9 @@ func layoutMenu(width, height int, position string, itemWidths []int, requestedP
 		layout.columns = min(count, 1+(width-cellWidth)/(cellWidth+menuColumnGap))
 	}
 	neededRows := 1 + (count-1)/layout.columns
-	// Natural height always includes both status borders and no blank padding.
+	// Natural height includes both status borders and their content spacers.
 	// Saturate rather than overflow if the content row count approaches MaxInt.
-	layout.preferredHeight = min(neededRows, int(^uint(0)>>1)-2) + 2
+	layout.preferredHeight = min(neededRows, int(^uint(0)>>1)-4) + 4
 	if height <= 0 {
 		return layout
 	}
@@ -47,6 +48,8 @@ func layoutMenu(width, height int, position string, itemWidths []int, requestedP
 	if layout.header {
 		chrome++
 	}
+	// Establish page capacity without spacers so separation cannot displace
+	// content or change page count/Tab normalization.
 	layout.rows = min(height-chrome, neededRows)
 	layout.capacity = count
 	if layout.rows <= count/layout.columns {
@@ -60,6 +63,19 @@ func layoutMenu(width, height int, position string, itemWidths []int, requestedP
 	layout.page = max(0, requestedPage) % layout.pages
 	remaining := count - layout.page*layout.capacity
 	layout.rows = min(layout.rows, 1+(remaining-1)/layout.columns)
+
+	// Spend only the selected page's actual spare rows on separation. A final
+	// page can have room even when a full page has none. Help/content win in
+	// short viewports; bottom-hint separation takes the first spare row.
+	spare := height - chrome - layout.rows
+	layout.bottomSpace = layout.help && spare >= 1
+	layout.topSpace = layout.header && spare >= 2
+	if layout.bottomSpace {
+		chrome++
+	}
+	if layout.topSpace {
+		chrome++
+	}
 
 	// Status borders span the viewport; horizontal anchors therefore coincide.
 	layout.width = width

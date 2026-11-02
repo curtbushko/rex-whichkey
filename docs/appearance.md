@@ -11,9 +11,10 @@ when terminal palette metadata arrives.
 [`render.go`](../render.go) and [`layout.go`](../layout.go) separate three regions:
 a full-width top status border containing title/icon/breadcrumbs, the menu entries,
 and a full-width bottom status border containing concise key hints. Status text
-shares its row with the horizontal rule (`─`, or `-` in ASCII mode); no additional
-blank padding, `Keys:` prefix or separate page-footer row is generated. These are
-terminal text borders, not native Rex pane/tab/window controls.
+shares its row with the horizontal rule (`─`, or `-` in ASCII mode). One blank
+spacer separates content from each status border when room permits. No `Keys:`
+prefix or separate page-footer row is generated. These are terminal text borders,
+not native Rex pane/tab/window controls.
 
 A single-page menu has no page counter or Tab hint. Multiple pages retain a
 `current/total` counter and Tab navigation in the bottom border where width permits.
@@ -22,9 +23,13 @@ cause pagination. The renderer picks shorter complete hints before grapheme
 clipping; at narrow widths Escape takes priority over decoration/counter text.
 Hidden and off-page bindings remain active, and Tab still wraps through pages.
 
-Content takes priority: three available rows permit both status borders, two
-permit content plus bottom hints, and one permits content alone. Confirmation
-replaces the entries with `y=yes / other=cancel: …` in the critical role, so
+Content takes priority: page capacity and page count are established without
+spacers, then separation uses rows left after the selected page's visible content.
+Partially filled final pages can therefore have spacers even when full pages
+cannot. Bottom-hint separation takes the first spare row; both spacers appear
+when two rows remain. Three available rows permit both status borders, two permit
+content plus bottom hints, and one permits content alone. Confirmation replaces
+the entries with `y=yes / other=cancel: …` in the critical role, so
 confirmation/cancellation instructions remain on the content row even without
 status borders, subject to width clipping. A zero-height viewport draws nothing
 but does not mutate navigation. Semantic roles and text warnings remain intact
@@ -34,16 +39,36 @@ without color; ASCII mode changes decorations, not user labels.
 
 `MenuFrame.PreferredHeight` is the natural terminal-row count at the current
 width: all current entries (or one confirmation/empty message) plus both status
-borders, with no blank padding. It is independent of viewport-height clipping,
+borders and both ideal spacer rows. It is independent of viewport-height clipping,
 pagination and selected page. `Height`/`Lines` still describe only the constrained
 visible frame. The geometry controller consumes this exact producer value, not
 a second menu measurement or the already-clipped frame height.
 
-The popup child publishes preferred rows and its actual terminal columns/rows
-only when those values change. The parent uses the existing liveness watcher to
-fit the **same owned floating layer**, through `Layer.Resize`, rather than centering
-a small frame inside the old fixed-height rectangle. Popup frames start at row
-zero during settling; standalone `RunTerminal` positioning is unchanged. See the
+Before creating the popup, [`popup_initial.go`](../popup_initial.go) calls this
+same renderer at an estimated popup width. The parent computes a content-sized
+rectangle and sends terminal startup columns/rows in the **single creation RPC**,
+instead of opening at the position maximum or using the server's unrelated 80×24
+default. It uses the exact origin leaf's window-relative rectangle and validated
+current-owner terminal measurement, never the active window or a leaf rectangle
+multiplied by floating-layer bounds. Split/floating origins keep their actual
+scale; documented zoomed origins use the window rectangle. Placement changes
+during sampling or before creation invalidate the measured snapshot.
+
+Initial sizing is an estimate: normalize origin bounds by measured rows/columns,
+reserve two cells for insets, and round height upward by half a row. Optional
+valid paired cell pixels seed terminal metadata, not font preferences or viewer
+measurement provenance. New-pane font/native chrome can differ from the origin.
+When geometry is missing, malformed or unmeasured, use a hypothetical 100-column,
+40-row window grid and cap initial height at 30% (or the smaller position cap).
+The seeded rows are the natural count capped to that estimated available space;
+large menus paginate. This compact fallback is policy, not measured GUI geometry.
+No hidden/offscreen first layer, recreation, cache or app binding is involved.
+
+The popup child then publishes preferred rows and its actual terminal columns/rows
+only when those values change. The existing liveness watcher refines the **same
+owned floating layer**, through `Layer.Resize`, for startup estimation differences
+and later submenu/back or viewer changes. Late shrinking is not the startup
+sizing strategy. Popup frames start at row zero during settling; standalone `RunTerminal` positioning is unchanged. See the
 [launch contract](launch-contract.md#private-preferred-row-hints-and-owned-layer-sizing)
 for private-file validation, ownership and cleanup.
 
@@ -52,7 +77,8 @@ current owner has exactly one matching, timestamped desired-size report. Seeded
 80×24 defaults alone are not measurements. Missing provenance pauses adaptation
 without canceling native display; zero or child/server-disagreeing dimensions do
 not drive a resize. Optional cell-pixel dimensions help detect geometry changes;
-applied rows suffice when pixels are absent. No font size is guessed or changed.
+applied rows suffice when pixels are absent. No fixed font pixels are guessed and
+no font preference is changed.
 Owner, width, row/cell-geometry and natural-content changes trigger reevaluation.
 
 The original position rectangle caps height: top/bottom use at most 40% of the

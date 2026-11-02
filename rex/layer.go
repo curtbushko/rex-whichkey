@@ -2,7 +2,6 @@ package rex
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -54,6 +53,21 @@ type Layer struct {
 // error. The placement lookup and creation are separate server operations, so
 // concurrent moves/closure can still race with creation.
 func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (Layer, error) {
+	return b.newLayer(ctx, bounds, command, nil)
+}
+
+// NewLayerWithSize creates the layer and seeds its terminal in the same RPC.
+// Unlike NewLayer's server defaults, size is an explicit startup estimate. A
+// changed origin placement invalidates that estimate before creation; callers
+// must not retry an uncertain creation. A move after inspection can still race.
+func (b Block) NewLayerWithSize(ctx context.Context, bounds Bounds, command []string, size TerminalStartSize) (Layer, error) {
+	if err := size.valid(); err != nil {
+		return Layer{}, err
+	}
+	return b.newLayer(ctx, bounds, command, &size)
+}
+
+func (b Block) newLayer(ctx context.Context, bounds Bounds, command []string, size *TerminalStartSize) (Layer, error) {
 	if err := b.valid(); err != nil {
 		return Layer{}, err
 	}
@@ -72,8 +86,19 @@ func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (L
 	if err != nil {
 		return Layer{}, err
 	}
+	if size != nil && !b.samePlacement(current) {
+		return Layer{}, errors.New("rex: origin moved before sized layer creation")
+	}
+	options := map[string]any{
+		"command": command,
+		"shell":   "none",
+		"exit":    map[string]bool{"on_completion": false},
+	}
+	if size != nil {
+		options["size"] = *size
+	}
 	// The captured session.new_layer schema explicitly defines layout.block
-	// and the shell creator's command/shell/exit options. Call that API directly;
+	// and the shell creator's command/shell/exit/size options. Call that API directly;
 	// popup creation needs no script VM or configuration action registration.
 	arguments := map[string]any{
 		"session_id": b.client.session,
@@ -81,12 +106,8 @@ func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (L
 		"bounds":     bounds,
 		"focus":      true,
 		"layout": map[string]any{"block": map[string]any{
-			"flavor": "com.superlogical.terminal.shell",
-			"options": map[string]any{
-				"command": command,
-				"shell":   "none",
-				"exit":    map[string]bool{"on_completion": false},
-			},
+			"flavor":  "com.superlogical.terminal.shell",
+			"options": options,
 		}},
 	}
 	var result struct {
@@ -184,32 +205,7 @@ func (l Layer) Bounds(ctx context.Context) (Bounds, error) {
 	if err != nil {
 		return Bounds{}, err
 	}
-	var coordinates []*float64
-	if err := json.Unmarshal(layer.bounds, &coordinates); err != nil {
-		var object struct {
-			X *float64 `json:"x"`
-			Y *float64 `json:"y"`
-			W *float64 `json:"w"`
-			H *float64 `json:"h"`
-		}
-		if err := json.Unmarshal(layer.bounds, &object); err != nil {
-			return Bounds{}, errors.New("rex: owned layer has malformed bounds")
-		}
-		coordinates = []*float64{object.X, object.Y, object.W, object.H}
-	}
-	if len(coordinates) != 4 {
-		return Bounds{}, errors.New("rex: owned layer has missing bounds")
-	}
-	for _, value := range coordinates {
-		if value == nil {
-			return Bounds{}, errors.New("rex: owned layer has incomplete bounds")
-		}
-	}
-	bounds := Bounds{X: *coordinates[0], Y: *coordinates[1], W: *coordinates[2], H: *coordinates[3]}
-	if err := bounds.valid(); err != nil {
-		return Bounds{}, err
-	}
-	return bounds, nil
+	return decodeBounds(layer.bounds)
 }
 
 func (l Layer) checkOwned(ctx context.Context) error {

@@ -20,10 +20,10 @@ type MenuFrame struct {
 
 	// PreferredHeight is the natural row count at the supplied viewport width:
 	// all current entries (or the confirmation/empty message), both status
-	// borders, and no blank padding. It is independent of viewport height,
-	// page clipping and the selected page; it can exceed Height, even when
-	// Height is zero. Counts saturate at the largest int. Inactive menus and
-	// nonpositive widths report zero.
+	// borders, and one content spacer beside each border. It is independent of
+	// viewport height, page clipping and the selected page; it can exceed Height,
+	// even when Height is zero. Counts saturate at the largest int. Inactive
+	// menus and nonpositive widths report zero.
 	PreferredHeight int
 }
 
@@ -76,6 +76,9 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	if layout.header {
 		frame.Lines = append(frame.Lines, menuStatus(header, theme, layout.width))
 	}
+	if layout.topSpace {
+		frame.Lines = append(frame.Lines, "")
+	}
 	cellWidth := (layout.width - (layout.columns-1)*menuColumnGap) / layout.columns
 	start := layout.page * layout.capacity
 	end := start + min(layout.capacity, len(items)-start)
@@ -94,6 +97,9 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 			}
 		}
 		frame.Lines = append(frame.Lines, line.String())
+	}
+	if layout.bottomSpace {
+		frame.Lines = append(frame.Lines, "")
 	}
 	if layout.help {
 		role := ThemeMuted

@@ -464,7 +464,14 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return err
 	}
-	layer, err = origin.NewLayer(ctx, popupBounds(config.Position), command)
+	initialBounds, initialSize, err := popupInitialSize(ctx, origin, config)
+	if err != nil {
+		return err
+	}
+	if lifetime == popupConfigured && !uiDeadline.After(time.Now()) {
+		return nil // Read-only geometry sampling must not spend the teardown reserve.
+	}
+	layer, err = origin.NewLayerWithSize(ctx, initialBounds, command, initialSize)
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
 	}
