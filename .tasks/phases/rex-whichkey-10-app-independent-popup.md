@@ -10,13 +10,13 @@ title: 'Phase10: App-independent popup display'
 mtnCreateRetry:
   key: rex-whichkey-phase10-v1
   intent: 5b41ac2d723b7c4cd6210942fd8f9ae2e3acfddc83de08ff7bb97db0e70fe29a
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T16:14:34.788Z'
-dateModified: '2026-11-02T16:15:13.123Z'
+dateModified: '2026-11-02T16:30:27.709Z'
 tags:
   - task
 type: task
@@ -26,6 +26,7 @@ projects:
 blockedBy:
   - uid: '[[phases/rex-whichkey-09-tab-return.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-02'
 ---
 # Phase10: App-independent native popup startup
 
@@ -33,14 +34,8 @@ Deliver REQ-023 from approved designs/rex-whichkey-app-independent-popup.md: rem
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE2OjE0OjQ1LjYxNVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2FwcC1pbmRlcGVuZGVudC9waGFzZS1wbGFuLzEiLCJpbnRlbnQiOiJlZGQ0OTNkNzNlNDkzMDc1YjgyMTg4NjQ4MzVkY2YxMzY4MDEwYWJmYzI1ZmU0NDYxYzQ5MTA4YjNmNTFiOTg4In0 -->
-### 2026-11-02T16:14:45.615Z · plan · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE2OjMwOjI3LjY5N1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcGhhc2UxMC9zdW1tYXJ5LzEiLCJpbnRlbnQiOiI4ZTNhMDY3ZjAyNzk1NDZhMDM0ZGM2YzYyMmRlMzU2MDc5MDM5NTViNGM2OTE3ODU0MmRjMjdlMDI3ZTFiNDFmIn0 -->
+### 2026-11-02T16:30:27.697Z · summary · unspecified
 
-{"approvedBy":"explicit user correction; bounded coordinator decomposition","attempt":1,"coverage":{"REQ-023":["tasks/rex-whichkey-10-01-app-independent-popup.md"]},"decision":"approved","decisionEvidence":"One source/docs task with independent security/lifecycle review and exact combined compilation/actual native UI gate. Prior phases remain complete; no source pass inferred from approval.","documents":[{"hash":"sha256:7215d04e0b71c6cc6a8a593372ef03cec57ae6aeb16907a81f1f9407b5781b4c","ref":"designs/rex-whichkey-app-independent-popup.md"}],"eventId":"rex-whichkey/app-independent/phase-plan/1","kind":"plan","recordRef":"phases/rex-whichkey-10-app-independent-popup.md","records":[{"ref":"tasks/rex-whichkey-10-01-app-independent-popup.md","specHash":"sha256:1b007c064cc0f5f60819251a8d259450baa76641ac643f286ba116a11683046d"}],"schemaVersion":1,"specHash":"sha256:6bdf93feca5f655089585868e7bdd56b5177a4689b6dcbc76f7ac5d7bfc2d16d"}
-<!-- mtn:end-entry:v1 -->
-
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE2OjE1OjEzLjExMloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcnVudGltZS9hcHAtaW5kZXBlbmRlbnQiLCJpbnRlbnQiOiI4OTczMzJmNDE4Yzk0OTI0OTRmN2E5YjcyZThiNzJhZDhjNWQ4YjgyNmQ0ZGFjNjY2ZjQ4YmFiZWRmODM3ZGJjIn0 -->
-### 2026-11-02T16:15:13.112Z · runtime · unspecified
-
-{"attempt":1,"continuationEvidence":"Same live coordinator process/runId/session/window handles explicit Phase10 fix; no replacement/restart or identity rename.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/app-independent","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-10-app-independent-popup.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:6bdf93feca5f655089585868e7bdd56b5177a4689b6dcbc76f7ac5d7bfc2d16d","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
+{"acceptedScope":"Phase10: App-independent popup display","approvalSummary":["User explicitly requests decoupling native popup display from GUI target selection. Phase10 implementation/fresh review and bounded normal/nonexistent-selector UI/refusal checks authorized; configured binding/action safety retained.","All exact native child summaries bind current independent source approval and delivered target commit/tree; ancestry verified."],"artifactRefs":[".mtn-tmp/startup-decoupling/phase10-final/validate.json",".mtn-tmp/startup-decoupling/phase10-final/worktrees.txt",".mtn-tmp/startup-decoupling/runtime/rex-whichkey-p10-t01-builder-a01/result.json"],"attempt":1,"coverage":{"REQ-023":["tasks/rex-whichkey-10-01-app-independent-popup.md"]},"eventId":"rex-whichkey-p03-coordinator-a01/phase10/summary/1","files":["README.md","docs/acceptance.md","docs/launch-contract.md","launch.go","native.go","popup.go"],"kind":"summary","limitations":["No tests/TDD/general suites, successful native/destructive dispatch, configured Lua callbacks, config changes/reloads or remote/Darwin trials. Normal and nonexistent-selector native display/dismissal and deliberately nonexistent-target selection refusal checked with recorded app counts, no app disconnections. Server capture is not remote GUI presentation proof. Native display no longer has a singleton-app guard; executable targeting and configured launch remain strict.","Independent fresh contexts used the same authenticated model family, not cross-family review.","Prior transferred coordinator process status remains unverified; ownership transfer did not assert remote/local stoppage.","No global cleanup or push; retained worktrees/artifacts remain available."],"recordRef":"phases/rex-whichkey-10-app-independent-popup.md","records":["tasks/rex-whichkey-10-01-app-independent-popup.md"],"requirements":["REQ-023"],"schemaVersion":1,"specHash":"sha256:6bdf93feca5f655089585868e7bdd56b5177a4689b6dcbc76f7ac5d7bfc2d16d","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"8a5f388444ae371a15ea89c4d54085d9f80180eb","targetTree":"bad2da66d266758ee52ac925dc9da3b8bd273565","verification":[{"command":"Actual normal and nonexistent-client-selector native popups opened/navigated/dismissed exit0; nonexistent-target selection refused only after owned popup cleanup; exact tracked runtime source verified","result":"pass"},{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...; make build (combined delivered revision and refreshed CLI artifact)","result":"pass"},{"command":"git diff --check; native graph/schema validation; exact completed child scope and Git delivery identities/ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
