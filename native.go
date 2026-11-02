@@ -145,9 +145,9 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
 		dispatchAction := mapping.Action
-		if mapping.Action == "client.tab.goto" {
-			// Compile only retained numbered-tab intent; the child cannot supply
-			// this action or its exact session/window arguments.
+		if mapping.Action == "client.tab.goto" || mapping.Action == "client.tab.new" {
+			// Compile only retained tab intent; the child cannot supply this
+			// action or its exact session/window arguments.
 			dispatchAction = "session.select"
 		}
 		if actions[dispatchAction] != "client" {
@@ -160,48 +160,102 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if mapping.Action == "client.tab.goto" {
 			return nativeNumberedTab(dispatch, client, bound, executable, mapping)
 		}
+		if mapping.Action == "client.tab.new" {
+			return nativeNewTab(dispatch, client, bound, executable, mapping)
+		}
 		args := mapping.Args
 		if len(args) == 0 {
 			args = json.RawMessage(`{}`)
 		}
-		var splitClient *rex.Client
-		if mapping.Action == "pane.split" {
-			// The origin authorizes this invocation, not the split destination.
-			// An unscoped api call omits session/block overrides, including ambient
-			// CLI context, so the chosen app uses its selected tab's focused pane.
-			splitClient, err = rex.New(rex.Options{Executable: executable, Server: target.Server,
-				Timeout: 3 * time.Second})
-			if err != nil {
-				return errors.New("whichkey: native split targeting refused: cannot construct the captured endpoint client")
-			}
+		// Keep the transport unscoped so context is explicit in the request,
+		// never injected by the adapter or taken from ambient CLI context.
+		performClient, err := rex.New(rex.Options{Executable: executable, Server: target.Server,
+			Timeout: 3 * time.Second})
+		if err != nil {
+			return errors.New("whichkey: native action targeting refused: cannot construct the captured endpoint client")
+		}
+		request := map[string]any{
+			"client_id": target.ClientID, "action": mapping.Action, "args": args,
+			"origin": "cli", "timeout_ms": 3000,
+		}
+		if mapping.Action != "pane.split" {
+			// Preserve origin-bound context, especially for destructive actions.
+			// Splits instead use the chosen app's selected tab and focused pane;
+			// their origin authorizes invocation, not the destination.
+			request["session_id"], request["block_id"] = origin.SessionID, origin.BlockID
 		}
 		// Recheck the exact captured generation and origin immediately before
 		// one dispatch. A reconnect never renews or silently selects another app.
 		if _, err := bound.originBlock(dispatch, client); err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
-		if splitClient != nil {
-			if err := splitClient.Call(dispatch, "client.perform", map[string]any{
-				"client_id": target.ClientID, "action": mapping.Action, "args": args,
-				"origin": "cli", "timeout_ms": 3000,
-			}, nil); err != nil {
-				return errors.New("whichkey: native split failed or is uncertain; check app Remote Control and action compatibility; not retried")
-			}
-			return nil
-		}
-		command := exec.CommandContext(dispatch, executable,
-			"--server", target.Server, "--client", target.ClientID, "--autostart=false", "--timeout", "3s",
-			"do", mapping.Action, "--session", origin.SessionID, "--block", origin.BlockID, "--args", "-")
-		command.Stdin = bytes.NewReader(args)
-		output := &launchOutput{remaining: popupMessageLimit}
-		command.Stdout, command.Stderr = output, output
-		command.WaitDelay = 250 * time.Millisecond
-		if err := command.Run(); err != nil {
+		// Discard only a validated JSON result. Errors can follow a successful
+		// mutation, so neither an uncertain reply nor a timeout permits retry.
+		if err := performClient.Call(dispatch, "client.perform", request, nil); err != nil {
 			return errors.New("whichkey: native action failed or is uncertain; check app Remote Control and action compatibility; not retried")
 		}
 		return nil
 	}
 	return errors.New("whichkey: native selection is missing from the retained snapshot")
+}
+
+// nativeNewTab compiles only Go-owned tn intent after both UIs and their
+// files/leases are gone and the caller checked session.select registration.
+// Creation and app activation are distinct effects, never a retryable transaction.
+func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, executable string, mapping Mapping) error {
+	if mapping.Action != "client.tab.new" || mapping.Keys != "tn" {
+		return errors.New("whichkey: native new tab refused: invalid retained new-tab intent")
+	}
+	if len(mapping.Args) != 0 {
+		if _, err := completionObject(mapping.Args); err != nil {
+			return errors.New("whichkey: native new tab refused: retained new-tab arguments must be empty")
+		}
+	}
+	unscoped, err := rex.New(rex.Options{Executable: executable, Server: bound.Server,
+		Timeout: 3 * time.Second})
+	if err != nil {
+		return errors.New("whichkey: native new tab refused: cannot construct the captured endpoint client")
+	}
+	session, err := client.Session(ctx, bound.SessionID)
+	if err != nil {
+		return errors.New("whichkey: native new tab refused: cannot inspect the captured origin session")
+	}
+	if _, err := bound.originBlock(ctx, client); err != nil {
+		return errors.New("whichkey: native new tab refused: origin or chosen app connection changed before creation")
+	}
+	// Exactly one default-terminal creation in the captured source session.
+	// NewWindow can retain a validated ID even when later response checks fail.
+	window, err := session.NewWindow(ctx, "")
+	if err != nil {
+		if window.ID != "" {
+			return fmt.Errorf("whichkey: native new tab creation response is incomplete; inspect preserved tab %s in session %s manually; activation not attempted, no retry or rollback", window.ID, bound.SessionID)
+		}
+		return errors.New("whichkey: native new tab creation failed or is uncertain; inspect the origin session for a possible new tab before any manual action; no retry or rollback")
+	}
+	// Freeze this exact returned ID. Never create again, close it on failure,
+	// resolve a position, or fall back to the original client.tab.new action.
+	target := launchOrigin{Server: bound.Server, SessionID: bound.SessionID,
+		BlockID: bound.BlockID, ClientID: bound.ClientID}
+	actions, err := target.actions(ctx, executable, true)
+	if err != nil || actions["session.select"] != "client" {
+		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation refused because session.select registration could not be verified; select that tab manually, no retry or rollback", window.ID, bound.SessionID)
+	}
+	if _, err := window.Inspect(ctx); err != nil {
+		return fmt.Errorf("whichkey: native new tab %s created in session %s; membership could not be verified before activation; inspect that exact tab manually, no retry or rollback", window.ID, bound.SessionID)
+	}
+	if _, err := bound.originBlock(ctx, client); err != nil {
+		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; origin or chosen app connection changed before activation; select that tab manually, no retry or rollback", window.ID, bound.SessionID)
+	}
+	// Only parent-derived destination args select the new tab. No outer
+	// session/block override can redirect the chosen app away from that ID.
+	if err := unscoped.Call(ctx, "client.perform", map[string]any{
+		"client_id": bound.ClientID, "action": "session.select",
+		"args":   map[string]string{"session_id": bound.SessionID, "window_id": window.ID},
+		"origin": "cli", "timeout_ms": 3000,
+	}, nil); err != nil {
+		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation failed or is uncertain; check app Remote Control/action compatibility and select that tab manually, no retry or rollback", window.ID, bound.SessionID)
+	}
+	return nil
 }
 
 // nativePopupSelection only captures finish's validated result. No app lookup,

@@ -152,7 +152,7 @@ launch-origin context for native `pane.split`.
 | Requirement | Implemented source | Evidence boundary |
 | --- | --- | --- |
 | REQ-031 — explicit late native app choice | [`native.go`](../native.go) captures the first validated result and returns from popup cleanup before resolving apps. [`native_targets.go`](../native_targets.go) retains eligible full IDs/generations and routes multiple apps through a separate canonical menu; safe label hints never grant authority. An explicit selector stays strict, zero apps refuse, one binds directly, chooser cancellation dispatches nothing. Only the target identity changes; original mapping/args/confirmation are revalidated, app metadata and exact generation/origin checked before one dispatch. Outer signal ownership spans both UIs and gaps; the dispatch budget starts after choice/cleanup. Both stages retain native FIFO lifetime, initial sizing/spacers and fixed navigation bounds. Configured original-VM binding/expiry/auth remain unchanged. | Source-only implementation, not compilation or runtime proof. Fresh frozen review, coordinator compilation, actual bare `s` -> explicit work-app choice -> below-origin split, chooser cancellation with no pane, strict invalid selector refusal and exact UI/file/lease cleanup belong to [task 14-01](../.tasks/tasks/rex-whichkey-14-01-action-target.md). No such gate is claimed by this source entry. |
-| REQ-032 — native splits use chosen app's selected window | [`native.go`](../native.go) sends only native `pane.split` through documented `client.perform` using a separate exact-endpoint, unscoped client. No session/block override or server active-window lookup is used; retained `right`/`down` args and selection/confirmation survive unchanged. The original scoped client still rechecks origin, session attachment and exact app generation immediately before one dispatch. Other native/destructive actions, configured routing, target chooser and cleanup remain unchanged. | Source-only change, not compilation or behavioral proof. [Task 14-04](../.tasks/tasks/rex-whichkey-14-04-selected-window-splits.md) requires coordinator compilation and owned launcher A versus selected tab B with two known panes: both `s`/`v` must split B's focused pane in the expected direction, leave A and B's other anchor unchanged, and clean exact fixtures. Ordinary same-window splits, late choice/cancel and strict missing selector also require verification. No runtime pass is asserted here. |
+| REQ-032 — native splits use chosen app's selected window | [`native.go`](../native.go) sends native `pane.split` through documented `client.perform` using a separate exact-endpoint, unscoped client; only splits omit origin session/block context. No session/block override or server active-window lookup is used; retained `right`/`down` args and selection/confirmation survive unchanged. The original scoped client still rechecks origin, session attachment and exact app generation immediately before one dispatch. Other native/destructive actions, configured routing, target chooser and cleanup remain unchanged. | Source-only change, not compilation or behavioral proof. [Task 14-04](../.tasks/tasks/rex-whichkey-14-04-selected-window-splits.md) requires coordinator compilation and owned launcher A versus selected tab B with two known panes: both `s`/`v` must split B's focused pane in the expected direction, leave A and B's other anchor unchanged, and clean exact fixtures. Ordinary same-window splits, late choice/cancel and strict missing selector also require verification. No runtime pass is asserted here. |
 
 The coordinator's recorded reproduction in the design identifies several attached
 apps as the bare split-down failure; explicit app dispatch produced the expected
@@ -167,9 +167,11 @@ of the revised split destination. The earlier assumed 18-resource/7-GUI partitio
 was disproved by actual probes: that snapshot left 19 native GUI outcomes
 uncertified. The later numbered-tabs supplement records functional evidence for
 `th` and `e`, but not an all-25 pass. Tab navigation did not update server
-`active_window_id`; `tn` returned success without an observed new server
-window/session and remains unverified, not conclusively broken. Source/registry
-acceptance or a successful receipt is not GUI proof.
+`active_window_id`; at that snapshot, `tn` returned success without an observed
+new server window/session and remained unverified. The later explicit-dispatch
+comparison below establishes a specific CLI/API effect difference, not an
+all-action diagnosis. Source/registry acceptance or a successful receipt is not
+GUI proof.
 Native chrome REQ-026 remains independently blocked. Leaves run source/format/
 whitespace checks only, with no tests/TDD, builds, native/GUI/API/config/font/
 platform experiments or installs.
@@ -192,6 +194,43 @@ Rex's native numeric `client.tab.goto` action. The all-25 action audit remains o
 REQ-026 native chrome remains independently blocked. Leaf validation is limited
 to source, formatting and whitespace checks; runtime effects belong to the
 coordinator's frozen candidate gate.
+
+## Explicit native client.perform: REQ-030 bounded repair
+
+Accepted **REXWHICHKEY-20261102-171343** in the
+[explicit-dispatch supplement](../.tasks/designs/rex-whichkey-client-perform.md)
+replaces the remaining native `rex do` transport, not retained action intent or
+target authority. The coordinator recorded that the exact same installed Rex
+executable returned success/empty output for `rex do client.tab.new` without a
+new window across inspected sessions, while direct documented `client.perform`
+with the same app/context created one. That earlier comparison was not a reliable
+New Tab fix: the a01 candidate compiled and passed source review but **failed** the
+actual `tn` resulting-effect gate, with only six of seven required effects.
+Tracing showed the original `client.perform client.tab.new {}` and correct retained
+app/origin; an interactive zsh caller with valid OSC PWD also created no tab.
+The cause remains unknown; neither version skew nor a shell/context diagnosis is
+established. The failed candidate and its artifacts remain failed, not certified.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-030 — explicit native dispatch | Except for numbered-tab and New Tab intent compilation, [`native.go`](../native.go) sends original action and `json.RawMessage` args through one documented `client.perform` using a separate unscoped exact-server client and the existing fresh three-second signal-cancellable budget. All non-split requests include explicit captured origin `session_id`/`block_id`; splits omit both and use the chosen app's selected window/focused pane. Original selection/confirmation, selected-action registration and exact app generation/origin recheck remain before dispatch, after both UI/file/lease cleanups. `Call(..., nil)` validates JSON before discarding; sanitized uncertainty errors never retry or fall back to CLI `do`. Read-only metadata still uses the Rex executable. The numbered exact-ID adapter, configured original-VM route/auth/expiry, late chooser, FIFO lifetime, no idle timeout and fixed initial dimensions/spacers are unchanged. | Source-only implementation, not compilation or behavior proof. [Task 14-06](../.tasks/tasks/rex-whichkey-14-06-client-perform.md) requires independent frozen source review and coordinator combined compilation, then actual native menu `v`/`s`/`tn`/`x`/`tx`/`wn`/`wx` with all seven resulting resource effects observed on exact owned fixtures. Selected-window split correctness and exact UI/files/fixture cleanup must hold. Destructive closes are limited to owned empty resources. A receipt or source review alone is insufficient; no leaf runtime pass is asserted. |
+
+The earlier six observed resource effects and functional `th`/`e` evidence do
+not certify the all-25 default matrix. Full action/API verification remains the
+coordinator's responsibility after integration; GUI interactions remain
+individually unresolved rather than a blanket screenshot requirement. REQ-026
+native chrome remains independently blocked. No leaf builds, tests/TDD, RPC,
+native/GUI/API/config/font/platform trials or installs were run for this repair.
+
+## Native New Tab resource intent: REQ-030 refinement
+
+Accepted **REXWHICHKEY-20261102-173105** in the
+[New Tab supplement](../.tasks/designs/rex-whichkey-new-tab-intent.md) refines the
+failed transport-only `tn` repair without changing the seven-effect acceptance gate.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-030 — one source-session New Tab | [`native.go`](../native.go) strictly validates Go-retained `tn` / `client.tab.new` intent with absent or empty-object args. The chosen app's actual `session.select` registration is checked before mutation. After both UI/file/lease cleanups, existing typed `Session.NewWindow` creates one default terminal in the captured source session following an origin/app-generation recheck. The returned exact ID is frozen; registration, exact window membership and original origin/app generation are checked before one unscoped exact-server `client.perform session.select` with explicit source session/new window args. All work shares the existing signal-cancellable dispatch budget. Uncertain creation refuses without retry; any known created ID survives response/recheck/activation errors with sanitized manual guidance. No duplicate create, automatic close, retry or original-action fallback exists. Configured Lua, numbered tabs, destructive targets and split context remain unchanged. This is Go intent translation, not execution of Rex's native `client.tab.new`. | Source-only change, not compiled or runtime-verified by this leaf. Fresh frozen review and coordinator combined compilation are required, followed by actual menu `v`/`s`/`tn`/`x`/`tx`/`wn`/`wx` and all seven resulting resource effects. Real `tn` must create exactly one tab in its captured own session and activate that exact ID; verify cleanup before creation and no duplicate/rollback on failure. The earlier a01 gate remains failed. All-25 modal/action verification and REQ-026 chrome remain incomplete. |
 
 ## Native display independent of app targeting: REQ-023
 

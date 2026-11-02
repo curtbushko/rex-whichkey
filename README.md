@@ -22,8 +22,10 @@ paging hints and measured content-fitting layer height. Phase12 adds compact
 first-frame sizing and status spacers. The later Phase13 correction retains one
 initial rectangle through navigation, superseding live grow/shrink behavior;
 source changes alone do not verify stable runtime bounds. Phase14 adds an explicit
-app chooser after native action selection when several apps are attached, and
-translates native numbered-tab intent to exact window IDs. These source repairs
+app chooser after native action selection when several apps are attached,
+translates native numbered-tab intent to exact window IDs, creates native New Tab
+intent through the typed source-session resource API, and uses explicit
+`client.perform` requests for native app dispatch. These source repairs
 do not certify every default action or GUI-only behavior.
 **Hiding native Rex pane/tab/window controls (REQ-026) remains blocked**,
 not waived or fulfilled;
@@ -35,8 +37,10 @@ The helper and `rex` CLI must be available on the **execution/server host**,
 even when the graphical client is on another machine. Optional customization
 also needs Lua modules available to the user/process running the server. The
 implementation targets Linux and macOS; declared Nix outputs are not platform
-certification. Basic startup creates a native floating terminal; selected actions
-use explicitly targeted CLI activation. Configured Lua launch additionally uses
+certification. Basic startup creates a native floating terminal; selected app
+actions use explicitly targeted `client.perform` API requests through the Rex CLI.
+Native New Tab first creates one source-session tab through the typed resource API.
+Configured Lua launch additionally uses
 configuration actions and detached process execution.
 
 The flake exports `packages.<system>.rex-whichkey` (also `default`) for
@@ -191,13 +195,30 @@ ID. The chosen app must register `session.select`; the child cannot replace the
 action or args. This is intent translation, not a claim that native numeric goto
 was repaired. Configured Lua defaults keep their direct native action route.
 
-Other native actions (including close) retain their existing origin-targeted
-context, and configured menus retain their original-VM contract. Server-wide
-active-window state is not used to choose a split destination.
+Native `tn` retains Go-owned `client.tab.new` intent with empty arguments, but Go
+creates exactly one default-terminal tab in the captured origin session through
+`Session.NewWindow`, then activates its exact returned ID with `session.select`.
+The chosen app must register that actual action before creation and again before
+activation; origin/app generation is checked before each effect, and window
+membership before activation. All UI/files/leases are gone before creation.
+If creation is uncertain, inspect the origin session before any manual action.
+If activation fails, the tab is preserved and the error includes its exact ID
+for manual selection. There is no retry, duplicate creation, automatic close or
+fallback to `client.tab.new`. This translates intent rather than claiming Rex's
+native New Tab action executed; configured Lua routing is unchanged.
+
+Other native actions (including close) use one documented `client.perform`
+request with the original action/JSON arguments and explicit captured origin
+`session_id`/`block_id`. A separate unscoped client pins the exact server and
+three-second timeout; splits omit both context fields. Errors, invalid replies
+and uncertain effects are not retried, and there is no `rex do` fallback.
+Configured menus retain their original-VM contract. Server-wide active-window
+state is not used to choose a split destination.
 
 Configured success acknowledges activation, not display or callback completion.
 Native success follows child exit, exact cleanup and optional one-shot action
-acceptance. Failed or uncertain activation is never retried automatically.
+acceptance (for `tn`, one creation followed by exact-ID activation). Failed or
+uncertain activation is never retried automatically.
 
 ### Linux/macOS endpoints and overrides
 

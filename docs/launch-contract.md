@@ -276,20 +276,78 @@ exact captured generation plus origin immediately before execution. Lost attachm
 reconnects or stale choices fail; no re-enumeration silently replaces the target.
 The chooser cannot renew the captured generation.
 
-Native `pane.split` alone (`v`/`right`, `s`/`down`) uses documented `client.perform`
+Native actions other than numbered-tab and New Tab intent use documented `client.perform`
 through a separate **unscoped** `rex.Client` pinned to the captured endpoint and a
-three-second timeout. The request contains only the retained `client_id`, `action`,
-`args`, `origin: "cli"` and `timeout_ms: 3000`. Both `session_id` and `block_id` are
-absent: the chosen app splits its currently selected tab/window's focused pane.
+three-second timeout. Each request preserves retained `client_id`, `action`, JSON
+`args`, `origin: "cli"` and `timeout_ms: 3000`; empty args become `{}`. All non-split
+requests also carry explicit captured origin `session_id` and `block_id`, preserving
+origin-bound context including destructive close targets. Only `pane.split`
+(`v`/`right`, `s`/`down`) omits both fields: the chosen app splits its currently
+selected tab/window's focused pane.
 `api call` does not default to ambient `REX_SESSION`/`REX_BLOCK`/`REX_WINDOW`, and
 omitting `Options.Session` prevents the generic adapter injecting an origin session.
 The original scoped client still checks invocation placement, session attachment
-and exact app generation immediately before this one call. Origin is liveness
-and authorization evidence, not split destination; server `active_window_id` is
-not used as app-selected state. `Call(..., nil)` discards a validated JSON result.
-The captured contract is `.mtn-tmp/action-audit/client-perform-api.json`; missing
-`block_id` explicitly means the client's focused block. Arguments stay `right` or
-`down`, never the CLI spelling `below`.
+and exact app generation immediately before this one call. For splits, origin is
+liveness and authorization evidence, not destination; server `active_window_id`
+is not used as app-selected state. `Call(..., nil)` discards a validated JSON
+result; timeout or invalid JSON may follow a successful mutation and never
+permits retry or CLI fallback. The captured contract is
+`.mtn-tmp/action-audit/client-perform-api.json`; missing `block_id` explicitly
+means the client's focused block. Split arguments stay `right` or `down`, never
+the CLI spelling `below`.
+
+Accepted **REXWHICHKEY-20261102-171343** in the
+[explicit-dispatch supplement](../.tasks/designs/rex-whichkey-client-perform.md)
+extends this transport to the remaining native leaves. The coordinator recorded
+the exact same installed executable returning success from `rex do client.tab.new`
+without creating a window, while direct documented `client.perform` with the same
+app/context created one. This is not version skew or proof that every CLI action
+is broken; the underlying CLI cause is not established. That transport-only a01
+candidate subsequently compiled and passed source review but **failed** the actual
+`tn` effect gate: only six of seven required effects were observed. Tracing showed
+`client.perform client.tab.new {}` with the retained exact app/origin; an interactive
+zsh caller with valid OSC PWD also created no tab. The earlier comparison does not
+establish reliable New Tab behavior or a shell/context diagnosis. Source changes
+alone do not prove resource effects.
+
+### Native New Tab intent compilation
+
+Accepted **REXWHICHKEY-20261102-173105** in the
+[New Tab supplement](../.tasks/designs/rex-whichkey-new-tab-intent.md) refines the
+transport-only repair only for Go's built-in `tn`. [`native.go`](../native.go)
+validates retained `client.tab.new`, key `tn` and absent or strictly empty-object
+arguments. Neither the child nor the target chooser supplies replacement intent.
+The chosen app must register native `session.select` before any mutation.
+
+After both UI lifecycles and all private files/leases are gone, the parent resolves
+the captured source session with `rex.Client.Session`, rechecks origin placement
+and exact chosen app attachment/generation, then invokes `Session.NewWindow` once
+with an empty label for a default terminal. The existing typed helper owns the
+documented `window new` resource command and response validation; no guessed
+creation schema or native action arguments are introduced.
+
+The returned exact window ID is frozen. Before one activation the parent checks
+`session.select` registration again, uses `Window.Inspect` to validate that ID's
+source-session membership, and rechecks the original origin/app generation.
+A separate unscoped exact-endpoint client sends `client.perform` with the chosen
+`client_id`, `action: "session.select"`, explicit
+`args: {session_id: ORIGIN_SESSION, window_id: CREATED_WINDOW}`, `origin: "cli"`
+and `timeout_ms: 3000`, without outer session/block overrides. Creation and
+activation share the fresh three-second signal-cancellable dispatch budget;
+these checks are not an atomic resource lock.
+
+An uncertain creation is reported as a possible effect without retry. If the
+typed helper returns a valid ID alongside an incomplete creation response, the
+error retains that ID and activation is not attempted. Every later registration,
+membership, origin/generation or activation failure reports the exact created ID
+and manual inspection/selection guidance. The tab is not automatically closed,
+recreated or replaced; there is no fallback to `client.tab.new`. Success denotes
+one creation plus accepted exact-ID activation, not a generic GUI certificate.
+This compiles Go-owned intent rather than claiming native `client.tab.new` ran.
+Configured Lua defaults/original-VM dispatch, numbered-tab compilation, split
+selected-app context and destructive origin targets remain unchanged. Fresh review,
+coordinator compilation and all seven actual resource effects remain required;
+the failed a01 gate is not relabeled a pass.
 
 ### Native numbered-tab intent compilation
 
@@ -331,12 +389,13 @@ This is intentional Go-owned intent compilation, not a repair of Rex's numeric
 and Lua defaults remain direct native actions. Native previous/next, splits and
 all destructive actions retain their existing behavior.
 
-Every remaining native action keeps trusted action/args once through
-`rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
---session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
-output is discarded with a shared 64 KiB budget. In particular, destructive close
-targets do not change. Configured original-VM routing is also unchanged. All
-native dispatch paths have the same three-second context, sanitized failure or
+Apart from the two tab-intent adapters above, every remaining native action sends
+trusted action/JSON args once through the
+explicit `client.perform` request above, with captured origin session/block
+context; no native `rex do` dispatch wrapper remains. Metadata still legitimately
+uses the read-only Rex `actions --json` command. Destructive close targets and
+configured original-VM routing do not change. All native dispatch paths share
+the fresh three-second signal-cancellable context, sanitized failure or
 uncertain-effect errors and no retries or fallback. Dismissal of either stage
 executes no native action.
 Cleanup errors prevent selection dispatch; partial/uncertain creation never triggers broad
