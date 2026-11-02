@@ -39,7 +39,15 @@ const (
 // SIGKILL, SIGSTOP, process/terminal loss cannot run cleanup. Darwin may transiently
 // expose PENDIN while restoring; restore the captured state unchanged, never mask
 // other configured flags or claim a byte-for-byte platform comparison here.
-func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event MenuEvent, outcome error) {
+func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (MenuEvent, error) {
+	return runTerminal(ctx, config, noColor, ascii, nil)
+}
+
+// observe is private popup plumbing. Direct terminal callers keep their existing
+// positioning and API; only popup children publish natural renderer dimensions.
+func runTerminal(ctx context.Context, config Config, noColor, ascii bool,
+	observe func(MenuFrame, int, int) error,
+) (event MenuEvent, outcome error) {
 	if err := ctx.Err(); err != nil {
 		return MenuEvent{}, err
 	}
@@ -131,8 +139,11 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	var palette PaletteDecoder
 	var input terminalKeys
 	theme := NewTheme(TerminalPalette{}, noColor, ascii)
+	draw := func() (MenuFrame, error) {
+		return drawTerminal(ctx, fd, menu, config, theme, observe)
+	}
 	viewportUsed = true // A failed redraw may already have cleared or styled cells.
-	frame, err := drawTerminal(ctx, fd, menu, config, theme)
+	frame, err := draw()
 	if err != nil {
 		return MenuEvent{}, err
 	}
@@ -166,7 +177,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			// pending confirmation must survive returning to this terminal.
 			// Refresh Pages before handling another key in this same read.
 			var err error
-			frame, err = drawTerminal(ctx, fd, menu, config, theme)
+			frame, err = draw()
 			if err != nil {
 				return MenuEvent{}, err
 			}
@@ -182,7 +193,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		}
 		select {
 		case <-resize:
-			frame, err = drawTerminal(ctx, fd, menu, config, theme)
+			frame, err = draw()
 			if err != nil {
 				return MenuEvent{}, err
 			}
@@ -212,7 +223,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 					if menu.Done() {
 						return event, nil
 					}
-					frame, err = drawTerminal(ctx, fd, menu, config, theme)
+					frame, err = draw()
 					if err != nil {
 						return MenuEvent{}, err
 					}
@@ -237,7 +248,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			keys, messages := palette.Feed(buffer[i : i+1])
 			for _, message := range messages {
 				theme = NewTheme(message.Palette, noColor, ascii)
-				frame, err = drawTerminal(ctx, fd, menu, config, theme)
+				frame, err = draw()
 				if err != nil {
 					return MenuEvent{}, err
 				}
@@ -250,12 +261,19 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	}
 }
 
-func drawTerminal(ctx context.Context, fd int, menu *Menu, config Config, theme Theme) (MenuFrame, error) {
+func drawTerminal(ctx context.Context, fd int, menu *Menu, config Config, theme Theme,
+	observe func(MenuFrame, int, int) error,
+) (MenuFrame, error) {
 	width, height, err := term.GetSize(fd)
 	if err != nil {
 		return MenuFrame{}, fmt.Errorf("whichkey: terminal size: %w", err)
 	}
 	frame := RenderMenu(menu, config, theme, width, height)
+	if observe != nil {
+		// The parent anchors the actual layer. Never center the popup frame
+		// a second time inside a temporarily oversized terminal viewport.
+		frame.Y = 0
+	}
 	var output strings.Builder
 	// The entire dedicated viewport is cleared so old geometry cannot survive
 	// a smaller/relocated frame. Disabled autowrap prevents resize-time scrolling.
@@ -268,6 +286,11 @@ func drawTerminal(ctx context.Context, fd int, menu *Menu, config Config, theme 
 	}
 	if err := writeTerminal(ctx, fd, output.String()); err != nil {
 		return MenuFrame{}, err
+	}
+	if observe != nil {
+		if err := observe(frame, width, height); err != nil {
+			return MenuFrame{}, err
+		}
 	}
 	return frame, nil
 }

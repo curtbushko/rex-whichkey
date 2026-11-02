@@ -2,6 +2,7 @@ package rex
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -111,6 +112,7 @@ func (b Block) valid() error {
 type placedLayer struct {
 	id     string
 	kind   string
+	bounds json.RawMessage
 	blocks []Block
 }
 
@@ -126,8 +128,9 @@ func (s Session) placedLayers(ctx context.Context) ([]placedLayer, error) {
 		Windows []struct {
 			ID     string `json:"window_id"`
 			Layers []struct {
-				ID     string `json:"layer_id"`
-				Kind   string `json:"kind"`
+				ID     string          `json:"layer_id"`
+				Kind   string          `json:"kind"`
+				Bounds json.RawMessage `json:"bounds"`
 				Blocks []struct {
 					ID string `json:"block_id"`
 				} `json:"blocks"`
@@ -152,7 +155,7 @@ func (s Session) placedLayers(ctx context.Context) ([]placedLayer, error) {
 				return nil, errors.New("rex session inspect: invalid layer placement")
 			}
 			seen[item.ID] = true
-			layer := placedLayer{id: item.ID, kind: item.Kind}
+			layer := placedLayer{id: item.ID, kind: item.Kind, bounds: item.Bounds}
 			for _, block := range item.Blocks {
 				if !resourceID(block.ID, "block") || seen[block.ID] {
 					return nil, errors.New("rex session inspect: invalid or duplicate block placement")

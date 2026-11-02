@@ -2,6 +2,7 @@ package rex
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -175,21 +176,62 @@ func (l Layer) valid() error {
 	return nil
 }
 
+// Bounds reads the current normalized rectangle after the same exact-owned
+// membership check used by Resize. A missing or malformed rectangle is never
+// substituted with a cached creation size.
+func (l Layer) Bounds(ctx context.Context) (Bounds, error) {
+	layer, err := l.owned(ctx)
+	if err != nil {
+		return Bounds{}, err
+	}
+	var coordinates []*float64
+	if err := json.Unmarshal(layer.bounds, &coordinates); err != nil {
+		var object struct {
+			X *float64 `json:"x"`
+			Y *float64 `json:"y"`
+			W *float64 `json:"w"`
+			H *float64 `json:"h"`
+		}
+		if err := json.Unmarshal(layer.bounds, &object); err != nil {
+			return Bounds{}, errors.New("rex: owned layer has malformed bounds")
+		}
+		coordinates = []*float64{object.X, object.Y, object.W, object.H}
+	}
+	if len(coordinates) != 4 {
+		return Bounds{}, errors.New("rex: owned layer has missing bounds")
+	}
+	for _, value := range coordinates {
+		if value == nil {
+			return Bounds{}, errors.New("rex: owned layer has incomplete bounds")
+		}
+	}
+	bounds := Bounds{X: *coordinates[0], Y: *coordinates[1], W: *coordinates[2], H: *coordinates[3]}
+	if err := bounds.valid(); err != nil {
+		return Bounds{}, err
+	}
+	return bounds, nil
+}
+
 func (l Layer) checkOwned(ctx context.Context) error {
+	_, err := l.owned(ctx)
+	return err
+}
+
+func (l Layer) owned(ctx context.Context) (placedLayer, error) {
 	if err := l.valid(); err != nil {
-		return err
+		return placedLayer{}, err
 	}
 	layers, err := l.Block().Session().placedLayers(ctx)
 	if err != nil {
-		return err
+		return placedLayer{}, err
 	}
 	for _, layer := range layers {
 		if layer.id == l.layerID {
 			if layer.kind != "floating" || len(layer.blocks) != 1 || layer.blocks[0].blockID != l.blockID {
-				return fmt.Errorf("rex: layer %q no longer contains exactly its owned terminal; refusing mutation", l.layerID)
+				return placedLayer{}, fmt.Errorf("rex: layer %q no longer contains exactly its owned terminal; refusing mutation", l.layerID)
 			}
-			return nil
+			return layer, nil
 		}
 	}
-	return fmt.Errorf("rex: owned layer %q is no longer in session %q", l.layerID, l.client.session)
+	return placedLayer{}, fmt.Errorf("rex: owned layer %q is no longer in session %q", l.layerID, l.client.session)
 }

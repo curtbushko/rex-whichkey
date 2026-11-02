@@ -468,7 +468,10 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
 	}
-	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock)
+	sizer := popupSizer{maximum: popupBounds(config.Position), position: config.Position}
+	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock, func(check context.Context) error {
+		return sizer.refresh(check, directory, layer)
+	})
 	if err != nil {
 		if lifetime == popupConfigured && errors.Is(err, context.DeadlineExceeded) &&
 			ctx.Err() == context.DeadlineExceeded && parent.Err() == nil && !time.Now().Before(expires) {
@@ -510,11 +513,12 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 // mode. Native display survives GUI ambiguity/disconnection. Neither policy
 // checks active-tab visibility: switching tabs must not cancel or refocus it.
 func waitPopup(ctx context.Context, request popupRequest, executable, blockID string,
-	originBlock func(context.Context) (rex.Block, error),
+	originBlock func(context.Context) (rex.Block, error), refresh func(context.Context) error,
 ) error {
 	waitCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	stopped := make(chan struct{})
+	var watcherErr error // Read only after stopped closes; no watcher survives cleanup.
 	go func() {
 		defer close(stopped)
 		ticker := time.NewTicker(time.Second)
@@ -524,7 +528,18 @@ func waitPopup(ctx context.Context, request popupRequest, executable, blockID st
 			case <-waitCtx.Done():
 				return
 			case <-ticker.C:
-				if _, err := originBlock(waitCtx); err != nil {
+				// One shared deadline bounds liveness plus geometry. Child exit
+				// stops new checks, but lets an in-flight resize finish before
+				// cleanup instead of making its result uncertain. Parent
+				// cancellation still interrupts it through ctx.
+				check, done := context.WithTimeout(ctx, 3*time.Second)
+				_, err := originBlock(check)
+				if err == nil {
+					err = refresh(check)
+				}
+				done()
+				if err != nil {
+					watcherErr = err
 					cancel(err)
 					return
 				}
@@ -541,6 +556,9 @@ func waitPopup(ctx context.Context, request popupRequest, executable, blockID st
 	cause := context.Cause(waitCtx)
 	cancel(nil)
 	<-stopped // No watcher/RPC goroutine outlives teardown.
+	if watcherErr != nil {
+		return watcherErr // Includes failures reported after the child's wait completed.
+	}
 	if cause != nil {
 		return cause
 	}
@@ -595,7 +613,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime"} {
+	for _, name := range []string{"config.json", "result.json", "lifetime", "size.json", "size.tmp"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -737,7 +755,7 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 		ctx, cancel = context.WithDeadline(parent, deadline)
 		defer cancel()
 	}
-	event, err := RunTerminal(ctx, config, noColor, ascii)
+	event, err := runTerminal(ctx, config, noColor, ascii, popupSizePublisher(root))
 	// Only the exact expected deadline error is graceful. Joined terminal
 	// restoration/I/O failures and other child errors must still fail closed.
 	if !deadline.IsZero() && err == context.DeadlineExceeded && ctx.Err() == context.DeadlineExceeded && parent.Err() == nil {
