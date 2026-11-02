@@ -273,7 +273,7 @@ func popupRexExecutable() (string, error) {
 // popup's PTY. Its lifetime, state and files belong to exactly one invocation.
 // Closing the UI (or a selected action closing the origin) cannot kill this
 // process through terminal teardown. The caller never logs its secret stdin.
-func RunPopupController(parent context.Context, input io.Reader) (outcome error) {
+func RunPopupController(parent context.Context, input io.Reader) error {
 	request, config, err := decodePopupRequest(input)
 	if err != nil {
 		return err
@@ -282,6 +282,18 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 	if err != nil {
 		return err
 	}
+	return runPopupLifecycle(parent, request, config, executable, func(ctx context.Context, message Completion) error {
+		return request.complete(ctx, executable, message)
+	})
+}
+
+// runPopupLifecycle shares the owned PTY transport and teardown between native
+// basic startup and the original-VM controller. finish is invocation-local and
+// called once, only after teardown on success. It never receives child action
+// names/args; those stay in the native parent snapshot or original Lua registry.
+func runPopupLifecycle(parent context.Context, request popupRequest, config Config, executable string,
+	finish func(context.Context, Completion) error,
+) (outcome error) {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 	ctx, cancel := context.WithDeadline(ctx, time.Unix(request.Expires, 0))
@@ -295,19 +307,45 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 	// cancellation/focus until the exact session, placed block and captured
 	// client connection generation have all been found through that endpoint.
 	// Never compare, stringify or substitute Rex's opaque Lua server identity.
-	origin, err := request.originBlock(ctx, client)
-	if err != nil {
+	if _, err := request.originBlock(ctx, client); err != nil {
 		return err
 	}
 	var layer rex.Layer
 	var directory string
-	closed, attempted := false, false
+	closed, attempted, focusAttempted := false, false, false
 	closePopup := func(cleanup context.Context) error {
 		if closed || layer.BlockID == "" {
 			return nil
 		}
 		closed = true // never retry an uncertain resource mutation
-		return layer.Close(cleanup)
+		if _, err := request.originBlock(cleanup, client); err != nil {
+			return err
+		}
+		if err := layer.Close(cleanup); err != nil {
+			return errors.New("whichkey: owned popup close failed or could not confirm exact layer removal; no cascading cleanup or retry")
+		}
+		return nil
+	}
+	focusOrigin := func(cleanup context.Context) error {
+		focusAttempted = true // never repeat a failed/uncertain focus mutation
+		origin, err := request.originBlock(cleanup, client)
+		if err != nil {
+			return err
+		}
+		if err := origin.Focus(cleanup); err != nil {
+			return errors.New("whichkey: cannot restore the exact origin focus; no selected action dispatched")
+		}
+		return nil
+	}
+	removeFiles := func() error {
+		if directory == "" {
+			return nil
+		}
+		if err := removePopupFiles(directory); err != nil {
+			return errors.New("whichkey: cannot remove private popup transport; no selected action dispatched")
+		}
+		directory = ""
+		return nil
 	}
 	defer func() {
 		// Cleanup survives caller cancellation, but is itself bounded. If only
@@ -316,18 +354,15 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 		cleanup, done := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer done()
 		outcome = errors.Join(outcome, closePopup(cleanup))
+		if !attempted && !focusAttempted {
+			outcome = errors.Join(outcome, focusOrigin(cleanup))
+		}
+		outcome = errors.Join(outcome, removeFiles())
 		if !attempted {
-			if origin, err := request.originBlock(cleanup, client); err == nil {
-				outcome = errors.Join(outcome, origin.Focus(cleanup))
-			} else {
-				outcome = errors.Join(outcome, err)
-			}
-			outcome = errors.Join(outcome, request.complete(cleanup, executable, Completion{
+			attempted = true
+			outcome = errors.Join(outcome, finish(cleanup, Completion{
 				Version: CompletionVersion, Capability: request.Capability, Kind: CompletionCancel,
 			}))
-		}
-		if directory != "" {
-			outcome = errors.Join(outcome, removePopupFiles(directory))
 		}
 	}()
 	directory, err = os.MkdirTemp("", "rex-whichkey-") // Go creates this with mode 0700.
@@ -350,6 +385,10 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 	if !uiDeadline.After(time.Now()) {
 		return errors.New("whichkey: insufficient invocation lifetime to open popup")
 	}
+	origin, err := request.originBlock(ctx, client)
+	if err != nil {
+		return err
+	}
 	layer, err = origin.NewLayer(ctx, popupBounds(config.Position), []string{
 		self, "popup", "--directory", directory, "--deadline", uiDeadline.UTC().Format(time.RFC3339),
 	})
@@ -369,15 +408,21 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 	if err := closePopup(ctx); err != nil {
 		return err // never dispatch after uncertain owned-resource cleanup
 	}
-	origin, err = request.originBlock(ctx, client)
-	if err != nil {
+	if err := focusOrigin(ctx); err != nil {
 		return err
 	}
-	if err := origin.Focus(ctx); err != nil {
+	// An action may close the caller's pane/tab/session. All terminal/Rex/file
+	// cleanup must therefore finish BEFORE invoking either dispatch route.
+	if err := removeFiles(); err != nil {
 		return err
 	}
-	attempted = true
-	return request.complete(ctx, executable, message)
+	if _, err := request.originBlock(ctx, client); err != nil {
+		return err
+	}
+	attempted = true // a failed/uncertain dispatch must never send a second result
+	dispatch, done := context.WithTimeout(ctx, 3*time.Second)
+	defer done()
+	return finish(dispatch, message)
 }
 
 func writePopupFile(directory, name string, data []byte) (outcome error) {

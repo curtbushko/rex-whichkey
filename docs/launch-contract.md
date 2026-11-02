@@ -1,23 +1,30 @@
 # Popup launch, endpoint and preparation contract
 
-## Ordinary startup and one-time setup
+## Ordinary startup and optional Lua setup
 
-After the one-time setup below, run inside the originating Rex terminal:
+With the helper and matching Rex CLI installed on the execution/server host,
+run inside the originating Rex terminal:
 
 ```sh
 rex-whichkey
 ```
 
-No arguments and no hand-authored JSON are needed: this activates a real Rex
-floating popup, not a greeting, demo or standalone terminal menu.
+No arguments, custom action registration or hand-authored JSON are needed for
+the basic Go-owned native-action menu. The production path creates a real Rex
+floating popup, not a greeting, demo or standalone terminal menu. If read-only
+server action metadata reports a registered Lua `whichkey` action, that original-VM
+configured path is preferred instead. This routing is decided before activation;
+a failed or uncertain activation never switches to native mode.
 `rex-whichkey --help` (or `-h`) describes the public `rex-whichkey [options]`
 entrypoint without contacting Rex. Public options are:
 
 - `--server ENDPOINT`: a concrete execution-host endpoint override.
 - `--client FULL_ID`: an exact `client:UUID` of a live graphical app attached to
   this terminal's session.
-- `--action NAME`: an installed configuration launch action, default `whichkey`.
-  Names contain only lowercase ASCII letters, digits and underscores.
+- `--action NAME`: require an installed configuration launch action, including
+  when NAME is `whichkey`. Missing registration is an actionable error, not a
+  request for native fallback. Names contain only lowercase ASCII letters,
+  digits and underscores.
 
 The root parser rejects unexpected positional arguments, unknown flags, missing
 flag values and an explicitly empty action before Rex calls. An explicitly empty
@@ -26,8 +33,10 @@ server/client is invalid, not an instruction to default. Existing private `menu`
 ordinary startup interface. Root launch does not read resolved configuration
 from the terminal's stdin or run the standalone menu in place of a Rex popup.
 
-Install the matching server-host helper, Rex CLI and Lua modules first. In the
-server's **user-owned** `init.lua`, perform ordinary Rex configuration setup once:
+The basic native menu needs no Lua modules, launch/completion registrations or
+configuration reload. For **optional custom Lua mappings/callbacks**, install
+matching server-host Lua modules and perform setup in the server's **user-owned**
+`init.lua`:
 
 ```lua
 local popup = require("rex_whichkey")
@@ -56,11 +65,14 @@ bind the registered action through your existing Rex configuration if desired.
 Modules never edit or reload `init.lua`. Remote Control must permit CLI activation
 on the selected client; installing/registering these pieces is not automatic.
 
-Missing helper/CLI/modules, registration, successful setup or Remote Control can
-make activation fail. The public caller reports fixed prerequisite guidance,
-without forwarding raw child stdout/stderr or private handoffs. Nonzero/timeout/
-output-limit failures are uncertain and never retried. A zero exit status means
-**activation was accepted**, not proof that a popup appeared or a callback ran.
+Missing helper/CLI, incompatible metadata/native actions or Remote Control can
+prevent basic startup. The configured path additionally needs its modules,
+registration and successful setup. Diagnostics identify the failed stage without
+forwarding raw child output/private handoffs. Nonzero/timeout/output-limit
+activation failures are uncertain and never retried. A configured zero exit
+means **activation was accepted**, not proof of display or callback execution.
+Native success follows child exit/teardown and optional one-shot action acceptance;
+RPC acceptance still is not proof of graphical display.
 
 ## Exact terminal origin and client selection
 
@@ -101,11 +113,77 @@ The launch route reuses `popupRequest.originBlock` and `popupOriginConnection`:
 recheck the selected connection generation, inspect the exact session and require
 the exact block to be uniquely placed there. The delivered Rex resource client
 rejects malformed/duplicate window/layer/block placement. A wrong endpoint or
-stale origin fails before named-action activation, without changing focus or
-creating resources. The Lua action and detached controller independently validate
-again rather than treating preflight as enduring authority.
+stale origin fails before activation or resource creation. The shared popup
+lifecycle and, on configured routes, the Lua action independently validate again
+rather than treating preflight as enduring authority.
 
-## Go-owned launch origin envelope
+## Native basic route and registration selection
+
+`LaunchPopup` reads the captured server's `rex --server ENDPOINT
+--autostart=false --timeout 3s actions --json` registry. It removes inherited
+REX client/server/session/window/block selectors for that metadata process and
+supplies captured session/block environment values; server metadata is deliberately
+queried without a client selector. Client metadata uses the same explicit endpoint
+plus `--client FULL_CLIENT`. These commands are read-only; they do not activate
+or probe actions. Both have a three-second process deadline, 250 ms pipe shutdown
+allowance, 1 MiB retained stdout limit, discarded 64 KiB stderr limit, and a
+required single JSON object with an `actions` array. Invalid/duplicate identities
+fail closed. Registry errors are never interpreted as absence of registration.
+
+A matching `kind: "lua"` server action selects configured launch. A conflicting
+non-Lua name is an error. Only absence of the **implicit** default selects
+`launchNativePopup`; explicit `--action` absence fails. Once configured activation
+begins, no outcome can select native mode or retry that activation.
+
+[`defaults.go`](../defaults.go) constructs real canonical `Mapping`/`Config` data,
+not an independent schema or a demo. Its ordered session/tab/pane/application keys,
+icons, native picker/rename semantics, close confirmations and inventory-only
+`known-hosts` provider match the shipped Lua fragments. `client.tab.goto` takes a
+one-based integer index; `pane.split` uses `right`/`down`; `pane.focus` uses
+`left`/`down`/`up`/`right`. Every built-in action must be reported as `kind: "client"`
+by the captured app's metadata before the popup opens; an incompatible app fails
+with the Go-owned missing action name, not a fabricated action or a silent route
+switch. Rex remains responsible for final action/schema/Remote Control checks.
+
+[`native.go`](../native.go) retains an independent immutable parent snapshot and
+passes only canonical configuration to the shared `runPopupLifecycle` in
+[`popup.go`](../popup.go). The native CLI is the invocation-scoped controller and
+may wait for its PTY child; it does not become a daemon. Its finite 30-second
+invocation starts before transport creation; five seconds are reserved for
+teardown/dispatch. Existing configured controllers remain detached and finite.
+Both paths use the same `RunPopupTerminal`/`RunTerminal`/`RenderMenu`/`HandleKey`.
+
+The shared lifecycle creates 0700 invocation-owned directories and exclusive
+0600 config/result files. The child returns only keys, optional opaque callback
+identity and explicit confirmation (or null dismissal). The strict canonical
+completion decoder rejects replacement action/args and checks confirmation and
+identity against the retained snapshot. The native snapshot has **no callbacks**;
+Go refuses callback references rather than evaluating Lua. Capabilities stay in
+the parent; transport/config/result paths contain no action credentials.
+
+After successful child exit (which follows terminal restoration), the controller
+closes only its returned owned terminal, confirms its layer vanished, restores
+exact origin focus and unlinks both private files and their empty directory
+**before** selected dispatch. Origin placement and live app connection generation
+are rechecked before creation, owned close, focus and dispatch. Native dispatch
+looks up only the retained mapping and uses its trusted action/args once through
+`rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
+--session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
+output is discarded with a shared 64 KiB budget. Dispatch has a three-second
+context and is never retried. Dismissal executes no native action. Cleanup errors
+prevent selection dispatch; partial/uncertain creation never triggers broad
+layer/window/session deletion. Deferred error/cancellation cleanup is bounded to
+five seconds and never retries an uncertain close/focus/dispatch. Stale origins
+can prevent safe cleanup; SIGKILL/server loss cannot be guaranteed recoverable.
+
+`rex/layer.go` calls the documented `session.new_layer` API directly with the
+exact inspected origin window and a `layout.block` shell creator, explicit argv,
+`shell = "none"` and `exit.on_completion = false`. No script or callback VM is
+created. Inspect/create/focus/dispatch are separate operations: concurrent moves,
+disconnects or external focus changes can race the final check; there is no
+claimed atomic transaction or current-client fallback.
+
+## Go-owned configured launch origin envelope
 
 `launch.go` owns a small fixed `launchOrigin` DTO, separate from mapping options
 and the authenticated completion protocol. Go validates each field before strict
@@ -161,12 +239,14 @@ This envelope is transport context, **not** executable Lua, a capability,
 authority to fabricate ctx, or a second mapping schema. Other callers supplying
 it cannot change the actual action activation or bypass retained registry checks.
 
-## Complete production route (source trace)
+## Configured production route (source trace)
 
 1. [`cmd/main.go`](../cmd/main.go) parses no arguments/public flags through
    `runLaunch`, then calls `LaunchPopup`, not private-mode usage or a JSON demo.
 2. [`launch.go`](../launch.go) resolves/fixes endpoint, validates the exact
-   session/block/client connection and invokes the installed named CONFIG action.
+   session/block/client connection and reads server registration metadata. The
+   native branch above is used only for an absent implicit default; otherwise it
+   invokes the installed named CONFIG action.
 3. [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) registers that action in the
    original VM; its real `run(ctx,args)` calls `menu.launch(ctx, optional_origin)`.
    [`config.lua`](../lua/rex_whichkey/config.lua) setup previously resolves
@@ -183,7 +263,8 @@ it cannot change the actual action activation or bypass retained registry checks
    [`terminal.go`](../terminal.go) `RunTerminal` uses real `RenderMenu` redraws and
    `HandleKey` navigation/selection; terminal cleanup succeeds before result commit.
 6. The independent controller closes only its owned popup, revalidates/focuses the
-   exact origin and sends authenticated fresh completion to the installed action.
+   exact origin, removes private transport files, and sends authenticated fresh
+   completion to the installed action.
    The original VM checks one-shot capability, connection/configuration generation,
    snapshot, expiry, confirmation and focus; original closures remain there and
    named/client actions use the actual completion activation. No popup-origin or
@@ -302,10 +383,26 @@ configuration generation, retained snapshot, confirmation, focus revalidation,
 original-VM callbacks, owned-only bounded cleanup and no uncertain action retries
 are unchanged. This does not install a daemon, copy callbacks into a new Lua VM,
 select a focused/default client, or edit/reload the user's `init.lua`. The helper,
-Rex CLI, original-server Lua modules, explicit user-owned action registration and
-app Remote Control policy remain prerequisites.
+Rex CLI and app Remote Control policy remain prerequisites. Original-server Lua
+modules and explicit user-owned action registration are additional prerequisites
+only for the configured route, not the basic native menu.
 
 ## Source evidence and verification limits
+
+Native startup uses coordinator-captured `.mtn-tmp/live-launch/actions.json`
+(server actions), `client-actions.json` (native client names and `.args` JSON
+schemas), `new-layer-api.json` (`session.new_layer` input/output/layout contract)
+and `block-types.json` (the terminal shell creator's command, shell and exit
+options) in the authoritative checkout. The installed Rex
+`0.0.1792609031-gc465ec` read-only `actions --help` confirms server versus selected
+client registry semantics; `do --help` confirms configured/native name routing,
+explicit session/block/client selectors and JSON stdin arguments. No new live
+API request or product run was made by the builder. Captured normal invocation
+failed for absent custom actions; renderer-only diagnostic display/navigation/
+dismissal is not evidence of successful normal floating-popup startup. The
+coordinator owns the later combined compilation and user-authorized actual
+launch/navigation/Escape/cleanup gate; this source revision claims no such pass.
+
 
 The native attachment classification is documented in the retained Rex
 `session.list_clients` method schema at
@@ -322,10 +419,10 @@ global `client.list` call and a cross-response membership intersection.
 Installed Rex `0.0.1792609031-gc465ec` read-only `client ls --help` confirms that
 ordinary text hides command-line clients while JSON includes the full server
 reply. Counting all JSON attachments therefore does not implement graphical-app
-selection. Actual user-side attachment counts were not inspected; neither this
-source mismatch nor its correction establishes a runtime root-cause cardinality.
-The selection correction uses source/format checks only; the historical review
-and compilation results below do not establish verification of later revisions.
+selection. That original selection correction did not inspect user attachment
+counts. The later captured native-startup evidence above does record one attached
+app, without retroactively making the earlier source correction a runtime pass.
+Historical review and compilation below do not verify later revisions.
 
 The published [CLI contract](https://www.superlogical.com/rex/docs/automate/cli)
 documents execution-host `REX_SERVER`, `REX_BIN_DIR`, explicit server selectors and
@@ -355,8 +452,9 @@ delivered source. These are supplied revision-bound results, not commands run by
 this documentation builder or approval of later corrections. No unrecorded
 `task build` result or runtime acceptance is inferred.
 
-No project tests/TDD, example/product execution, new live identity queries,
-GUI/remote trials or configuration reloads were performed for this revision.
-Formatting, compilation and source checks do not verify runtime or Darwin
-behavior. The complete route above is a source trace, not a claimed popup,
-Remote Control or callback pass. Private preparation is not the normal entrypoint.
+This revision's builder performed no project tests/TDD, example/product
+execution, new live identity queries, GUI/remote trials or configuration reloads.
+Formatting and source checks do not verify runtime or Darwin behavior; combined
+compilation and the later authorized bounded popup check belong to the
+coordinator. The routes above are source traces, not claimed popup, Remote
+Control or callback passes. Private preparation is not the normal entrypoint.

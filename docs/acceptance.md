@@ -1,5 +1,37 @@
 # Release delivery inventory and limitations
 
+## Current native-startup correction
+
+Task `07-05` implements the accepted supplemental native-startup design
+(**REXWHICHKEY-20261101-201834**, refining **REXWHICHKEY-20261101-101502**).
+The user authorized a bounded actual binary launch/navigation/Escape-dismissal
+check in the existing Rex session, without changing/reloading user configuration.
+This is a narrow exception to the earlier no-runtime policy, not permission for
+project tests, destructive actions, remote/Darwin trials or a new test matrix.
+
+Coordinator-captured `.mtn-tmp/live-launch/` evidence records a **failed normal
+invocation** caused by absent `whichkey`/completion actions despite one attached
+app. A separately invoked renderer displayed/navigated/dismissed successfully;
+that diagnostic is **not** a normal floating-popup/default-startup pass.
+
+The correction adds Go-owned native defaults in `defaults.go` and a reachable
+`launch.go` -> `native.go` -> shared `popup.go` lifecycle. Read-only server action
+metadata selects the registered original-VM route or, only for an unregistered
+implicit default, self-contained native startup. Explicit `--action` always
+requires registration; configured activation failure/uncertainty never falls back.
+`rex/layer.go` calls the captured `session.new_layer` schema directly without a
+script VM. Retained canonical mapping identity/confirmation, exact origin/app
+connection generation, private bounded files, at-most-once dispatch and cleanup
+before actions that might kill the caller are preserved. Optional Lua callbacks
+stay exclusively in the original VM; no Lua/dispatcher/schema changes are made.
+
+The builder formatted and inspected source only. No task `07-05` compilation,
+independent approval, native popup display or action success is asserted here or
+inherited from earlier revisions. Before completion the coordinator must compile
+the exact independently reviewed candidate and record real normal floating-menu
+and submenu display, Escape dismissal, zero parent exit and exact owned-popup
+cleanup. The recorded historical baseline results below are not that gate.
+
 ## Scope and evidence boundary
 
 This is a **source-based delivery inventory, not an acceptance-test result**.
@@ -41,8 +73,9 @@ this documentation task. Historical draft IF-* signatures are not adopted contra
 Nix package checks/install checks, Home Manager evaluation/activation, graphical
 checks, live API probes, remote trials, disconnected-origin exercises and
 configuration reloads. Go compilation and Nix package builds did run, as recorded
-below; they are not test or runtime passes. No new acceptance runner or runtime
-verification is scheduled here. Existing test files and historical evidence are
+below; they are not test or runtime passes. No new acceptance runner is
+introduced. The targeted task `07-05` runtime gate above is the later explicit
+exception; the following baseline history does not claim it passed. Existing test files and historical evidence are
 preserved, not converted into current passes.
 
 Historical exception: metadata commit `7d4cff8` inadvertently ran pre-commit
@@ -86,7 +119,7 @@ Phase07 startup/default-endpoint paths.
 
 | Requirement | Implemented source and integration | Outstanding verification / limitations |
 | --- | --- | --- |
-| REQ-016 — ordinary popup launch | [`cmd/main.go`](../cmd/main.go) routes no arguments/public flags to [`launch.go`](../launch.go) `LaunchPopup`; it captures terminal session/block, selects an exact or unique eligible attached client/generation, preflights placement and activates the installed named action once. [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) `menu.register_launch` uses the actual original-VM ctx, then the delivered defaults/evaluation/prepare/controller/terminal/completion route. Review 07-02; integrated `69078fc`. [Launch contract](launch-contract.md) traces the full path. | No installed no-argument run, popup display, Remote Control or callback exercise. Source reachability/compilation is not a runtime pass. Missing/stale/ambiguous origins fail; activation acceptance is not display success. L1–L5/L9. |
+| REQ-016 — ordinary popup launch | [`cmd/main.go`](../cmd/main.go) -> [`launch.go`](../launch.go) captures exact terminal origin/app generation, preflights placement and reads server registration. An absent implicit default uses [`native.go`](../native.go)/[`defaults.go`](../defaults.go) and the shared [`popup.go`](../popup.go) lifecycle; registered/explicit actions keep the original-VM configured route. Historical configured-only review 07-02/integration `69078fc` does not approve this correction. [Launch contract](launch-contract.md) traces both paths. | Actual configured-only normal startup failed for missing registrations; renderer-only diagnostic succeeded, not normal popup acceptance. Native correction has no claimed runtime/compilation/review pass in this inventory; coordinator gate above remains distinct. L1–L5/L9. |
 | REQ-017 — native platform endpoints | [`rex/endpoint.go`](../rex/endpoint.go) owns explicit override > nonempty execution-host REX_SERVER > bounded no-autostart native Linux/macOS Rex identity discovery, capturing/validating a concrete endpoint. [`popup.go`](../popup.go) preparation and the public caller consume it; Lua permits `popup.new(defaults)` and forwards preparation's canonical server. Private controller handoffs never ambient-default. Review 07-01, later composition review 07-02; integrated `d1164e7`/`69078fc`. | No live default discovery, custom-server or Darwin runtime exercise. Exact native socket algorithms belong to Rex; no guessed path formula or platform certification. CLI identity shape requires compatible installed Rex; no autostart, scan or alternate-server retry. L1/L2/L4/L9. |
 
 ### Phase07 intent and implemented source traces
@@ -115,8 +148,9 @@ coordinator records below bind producer and documentation reviews to frozen
 revisions and actual integration/compilation evidence. Later documentation
 corrections require fresh independent review and coordinator integration; prior
 approvals do not cover them. The coordinator alone records phase
-delivery/completion. No runtime gate or example execution is scheduled, and no
-unsupplied `task build` result is inferred from the recorded Go/Nix commands.
+delivery/completion. Those baseline traces predate the native correction and its
+targeted coordinator-owned runtime gate above. No unsupplied `task build` result
+is inferred from recorded Go/Nix commands.
 
 ## Recorded independent source-review outcomes
 
@@ -299,9 +333,12 @@ delivery.
   later edits require fresh evidence. There is no runtime acceptance pass,
   coverage claim or outstanding instruction to execute a final matrix under the
   current stop policy.
-- **L9 — ordinary launch/native defaults:** REQ-016/017 are implemented and the
-  producer revisions have recorded review/compilation/integration, not live
-  startup or platform verification. A reachable already-running default server,
+- **L9 — ordinary launch/native defaults:** the earlier producer revisions have
+  recorded review/compilation/integration, but a later normal invocation failed
+  for absent custom registrations. Task `07-05` supplies self-contained native
+  defaults; it has no claimed normal-startup pass here. The coordinator's
+  user-authorized bounded live gate above must not be replaced by renderer-only
+  evidence or historical compilation. A reachable already-running default server,
   valid execution-host Rex runtime/home settings and compatible CLI identity JSON
   are required for native discovery. Present invalid overrides fail rather than
   falling through; controller handoffs never default. Terminal and server-side
@@ -315,8 +352,9 @@ delivery.
 
 ## Usage and published contracts
 
-The [README](../README.md) covers installation layout, explicit user-owned
-registration, imported/inline configuration, default keys and troubleshooting.
+The [README](../README.md) covers basic startup without custom registration,
+installation layout, optional user-owned Lua registration, imported/inline
+configuration, default keys and troubleshooting.
 [launch-contract.md](launch-contract.md) details ordinary no-argument popup launch,
 exact client/origin selection and native/default/custom endpoint routing;
 [mapping-format.md](mapping-format.md) is the Go-owned shared standard;

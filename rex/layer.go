@@ -2,7 +2,6 @@ package rex
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -43,51 +42,6 @@ type Layer struct {
 	blockID string
 }
 
-// newLayerScript uses Rex's published layout constructor rather than guessing
-// its JSON representation. All variable data travels as JSON in --args, never
-// Lua source or a shell command. See /rex/docs/reference/lua and
-// /rex/docs/automate/lua-scripts at https://www.superlogical.com.
-const newLayerScript = `
-local a = rex.args
-local view, err = rex.session.view{session_id = a.session_id}
-if err ~= nil then error(err, 0) end
-if view == nil or view.session_id ~= a.session_id then
-  error("origin session is unavailable", 0)
-end
-local window_id
-for _, window in ipairs(view.windows or {}) do
-  for _, layer in ipairs(window.layers or {}) do
-    for _, block in ipairs(layer.blocks or {}) do
-      if block.block_id == a.block_id then
-        if window_id ~= nil then error("ambiguous origin placement", 0) end
-        window_id = window.window_id
-      end
-    end
-  end
-end
-if type(window_id) ~= "string" or window_id == "" then
-  error("origin block is no longer placed in the session", 0)
-end
-local result, create_err = rex.session.new_layer{
-  session_id = a.session_id,
-  window_id = window_id,
-  bounds = a.bounds,
-  focus = true,
-  layout = rex.layout.block{
-    flavor = "com.superlogical.terminal.shell",
-    options = {
-      command = a.command,
-      shell = "none",
-      exit = {on_completion = false},
-    },
-  },
-}
-if create_err ~= nil then error(create_err, 0) end
-if result == nil then error("layer creation returned no identity", 0) end
-result.window_id = window_id
-return result
-`
-
 // NewLayer opens one owned floating terminal in the origin's current window.
 // command is a program and its arguments on the selected server, not paths to
 // resolve on the graphical client. The terminal runs directly without a shell
@@ -113,24 +67,32 @@ func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (L
 			return Layer{}, errors.New("rex: layer command must not contain NUL")
 		}
 	}
-	arguments, err := json.Marshal(struct {
-		SessionID string   `json:"session_id"`
-		BlockID   string   `json:"block_id"`
-		Bounds    Bounds   `json:"bounds"`
-		Command   []string `json:"command"`
-	}{b.client.session, b.blockID, bounds, command})
+	current, err := b.Inspect(ctx)
 	if err != nil {
-		return Layer{}, fmt.Errorf("rex layer arguments: %w", err)
+		return Layer{}, err
+	}
+	// The captured session.new_layer schema explicitly defines layout.block
+	// and the shell creator's command/shell/exit options. Call that API directly;
+	// popup creation needs no script VM or configuration action registration.
+	arguments := map[string]any{
+		"session_id": b.client.session,
+		"window_id":  current.WindowID,
+		"bounds":     bounds,
+		"focus":      true,
+		"layout": map[string]any{"block": map[string]any{
+			"flavor": "com.superlogical.terminal.shell",
+			"options": map[string]any{
+				"command": command,
+				"shell":   "none",
+				"exit":    map[string]bool{"on_completion": false},
+			},
+		}},
 	}
 	var result struct {
 		ID       string   `json:"layer_id"`
-		WindowID string   `json:"window_id"`
 		BlockIDs []string `json:"block_ids"`
 	}
-	if err := b.client.resourceCommand(ctx, &result,
-		"do", "--session", b.client.session, "--block", b.blockID,
-		"--json", "--args", string(arguments), "--eval", newLayerScript,
-	); err != nil {
+	if err := b.client.Call(ctx, "session.new_layer", arguments, &result); err != nil {
 		return Layer{}, err
 	}
 	if !resourceID(result.ID, "layer") {
@@ -141,10 +103,7 @@ func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (L
 		return layer, errors.New("rex new_layer: invalid owned block_ids (creation may have succeeded)")
 	}
 	layer.BlockID, layer.blockID = result.BlockIDs[0], result.BlockIDs[0]
-	if !resourceID(result.WindowID, "window") {
-		return layer, errors.New("rex new_layer: invalid window_id (creation may have succeeded)")
-	}
-	layer.WindowID = result.WindowID
+	layer.WindowID = current.WindowID
 	return layer, nil
 }
 

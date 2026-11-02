@@ -14,7 +14,8 @@ import (
 
 // run composes the bounded controller, its PTY child and the standalone menu.
 // Secret handoff/completion data travels on pipes, never command-line arguments.
-// All action execution remains in the originating Rex configuration Lua VM.
+// Configured callbacks stay in the original Rex VM; native defaults use exact
+// captured Rex activation after owned-popup and private-file cleanup.
 func run(ctx context.Context, args []string, input io.Reader, output, diagnostics io.Writer) error {
 	if len(args) == 0 {
 		return runLaunch(ctx, args, output)
@@ -95,19 +96,22 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 
 const publicHelp = `usage: rex-whichkey [options]
 
-Launch the installed which-key popup from this Rex terminal.
+Open the basic floating menu from this Rex terminal, without custom registration.
+A registered default whichkey action instead uses your original-VM Lua menu.
 
 Options:
   --server ENDPOINT  Execution-host socket path, unix URI or host:port override
   --client FULL_ID   Exact attached client ID (otherwise REX_CLIENT or the only
                      eligible client attached to this terminal's session)
-  --action NAME      Registered configuration launch action (default: whichkey)
+  --action NAME      Require this registered Lua launch action (no native fallback)
   --help, -h         Show help without contacting Rex
 
 Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
-server-host Rex CLI/helper/Lua modules, successful menu.setup, completion action
-registration and menu.register_launch("whichkey") in user-owned init.lua, and
-client Remote Control permission. Nothing edits or reloads your configuration.
+execution/server-host helper and Rex CLI, an attached live graphical app and its
+Remote Control permission. Lua customization additionally needs installed modules,
+setup and launch/completion registration. Nothing edits/reloads configuration.
+The native caller waits for its bounded popup; configured launch returns after
+activation. Failed/uncertain activation is never retried or switched to native.
 
 Endpoint: --server > nonempty REX_SERVER > Rex native Linux/macOS default.
 Missing, stale or ambiguous origin context fails; no focused/current-client or
@@ -135,13 +139,15 @@ func runLaunch(ctx context.Context, args []string, output io.Writer) error {
 	if *action == "" {
 		return errors.New("whichkey: --action must name the registered configuration launch action")
 	}
-	options := whichkey.LaunchOptions{Action: *action}
+	options := whichkey.LaunchOptions{}
 	flags.Visit(func(option *flag.Flag) {
 		switch option.Name {
 		case "server":
 			options.Server = server
 		case "client":
 			options.Client = client
+		case "action":
+			options.Action = *action
 		}
 	})
 	// Parsing, including help/errors, finishes before any Rex lookup or call.

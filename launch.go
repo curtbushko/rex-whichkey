@@ -16,9 +16,10 @@ import (
 	"temp/rex"
 )
 
-// LaunchOptions selects the installed configuration action and execution-host
-// routing. Nil selectors are absent; present empty selectors are invalid.
-// Action defaults to whichkey. No option can supply or fabricate an action ctx.
+// LaunchOptions selects execution-host routing and an optional configured action.
+// Nil selectors are absent; present empty selectors are invalid. An empty Action
+// prefers registered whichkey, otherwise the native basic menu. A nonempty Action
+// always requires that configured action; it never requests native fallback.
 type LaunchOptions struct {
 	Server *string
 	Client *string
@@ -54,10 +55,11 @@ func popupConnectionGeneration(value string) bool {
 		strings.IndexFunc(value, unicode.IsControl) < 0
 }
 
-// LaunchPopup activates the installed original-VM configuration action once.
-// Success means activation was accepted, not that a popup was displayed or a
-// selection completed. All preflight calls are read-only and explicitly scoped;
-// an uncertain activation is never retried.
+// LaunchPopup opens the basic native popup when the implicit default action is
+// unregistered, or activates a registered original-VM action once. Configured
+// success acknowledges activation only; native success follows UI exit/cleanup.
+// Read-only metadata selects the route BEFORE any activation. An uncertain
+// activation never switches routes or retries.
 func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	if parent == nil {
 		return errors.New("whichkey: launch requires a context")
@@ -114,6 +116,23 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	if _, err := request.originBlock(ctx, client); err != nil {
 		return err
 	}
+	actions, err := origin.actions(ctx, executable, false)
+	if err != nil {
+		return err
+	}
+	if kind, registered := actions[action]; !registered {
+		if options.Action != "" {
+			return errors.New("whichkey: requested configuration launch action is not registered on the captured server; register it with menu.register_launch or omit --action for the basic menu")
+		}
+		// Use the caller context, not the short preflight deadline, for the
+		// invocation's own finite UI lifetime. The captured origin is rechecked.
+		return launchNativePopup(parent, origin, executable)
+	} else if kind != "lua" {
+		return errors.New("whichkey: launch name is not a server configuration action; choose a registered menu.register_launch action")
+	}
+	if _, err := request.originBlock(ctx, client); err != nil {
+		return err
+	}
 	data, err := origin.marshal()
 	if err != nil {
 		return err
@@ -136,7 +155,10 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	command.Stdout, command.Stderr = output, output
 	command.WaitDelay = 250 * time.Millisecond
 	if err := command.Run(); err != nil {
-		return errors.New("whichkey: launch failed or is uncertain; check menu.register_launch, completion registration, setup, server-host helper/modules and client Remote Control; activation not retried")
+		if activation.Err() != nil {
+			return errors.New("whichkey: registered launch activation timed out or was cancelled; result uncertain, not retried and not switched to native mode")
+		}
+		return errors.New("whichkey: registered launch action failed or is uncertain; check its setup/completion registration, server-host helper/modules and app Remote Control; private action diagnostics suppressed, no retry or native fallback")
 	}
 	return nil
 }
