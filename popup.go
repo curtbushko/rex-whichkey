@@ -206,8 +206,8 @@ func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, r
 }
 
 // originBlock validates the connection generation independently of the Lua
-// registry. This also guards focus restoration after dismissal, for which the
-// cancellation handler deliberately performs no focus operation.
+// registry. Configured mode also uses it for focus restoration after dismissal;
+// native mode uses it only once an executable selection has bound an app.
 func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.Block, error) {
 	_, generation, err := popupOriginConnection(ctx, client, r.SessionID, r.ClientID)
 	if err != nil {
@@ -216,6 +216,14 @@ func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.
 	if generation != r.ConnectedAt {
 		return rex.Block{}, errors.New("whichkey: origin client connection changed; relaunch from the original terminal")
 	}
+	return r.resourceOriginBlock(ctx, client)
+}
+
+// resourceOriginBlock checks only the captured endpoint/session/block. Native
+// display, focus and liveness do not grant authority to execute app actions.
+// Configured callers must use originBlock as well, never infer policy from an
+// absent client field in a handoff.
+func (r popupRequest) resourceOriginBlock(ctx context.Context, client *rex.Client) (rex.Block, error) {
 	session, err := client.Session(ctx, r.SessionID)
 	if err != nil {
 		return rex.Block{}, errors.New("whichkey: origin session is unavailable; relaunch inside the original Rex terminal")
@@ -324,8 +332,8 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 		// Reserve the original five seconds for restoration/cleanup/completion.
 		uiDeadline = expires.Add(-5 * time.Second)
 	case popupNative:
-		if request.Expires != 0 || request.Completion != "" {
-			return errors.New("whichkey: native foreground popup cannot carry a configured lifetime or completion action")
+		if request.Expires != 0 || request.Completion != "" || request.ClientID != "" || request.ConnectedAt != "" {
+			return errors.New("whichkey: native foreground popup cannot carry a configured lifetime, completion action or pre-bound app")
 		}
 	default:
 		return errors.New("whichkey: invalid popup lifetime policy")
@@ -335,22 +343,37 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return errors.New("whichkey: cannot construct the origin client")
 	}
-	// A wrong endpoint must fail read-only. In particular, do not arm deferred
-	// cancellation/focus until the exact session, placed block and captured
-	// client connection generation have all been found through that endpoint.
+	// Only the trusted Go caller selects native resource-only liveness. Empty
+	// decoded client fields or expiry values cannot select this policy.
+	originBlock := func(check context.Context) (rex.Block, error) {
+		if lifetime == popupNative {
+			return request.resourceOriginBlock(check, client)
+		}
+		return request.originBlock(check, client)
+	}
+	// A wrong endpoint must fail read-only before arming cancellation/focus.
+	// Configured mode additionally requires its captured app generation here.
 	// Never compare, stringify or substitute Rex's opaque Lua server identity.
-	if _, err := request.originBlock(ctx, client); err != nil {
+	if _, err := originBlock(ctx); err != nil {
 		return err
 	}
 	var layer rex.Layer
 	var directory string
+	var lease *os.File
 	closed, attempted, focusAttempted := false, false, false
 	closePopup := func(cleanup context.Context) error {
 		if closed || layer.BlockID == "" {
 			return nil
 		}
 		closed = true // never retry an uncertain resource mutation
-		if _, err := request.originBlock(cleanup, client); err != nil {
+		if lifetime == popupNative {
+			// The exact owned block can be cleaned even after origin loss or
+			// app disconnect. Inspect its placement in the captured session;
+			// never search another endpoint/session or close a whole layer.
+			if _, err := layer.Block().Inspect(cleanup); err != nil {
+				return errors.New("whichkey: cannot inspect the exact owned popup for cleanup")
+			}
+		} else if _, err := originBlock(cleanup); err != nil {
 			return err
 		}
 		if err := layer.Close(cleanup); err != nil {
@@ -360,7 +383,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	}
 	focusOrigin := func(cleanup context.Context) error {
 		focusAttempted = true // never repeat a failed/uncertain focus mutation
-		origin, err := request.originBlock(cleanup, client)
+		origin, err := originBlock(cleanup)
 		if err != nil {
 			return err
 		}
@@ -370,6 +393,13 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 		return nil
 	}
 	removeFiles := func() error {
+		if lease != nil {
+			writer := lease
+			lease = nil // a failed close is not retried
+			if err := writer.Close(); err != nil {
+				return errors.New("whichkey: cannot close native popup lifetime pipe; no selected action dispatched")
+			}
+		}
 		if directory == "" {
 			return nil
 		}
@@ -419,11 +449,10 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if lifetime == popupNative {
 		// The child watches this pipe, not a renewable timestamp or PID. EOF
 		// cancels it even if the foreground parent is killed without defers.
-		lease, err := createPopupLease(directory)
+		lease, err = createPopupLease(directory)
 		if err != nil {
 			return err
 		}
-		defer func() { outcome = errors.Join(outcome, lease.Close()) }()
 		command = append(command, "--native")
 	} else {
 		if !uiDeadline.After(time.Now()) {
@@ -431,7 +460,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 		}
 		command = append(command, "--deadline", uiDeadline.UTC().Format(time.RFC3339))
 	}
-	origin, err := request.originBlock(ctx, client)
+	origin, err := originBlock(ctx)
 	if err != nil {
 		return err
 	}
@@ -439,7 +468,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
 	}
-	err = waitPopup(ctx, request, client, executable, layer.BlockID)
+	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock)
 	if err != nil {
 		if lifetime == popupConfigured && errors.Is(err, context.DeadlineExceeded) &&
 			ctx.Err() == context.DeadlineExceeded && parent.Err() == nil && !time.Now().Before(expires) {
@@ -465,7 +494,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err := removeFiles(); err != nil {
 		return err
 	}
-	if _, err := request.originBlock(ctx, client); err != nil {
+	if _, err := originBlock(ctx); err != nil {
 		return err
 	}
 	attempted = true // a failed/uncertain dispatch must never send a second result
@@ -477,10 +506,12 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 // waitPopup deliberately does not use Layer.Wait: that wrapper caps the whole
 // CLI process at its RPC timeout. `rex wait --help` documents unbounded event
 // delivery, with --timeout still bounding connections/nonstreaming requests.
-// Watch the captured origin too: an idle UI must not survive app/origin loss.
-// originBlock checks placement/membership/generation, not active-tab visibility;
-// switching tabs alone must neither cancel the UI nor refocus its origin.
-func waitPopup(ctx context.Context, request popupRequest, client *rex.Client, executable, blockID string) error {
+// Watch captured resource liveness too, plus app generation only in configured
+// mode. Native display survives GUI ambiguity/disconnection. Neither policy
+// checks active-tab visibility: switching tabs must not cancel or refocus it.
+func waitPopup(ctx context.Context, request popupRequest, executable, blockID string,
+	originBlock func(context.Context) (rex.Block, error),
+) error {
 	waitCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	stopped := make(chan struct{})
@@ -493,7 +524,7 @@ func waitPopup(ctx context.Context, request popupRequest, client *rex.Client, ex
 			case <-waitCtx.Done():
 				return
 			case <-ticker.C:
-				if _, err := request.originBlock(waitCtx, client); err != nil {
+				if _, err := originBlock(waitCtx); err != nil {
 					cancel(err)
 					return
 				}

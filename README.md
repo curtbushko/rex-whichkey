@@ -12,10 +12,12 @@ owned-popup cleanup in one Linux Rex session. That does not verify the later
 idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
 compatibility or Home Manager activation. The coordinator's Phase08 gate adds
 35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
-[delivery inventory](docs/acceptance.md) for REQ-001–REQ-022 and revision-bound
+[delivery inventory](docs/acceptance.md) for REQ-001–REQ-023 and revision-bound
 results. Phase09 adds default Zoom removal and focus-in repaint; earlier runtime
 observations do not verify these changes or native GUI tab-return visibility.
-No minimum tested Rex build or general runtime certification is claimed.
+Phase10 separates native display from deferred app-action targeting; earlier
+observations do not verify that boundary. No minimum tested Rex build or general
+runtime certification is claimed.
 
 ## Install on the Rex server host
 
@@ -23,9 +25,9 @@ The helper and `rex` CLI must be available on the **execution/server host**,
 even when the graphical client is on another machine. Optional customization
 also needs Lua modules available to the user/process running the server. The
 implementation targets Linux and macOS; declared Nix outputs are not platform
-certification. Basic startup uses native floating terminals and explicitly
-targeted CLI activation; configured Lua launch additionally uses configuration
-actions and detached process execution.
+certification. Basic startup creates a native floating terminal; selected actions
+use explicitly targeted CLI activation. Configured Lua launch additionally uses
+configuration actions and detached process execution.
 
 The flake exports `packages.<system>.rex-whichkey` (also `default`) for
 `x86_64-linux`, `aarch64-linux`, `x86_64-darwin` and `aarch64-darwin`. The package
@@ -36,9 +38,11 @@ layout is:
 - `share/doc/rex-whichkey/mapping-format.md`
 
 Rex itself is not bundled. The executable plus a compatible server-host Rex CLI
-and attached graphical app suffice for the basic menu; no custom action
-registration is required. Installing the executable does not put optional Lua
-modules in Rex's search path or register a customized menu.
+and valid captured session/block suffice to create the basic menu; no graphical
+app selection or custom action registration is required for display/dismissal.
+Executing a selected native action does require an eligible live graphical app.
+Installing the executable does not put optional Lua modules in Rex's search path
+or register a customized menu.
 
 ### Home Manager (opt in)
 
@@ -126,24 +130,33 @@ required. `rex-whichkey --help` (or `-h`) describes public options without conta
 | Option | Meaning |
 | --- | --- |
 | `--server ENDPOINT` | Concrete execution-host endpoint override. |
-| `--client FULL_ID` | Exact full `client:UUID` of a live graphical app attached to this terminal's session. |
+| `--client FULL_ID` | Exact full `client:UUID` requested for app actions. Native display validates syntax only; configured launch requires a live attached app immediately. |
 | `--action NAME` | Require an installed Lua launch action; no native fallback. Omit to prefer registered `whichkey`, otherwise use basic defaults. |
 
-The command captures this terminal's full `REX_SESSION` and `REX_BLOCK`. Client
-selection is `--client`, then a present `REX_CLIENT`, otherwise **exactly one live
-graphical app** attached to that captured session, with a valid `connected_at`
-generation. Rex's native attachment `info.kind == "app"` classification excludes
-CLI/automation connections and unknown kinds; labels/names/platforms are not kind
-heuristics. `REX_CLIENT` is normally absent and is not required for the single-app
-case, even with other CLI connections. No attached live app requires connecting
-the app to that session; several attached apps require an exact full app client
-ID. Explicit selectors must also identify an attached live app; labels/suffixes,
-stale IDs and non-app clients are rejected. Missing/stale origins fail rather than
-selecting the focused block, current client or arbitrary first match. Configured
-success acknowledges activation, not popup display or callback completion. Native
-success follows child exit, exact owned-popup/file cleanup and optional one-shot
-action acceptance; RPC acceptance alone is never proof of graphical display.
-Failed or uncertain activation is never retried automatically.
+The command captures this terminal's full `REX_SESSION` and `REX_BLOCK` and checks
+those resources through the captured endpoint before choosing native/configured
+mode from server action metadata. **Native display, navigation and dismissal do
+not inspect graphical apps or their action registry.** Zero/several apps, unknown
+attachment kinds or a syntactically valid but nonexistent requested client do not
+prevent native display/dismissal. A graphical app still has to present the server's
+terminal for a user to see it; resource creation alone is not graphical proof.
+
+App selector precedence is `--client`, then a present `REX_CLIENT`, otherwise
+exactly one eligible live app in the captured session. Empty/malformed selectors,
+labels and suffixes fail early. Native mode retains that optional selector as
+intent and resolves it **only after executable selection/confirmation and exact
+owned-popup/file cleanup**; Escape returns without app lookup. Configured mode
+binds before launch as before. Rex's native `info.kind == "app"` classification
+excludes CLI/automation and unknown kinds; names, focus and terminal ownership
+are not selection heuristics. `REX_CLIENT` is normally absent. An executable
+selection with no eligible app, several eligible apps without a selector, or a
+stale/non-app/unattached explicit selector is refused as **native action targeting**,
+not a popup launch failure. Only the selected retained action must be available.
+Its exact client ID and `connected_at` generation plus origin placement are
+rechecked immediately before one dispatch; no reconnect retargeting is allowed.
+Configured success acknowledges activation, not display or callback completion.
+Native success follows child exit, exact cleanup and optional one-shot action
+acceptance. Failed or uncertain activation is never retried automatically.
 
 ### Linux/macOS endpoints and overrides
 
@@ -181,7 +194,8 @@ Accepted endpoints are absolute Unix socket paths (normalized to `unix:///...`),
 strict absolute Unix URIs or `host:port` with a nonzero numeric port (bracket IPv6).
 No whitespace, controls or mutable host labels are accepted. Routing is not
 runtime authority: opaque `ctx.server` is never converted into an address, and
-original server/session/block/client/connection checks remain mandatory. This
+exact server/session/block checks remain mandatory. Configured launch and native
+selected-action dispatch additionally validate app identity/generation. This
 refines the earlier explicit-only setup, not its fail-closed safety rationale.
 See the [launch contract](docs/launch-contract.md) for exact validation, discovery
 bounds, source traces and runtime-unverified limits.
@@ -262,9 +276,9 @@ optional `rex_whichkey.defaults` Lua fragments supply the same keys/intent:
 Session/tab/pane close bindings require confirmation. Named actions and callbacks
 share the confirmation path. Native interaction has **no fixed idle deadline**;
 RPC/preflight, dispatch and cleanup operations still have bounded timeouts. The
-foreground parent watches the captured origin/app generation, and the child is
-tied to that parent by a private lifetime pipe, not a daemon. Switching tabs alone
-is not cancellation. The terminal saves/enables/restores xterm focus-reporting
+foreground parent watches captured server/session/block liveness, not app
+attachments or generation, and the child is tied to that parent by a private
+lifetime pipe, not a daemon. Switching tabs alone is not cancellation. The terminal saves/enables/restores xterm focus-reporting
 mode 1004; a complete focus-in report repaints the existing menu with its current
 submenu/page/confirmation and theme, without navigation or action dispatch.
 Focus-out does not cancel or steal focus. No periodic repaint or replacement
@@ -307,16 +321,17 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   (matching an explicit `--action`). `REX_BIN_DIR`, if set, must name an absolute execution-host directory
   containing the matching `rex`. Raw child diagnostics are suppressed to avoid
   leaking capability data.
-- **Missing/stale origin or client-selection failure:** launch inside the original
-  Rex terminal with its real full `REX_SESSION`/`REX_BLOCK`. No attached live app
-  means the graphical app must connect to that session; several attached live apps
-  require `--client` with the exact full app ID. CLI/automation connections do not
-  cause ambiguity. An invalid supplied selector requires correcting `--client` or
-  a stale/empty `REX_CLIENT`; an absent `REX_CLIENT` is normal, not a setup failure.
-  Never substitute focus/current-client selection. A reconnect's changed
-  connection generation requires a new invocation. Captured delivery evidence
-  later showed one attached app; that observation does not certify other sessions
-  or later revisions.
+- **Missing/stale origin:** launch inside the original Rex terminal with its real
+  full `REX_SESSION`/`REX_BLOCK` and execution endpoint. No focus fallback exists.
+- **Native action-targeting refusal / configured client-selection failure:** no
+  eligible app means connecting one to that session before trying a new action;
+  several eligible apps require an exact full app ID. CLI/automation/unknown kinds
+  do not count. Fix malformed `--client`/empty `REX_CLIENT` before launch; stale
+  but valid IDs are checked only after native selection, or before configured
+  activation. Native display/Escape need neither a singleton app nor live selector.
+  An absent `REX_CLIENT` is normal. Never substitute current focus or guess an app;
+  changed generation prevents dispatch. Historical one-app captures do not certify
+  other sessions or this deferred-binding revision.
 - **Discovery/endpoint failure:** check the already-running execution-host server,
   Rex runtime/home settings and CLI compatibility. Fix malformed explicit or
   `REX_SERVER` values; a custom/shared endpoint may need both a public override and

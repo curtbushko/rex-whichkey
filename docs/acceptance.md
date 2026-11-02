@@ -1,5 +1,33 @@
 # Release delivery inventory and limitations
 
+## Native display independent of app targeting: REQ-023
+
+Accepted **REXWHICHKEY-20261102-111430** under the
+[Phase10 design](../.tasks/designs/rex-whichkey-app-independent-popup.md) refines
+native launch-time app requirements without weakening native action safety or
+configured original-VM binding. This is separate from the Phase09 tab-return work.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-023 — app-independent native display | [`launch.go`](../launch.go) validates syntax and captured endpoint/session/block, then reads server registration before GUI binding. [`native.go`](../native.go) retains immutable canonical defaults and optional requested selector without app lookup. [`popup.go`](../popup.go) uses resource-only native creation/wait/focus, deadline-free interaction and FIFO parent lease; owned cleanup needs no app and precedes selected-action targeting. Cancellation needs no app. Executable retained selection/confirmation resolves exact requested or unique eligible app, checks only the selected action and rechecks full ID/generation/origin before one dispatch. Configured handoffs retain prelaunch binding, strict decoding, original authenticated expiry and same-VM completion. | Source trace and formatting do not prove compilation or runtime behavior. Earlier single-app gates do not verify the deferred boundary. Exact revision-bound review, coordinator compilation and runtime artifacts belong to [task 10-01](../.tasks/tasks/rex-whichkey-10-01-app-independent-popup.md) and its [phase](../.tasks/phases/rex-whichkey-10-app-independent-popup.md). No runtime pass is asserted here. |
+
+Native display/navigation/Escape do not require a live requested client, a singleton
+app, known attachment kinds or any selected-client action registry. Malformed
+selector syntax still fails early. Missing/ambiguous/unavailable app or unsupported
+selected action refuses **action targeting after popup cleanup**, never silently
+chooses focus/first/last/terminal owner, and never retries uncertainty. Configured
+launch retains its live app prerequisite. Resource creation is not proof that a
+GUI showed the menu.
+
+The authorized coordinator-only runtime scope is normal startup/navigation/Escape,
+valid-but-nonexistent selector startup/Escape, then one non-destructive selection
+with that nonexistent target refusing after selection/cleanup with zero action
+dispatch. Actual observed app counts remain distinct from source-reviewed zero/
+multiple behavior; no user app disconnection is authorized. Builders use static
+source/format/whitespace checks only: no tests/TDD, compilation, product/live API,
+GUI/config/remote experiments or actual native action dispatch. Historical evidence
+below is preserved and cannot certify this source revision. L1–L9 still apply.
+
 ## Tab-return and default Zoom removal: REQ-021/022
 
 Accepted **REXWHICHKEY-20261102-102253** under the
@@ -15,11 +43,11 @@ delivery, not a reinterpretation of Phase07/08 runtime passes.
 The native no-argument path remains `LaunchPopup` -> `launchNativePopup` ->
 `runPopupWithLifetime(popupNative)` -> `RunNativePopupTerminal` -> `RunTerminal`
 through `runPopupTerminal`. [`popup.go`](../popup.go) retains deadline-free native
-interaction, the private parent-lifetime pipe, captured endpoint/session/block/app
-generation checks, exact owned-only cleanup and no uncertain retry. Its origin
-watcher checks membership/placement, not active-tab visibility. No evidence here
-establishes transient attachment loss as the reported cause, so its liveness and
-selection-authorization policy is unchanged. The configured original-VM route
+interaction, the private parent-lifetime pipe, exact owned-only cleanup and no
+uncertain retry. Phase09 retained endpoint/session/block/app-generation checks;
+Phase10 above separates native resource liveness from deferred action binding.
+Neither watcher checks active-tab visibility. No evidence here establishes
+transient attachment loss as the tab-return cause. The configured original-VM route
 still enforces authenticated 30-second expiry and graceful expected dismissal;
 absence of native idle expiry does not renew configured authority.
 
@@ -28,7 +56,8 @@ native process/layer/menu through pre-change server focus and app tab-goto
 round-trips. They did **not** establish actual GUI frame visibility, a crash or an
 attachment-loss root cause. The captured new-layer API has no persistence option.
 The separately reported several-app diagnostic is not an explanation of tab-return
-visibility, and no client-selection policy is changed to work around it.
+visibility; Phase09 did not change client selection to work around it. Phase10's
+separate native display correction is described above.
 
 [Task 09-01](../.tasks/tasks/rex-whichkey-09-01-tab-return.md) and the
 [phase record](../.tasks/phases/rex-whichkey-09-tab-return.md) own fresh review,
@@ -146,7 +175,8 @@ Requirements come from `.tasks/prds/rex-whichkey.md`, with stable REQ-001–REQ-
 reopening completed phases02–06. The popup-polish design adds REQ-018–REQ-020;
 its accepted lifetime/default/color refinements supersede earlier source descriptions
 where noted below. The tab-return design adds REQ-021/022 without rewriting that
-history.
+history. The app-independent-popup design adds REQ-023 and refines only native
+display/action binding.
 
 The later direction **REXWHICHKEY-20261031-072107** supersedes earlier experimental,
 TDD, live-Rex and final acceptance-matrix execution requirements, not product
@@ -168,9 +198,9 @@ checks, live API probes, remote trials, disconnected-origin exercises and
 configuration reloads. Go compilation and Nix package builds did run, as recorded
 below; they are not test or runtime passes. No new acceptance runner is
 introduced. The targeted task `07-05` runtime gate above is the later explicit
-exception, extended by Phase08 to the idle/default/color gate and by Phase09 to
-the bounded tab-return gate above. Only the
-revision-bound recorded observations count as passes. Existing test files and
+exception, extended by Phase08 to the idle/default/color gate, Phase09 to the
+bounded tab-return gate and Phase10 to startup/deferred nonexistent-target refusal
+as described above. Only revision-bound recorded observations count as passes. Existing test files and
 historical evidence are preserved, not converted into current passes.
 
 Historical exception: metadata commit `7d4cff8` inadvertently ran pre-commit
@@ -204,7 +234,7 @@ Phase07 startup/default-endpoint paths.
 | REQ-008 — geometry/rendering | [`layout.go`](../layout.go)/[`render.go`](../render.go) constrain cell-based columns, paging, grapheme-safe clipping, breadcrumbs/icons/help; [`popup.go`](../popup.go) selects native top/bottom/left/right/center bounds. [`terminal.go`](../terminal.go) consumes actual frame placements/Lines and passes Pages to key handling. Reviews 04-02/04-04/04-05. | All five positions, native floating-layer clipping, resize and tiny-terminal geometry remain graphically unverified. No old full-window overlay workaround is adopted. L1/L5. |
 | REQ-009 — theme/terminal safety | [`theme.go`](../theme.go) supplies palette decoding, semantic contrast-aware styles, default/fallback colors, NO_COLOR and ASCII decorations; [`render.go`](../render.go) uses styles/decorations. [`terminal.go`](../terminal.go) orders palette metadata before keys and restores terminal state before returning a result. Reviews 04-03/04-02/04-04/04-05. | Real palette behavior, glyph widths and restoration were not exercised. Unknown background uses immediate ANSI semantic accents with default body text/background; measured palette contrast applies only when background metadata is valid. ASCII does not transliterate user labels. Phase08 review above. L1/L3/L5. |
 | REQ-010 — built-ins/session parity | [`defaults/sessions.lua`](../lua/rex_whichkey/defaults/sessions.lua), [`tabs.lua`](../lua/rex_whichkey/defaults/tabs.lua), [`panes.lua`](../lua/rex_whichkey/defaults/panes.lua), [`app.lua`](../lua/rex_whichkey/defaults/app.lua), [`init.lua`](../lua/rex_whichkey/defaults/init.lua) and dispatcher provide session/tab lifecycle/navigation, split/close, sidebar and palette. Default Focus and host groups were removed in 08-02 and Zoom in Phase09; custom focus/zoom actions and explicit host providers remain. Reviews 05-01–05-03/05-04, 03-04 and 08-02. | Each actual Rex action, native rename/picker interaction and old-plugin runtime parity remain unexecuted. Session switch delegates Rex's picker, not an enumerated popup session list. L1/L2. |
-| REQ-011 — origin/focus/cleanup | [`rex/block.go`](../rex/block.go)/[`layer.go`](../rex/layer.go), [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua), [`popup.go`](../popup.go), Lua launcher: captured server/session/block/client/connection generation, current placement lookup, origin focus and returned-owned-terminal cleanup. Reviews 02-03/03-04/04-05 and documentation 05-05. | Recorded native dismissal cleanup is limited to the frozen targeted gate above. Moved-block, reconnect, error cleanup and disconnected-origin behavior remain unverified. No local/current-client fallback or broad cascading cleanup is intended. L2/L3/L4. |
+| REQ-011 — origin/focus/cleanup | [`rex/block.go`](../rex/block.go)/[`layer.go`](../rex/layer.go), [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua), [`popup.go`](../popup.go), Lua launcher: captured server/session/block, current placement lookup, origin focus and returned-owned-terminal cleanup. Configured binding retains app generation throughout; native app binding/generation begins only after executable selection and cleanup (REQ-023). Reviews 02-03/03-04/04-05 and documentation 05-05 describe their earlier revisions. | Recorded native dismissal cleanup is limited to the frozen targeted gate above. Moved-block, reconnect, error cleanup and disconnected-origin behavior remain unverified. No local/current-client fallback or broad cascading cleanup is intended. L2/L3/L4. |
 | REQ-012 — known hosts | [`rex/hosts.go`](../rex/hosts.go) decodes `rex hosts --json`; [`hosts.go`](../hosts.go)/[`terminal.go`](../terminal.go), [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) expand explicit known-hosts provider groups once per invocation. IDs, labels, home metadata and warnings remain distinct; generated rows are non-executable. Reviews 02-04/05-04. | No current discovery or reachability trial. A failed listing produces a warning, not successful empty inventory. Execution-host inventory differs from origin-server selection. L6. |
 | REQ-013 — remote compatibility | Captured targeting in [`rex/`](../rex), server-local loading/launch in Lua/config/popup paths, and [remote-compatibility.md](remote-compatibility.md). Reviews 02-01–02-04/03-01/03-04/04-05/05-05. | No remote deployment/trial. Helper/controller/child must share the Rex server host's executable and temporary filesystem; client-local installation does not install remotely. L1/L2/L3/L4/L6. |
 | REQ-014 — packaging/config ownership | [`flake.nix`](../flake.nix), [`nix/package.nix`](../nix/package.nix), [`nix/home-manager.nix`](../nix/home-manager.nix) package the executable/Lua and opt-in sibling links. User init/mapping files are not managed; links are non-forcing. Reviews 06-01/06-02. | Recorded Nix package builds passed with checks/install checks disabled; no Home Manager evaluation/activation or existing-file byte-preservation trial. Declared four-system outputs are not certification. L7. |
@@ -214,7 +244,7 @@ Phase07 startup/default-endpoint paths.
 
 | Requirement | Implemented source and integration | Outstanding verification / limitations |
 | --- | --- | --- |
-| REQ-016 — ordinary popup launch | [`cmd/main.go`](../cmd/main.go) -> [`launch.go`](../launch.go) captures exact terminal origin/app generation, preflights placement and reads server registration. An absent implicit default uses [`native.go`](../native.go)/[`defaults.go`](../defaults.go) and the shared [`popup.go`](../popup.go) lifecycle; registered/explicit actions keep the original-VM configured route. Historical configured-only review 07-02/integration `69078fc` does not approve this correction. [Launch contract](launch-contract.md) traces both paths. | Historical configured-only launch failed; later 07-05 records a normal native popup/navigation/dismissal/exit0/cleanup pass. Neither that result nor historical producer review/compilation establishes Phase08 idle/default/color behavior; use the assembly evidence index above. L1–L5/L9. |
+| REQ-016 — ordinary popup launch | [`cmd/main.go`](../cmd/main.go) -> [`launch.go`](../launch.go) captures exact terminal origin, preflights placement and reads server registration before GUI binding. Native app binding is deferred to executable selection (REQ-023); configured launch still captures the app generation before activation. An absent implicit default uses [`native.go`](../native.go)/[`defaults.go`](../defaults.go) and the shared [`popup.go`](../popup.go) lifecycle; registered/explicit actions keep the original-VM configured route. Historical configured-only review 07-02/integration `69078fc` does not approve this correction. [Launch contract](launch-contract.md) traces both paths. | Historical configured-only launch failed; later 07-05 records a normal native popup/navigation/dismissal/exit0/cleanup pass. Neither that result nor historical producer review/compilation establishes Phase08 idle/default/color behavior; use the assembly evidence index above. L1–L5/L9. |
 | REQ-017 — native platform endpoints | [`rex/endpoint.go`](../rex/endpoint.go) owns explicit override > nonempty execution-host REX_SERVER > bounded no-autostart native Linux/macOS Rex identity discovery, capturing/validating a concrete endpoint. [`popup.go`](../popup.go) preparation and the public caller consume it; Lua permits `popup.new(defaults)` and forwards preparation's canonical server. Private controller handoffs never ambient-default. Review 07-01, later composition review 07-02; integrated `d1164e7`/`69078fc`. | No default-discovery/platform matrix, custom-server or Darwin runtime certification. Exact native socket algorithms belong to Rex; no guessed path formula or platform certification. CLI identity shape requires compatible installed Rex; no autostart, scan or alternate-server retry. L1/L2/L4/L9. |
 
 ### Popup-polish extension: REQ-018/019/020
@@ -390,11 +420,13 @@ delivery.
   prerequisites, not verified deployment outcomes. CLI-origin client/block
   actions require the graphical client's Remote Control setting. Configuration
   changes remain user-owned; no init.lua rewrite, automatic reload or restart.
-- **L2 — origin/races:** source targets the captured server/session/block/client
-  and `connected_at` generation, following block moves within the captured
-  session, not searching other sessions. Missing/ambiguous/lost/changed origins
-  fail closed. Inspect/focus/execute are separate Rex operations, not an atomic
-  transaction; external moves, disconnects, focus or configuration changes can
+- **L2 — origin/races:** source targets captured server/session/block, following
+  block moves within that session, not searching other sessions. Native display
+  uses resource liveness alone; app ID/`connected_at` bind after selection/cleanup.
+  Configured mode binds app generation before activation. Missing/ambiguous/lost/
+  changed required identities fail closed at their respective boundary.
+  Inspect/focus/execute are separate Rex operations, not an atomic transaction;
+  external moves, disconnects, focus or configuration changes can
   race side effects after the last check. Disconnected-origin rejection and real
   graphical-client action routing remain untested.
 - **L3 — cleanup/termination/uncertainty:** only the returned owned terminal is
@@ -407,9 +439,10 @@ delivery.
   completion; native interaction has no fixed expiry. Both have bounded deferred
   cleanup, and native parent loss cancels the child through its lifetime pipe.
   No retry of uncertain mutations/completion, label-based scavenging, recursive cleanup or compensating daemon is provided.
-- **L4 — trust/lifetime:** source binds a Go crypto/rand capability, retained
-  mapping/confirmation, original runtime context, config and connection
-  generations to one invocation. Configured Lua lifetime is 30 seconds from
+- **L4 — trust/lifetime:** configured source binds a Go crypto/rand capability,
+  retained mapping/confirmation, original runtime context, config and connection
+  generations to one invocation. Native app binding is deferred per REQ-023.
+  Configured Lua lifetime is 30 seconds from
   reservation (the launcher starts its bound before evaluation/preparation), with
   at most 64 pending/in-progress entries per registry. Expected UI expiry dismisses
   without selection; completion is not activated after expiry. Native mode has no
@@ -446,8 +479,8 @@ delivery.
   release. Reviews and compilation apply to their recorded frozen revisions;
   later edits require fresh evidence. The narrow native runtime observations
   above are not general acceptance, a coverage claim or authority to execute a
-  final test matrix. Only the bounded coordinator Phase08/09 gates described above
-  are authorized.
+  final test matrix. Only the bounded coordinator Phase08/09/10 gates described
+  above are authorized.
 - **L9 — ordinary launch/native defaults:** the earlier producer revisions have
   recorded review/compilation/integration, but a later normal invocation failed
   for absent custom registrations. Task `07-05` supplies self-contained native
@@ -458,10 +491,11 @@ delivery.
   are required for native discovery. Present invalid overrides fail rather than
   falling through; controller handoffs never default. Terminal and server-side
   preparation must resolve the same canonical endpoint for custom/shared setups.
-  Full captured session/block and an exact/unique eligible attached client with
-  unchanged connection generation are mandatory; no focus/current-client/server
-  substitution is authorized. No-argument activation may be accepted without
-  popup display, and uncertainty is not retried. Recorded documentation review,
+  Full captured session/block are mandatory for display. An exact/unique eligible
+  attached app with unchanged generation is mandatory for native selected-action
+  execution or configured launch, not native display/dismissal (REQ-023). No
+  focus/current-client/server substitution is authorized. No-argument configured
+  activation may be accepted without popup display, and uncertainty is not retried. Recorded documentation review,
   integration and Go/Nix compilation do not convert skipped tests/runtime gates
   into passing usability criteria.
 

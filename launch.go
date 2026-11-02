@@ -58,8 +58,9 @@ func popupConnectionGeneration(value string) bool {
 // LaunchPopup opens the basic native popup when the implicit default action is
 // unregistered, or activates a registered original-VM action once. Configured
 // success acknowledges activation only; native success follows UI exit/cleanup.
-// Read-only metadata selects the route BEFORE any activation. An uncertain
-// activation never switches routes or retries.
+// Read-only server metadata selects the route before GUI binding or activation.
+// Native display needs no app; configured activation binds its app at launch.
+// An uncertain activation never switches routes or retries.
 func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	if parent == nil {
 		return errors.New("whichkey: launch requires a context")
@@ -82,7 +83,7 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 		}
 	}
 	if selector != nil && !popupResourceID(*selector, "client") {
-		return errors.New("whichkey: --client or REX_CLIENT must be an exact full client ID for an attached live graphical app, not a label or suffix")
+		return errors.New("whichkey: --client or REX_CLIENT must be an exact full client:UUID, not an empty value, label or suffix")
 	}
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
@@ -103,17 +104,10 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	if selector != nil {
 		requested = *selector
 	}
-	// Absence of REX_CLIENT is normal: the shared resolver counts only live
-	// graphical apps attached to this session, excluding CLI/automation clients.
-	origin.ClientID, origin.ConnectedAt, err = popupOriginConnection(ctx, client, origin.SessionID, requested)
-	if err != nil {
-		return err
-	}
-	// Reuse the controller's exact placement and generation checks. A wrong
-	// endpoint, stale session/block or reconnect fails before action activation.
-	request := popupRequest{Server: server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-		ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}
-	if _, err := request.originBlock(ctx, client); err != nil {
+	// Validate server resources before choosing a route, without inspecting GUI
+	// attachments. A requested native selector is intent, not a live binding.
+	request := popupRequest{Server: server, SessionID: origin.SessionID, BlockID: origin.BlockID}
+	if _, err := request.resourceOriginBlock(ctx, client); err != nil {
 		return err
 	}
 	actions, err := origin.actions(ctx, executable, false)
@@ -124,12 +118,19 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 		if options.Action != "" {
 			return errors.New("whichkey: requested configuration launch action is not registered on the captured server; register it with menu.register_launch or omit --action for the basic menu")
 		}
-		// Use the caller context, not the short preflight deadline, for the
-		// invocation's own finite UI lifetime. The captured origin is rechecked.
-		return launchNativePopup(parent, origin, executable)
+		// Native interaction has no idle deadline. Preserve only the optional
+		// selector until an executable retained selection needs an app.
+		return launchNativePopup(parent, origin, executable, requested)
 	} else if kind != "lua" {
 		return errors.New("whichkey: launch name is not a server configuration action; choose a registered menu.register_launch action")
 	}
+	// Configured launch still requires an exact live app and generation before
+	// activation in the original Lua VM; no decoded handoff can defer binding.
+	origin.ClientID, origin.ConnectedAt, err = popupOriginConnection(ctx, client, origin.SessionID, requested)
+	if err != nil {
+		return err
+	}
+	request.ClientID, request.ConnectedAt = origin.ClientID, origin.ConnectedAt
 	if _, err := request.originBlock(ctx, client); err != nil {
 		return err
 	}

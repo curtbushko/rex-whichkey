@@ -19,8 +19,9 @@ a failed or uncertain activation never switches to native mode.
 entrypoint without contacting Rex. Public options are:
 
 - `--server ENDPOINT`: a concrete execution-host endpoint override.
-- `--client FULL_ID`: an exact `client:UUID` of a live graphical app attached to
-  this terminal's session.
+- `--client FULL_ID`: an exact `client:UUID` requested for app execution in this
+  terminal's session. Syntax is checked early; liveness is checked after native
+  executable selection or before configured launch.
 - `--action NAME`: require an installed configuration launch action, including
   when NAME is `whichkey`. Missing registration is an actionable error, not a
   request for native fallback. Names contain only lowercase ASCII letters,
@@ -65,8 +66,10 @@ bind the registered action through your existing Rex configuration if desired.
 Modules never edit or reload `init.lua`. Remote Control must permit CLI activation
 on the selected client; installing/registering these pieces is not automatic.
 
-Missing helper/CLI, incompatible metadata/native actions or Remote Control can
-prevent basic startup. The configured path additionally needs its modules,
+Missing helper/CLI, incompatible server metadata or unavailable session/block
+can prevent basic startup. App availability, selected-action compatibility and
+Remote Control gate native action execution, not native display/dismissal. The
+configured path additionally needs a live selected app before launch, modules,
 registration and successful setup. Diagnostics identify the failed stage without
 forwarding raw child output/private handoffs. Nonzero/timeout/output-limit
 activation failures are uncertain and never retried. A configured zero exit
@@ -83,15 +86,29 @@ fallback, session label lookup, ID suffix or graphical-client filesystem lookup.
 Resolve one canonical endpoint by the policy below, then use it explicitly for
 all read-only preflight and activation calls.
 
+Native display validates endpoint/session/block resources through
+`popupRequest.resourceOriginBlock` before reading server registration metadata.
+It does not call `session.list_clients` or query a selected-client action registry.
+The native lifecycle uses resource-only liveness for creation, wait and server
+focus restoration, and owned-resource checks for cleanup. Zero/several apps,
+unknown attachment kinds and a valid-but-nonexistent explicit selector do not
+prevent display/navigation/dismissal; they do not prove a GUI presented the layer.
+
 Client precedence is present `--client`, then present `REX_CLIENT`, otherwise a
 relationship lookup of **only the captured session's attached graphical apps**.
+For native mode this lookup is deferred until an executable retained selection
+has been confirmed and the owned popup/private transport cleaned. Cancellation
+returns without looking up an app. Configured mode still performs it before
+activation and retains that exact generation throughout its finite lifetime.
 `session.list_clients` provides both exact session membership and Rex's native
 `info.kind` classification in one response. Only the documented kind `app` is
 eligible: `cli`, `agent`, `other`, missing and unknown kinds do not contribute to
 automatic cardinality and cannot be explicitly selected. No label/name/platform
 heuristics or unscoped global app list are used.
 
-Present empty or malformed selectors and labels/suffixes fail. Malformed or
+Present empty or malformed selectors and labels/suffixes fail early. A syntactically
+valid native selector is Go-owned intent, not a fabricated live generation; its
+liveness is deliberately not checked for display/Escape. At binding, malformed or
 duplicate attached client IDs fail even for non-app/lost records; UUID case
 variants cannot hide a duplicate. Each nonlost app attachment must have a nonblank
 UTF-8 `connected_at` generation of at most 1024 bytes without control characters.
@@ -99,23 +116,26 @@ Rex's documented missing/unknown connection state counts as connected; only `los
 is disconnected. The documented null/empty attachment list means no candidates;
 a missing/malformed list is an inspection error, not a successful empty lookup.
 
-Without a selector, exactly one live attached app succeeds, even when CLI or
-automation connections are also attached. Rex terminals normally need not export
+At configured launch or native selected-action binding, without a selector,
+exactly one live attached app succeeds, even when CLI or automation connections
+are also attached. Rex terminals normally need not export
 `REX_CLIENT`; its absence is not a prerequisite failure. No live attached app
 produces guidance to connect the graphical app to the origin session. Several
 live attached apps produce distinct guidance to supply an exact full app client
 ID. A supplied selector must match a live app in that exact session; stale,
 non-app or unattached selectors produce a separate selector error even if another
-app could have been selected automatically. No global, current-client or
-arbitrary-first fallback is used.
+app could have been selected automatically. Native failures are identified as
+**action-targeting refusals after popup cleanup**, not launch prerequisites. No
+global, focused, terminal-owner or arbitrary-first fallback is used.
 
-The launch route reuses `popupRequest.originBlock` and `popupOriginConnection`:
-recheck the selected connection generation, inspect the exact session and require
-the exact block to be uniquely placed there. The delivered Rex resource client
-rejects malformed/duplicate window/layer/block placement. A wrong endpoint or
-stale origin fails before activation or resource creation. The shared popup
-lifecycle and, on configured routes, the Lua action independently validate again
-rather than treating preflight as enduring authority.
+`popupRequest.originBlock` combines `popupOriginConnection` generation revalidation
+with `resourceOriginBlock`'s exact session and uniquely placed block check.
+Configured launch/controllers use the combined check throughout. Native display
+uses only resource checks; native dispatch binds after selection and then uses
+the combined check immediately before execution. The Rex resource client rejects
+malformed/duplicate window/layer/block placement. A wrong endpoint or stale origin
+fails read-only before resource creation or activation. Preflight is not enduring
+authority; each route independently validates at its mutation boundary.
 
 ## Native basic route and registration selection
 
@@ -146,10 +166,12 @@ lookup in [`hosts.go`](../hosts.go). Custom `pane.focus` mappings and explicit
 `provider = "known-hosts"` groups remain supported; the optional
 [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) fragment is retained.
 `client.tab.goto` takes a one-based integer index; `pane.split` uses `right`/`down`;
-custom `pane.focus` uses `left`/`down`/`up`/`right`. Every built-in action must be
-reported as `kind: "client"` by the captured app's metadata before the popup opens; an incompatible app fails
-with the Go-owned missing action name, not a fabricated action or a silent route
-switch. Rex remains responsible for final action/schema/Remote Control checks.
+custom `pane.focus` uses `left`/`down`/`up`/`right`. No app registry is required to
+open the menu. Only the executable retained selection must be reported as
+`kind: "client"` by the app selected after cleanup; unrelated unavailable defaults
+do not block display or that selection. Incompatibility refuses action targeting
+with the Go-owned selected action name, never a fabricated action or route switch.
+Rex remains responsible for final action/schema/Remote Control checks.
 
 [`native.go`](../native.go) retains an independent immutable parent snapshot and
 passes canonical configuration to `runPopupWithLifetime` in
@@ -158,13 +180,13 @@ stays in the foreground while its PTY child is usable, with **no fixed interacti
 or idle deadline**. `RunNativePopupTerminal` requires a private 0600 lifetime pipe;
 parent loss cancels the child even if parent defers cannot run. `waitPopup` waits
 for the child's exit without capping interactive time at the RPC timeout, while
-checking exact origin placement and app connection generation every second.
-Cancellation, signals, terminal/process failure or lost origin still end the
+checking exact captured session/block placement every second. Native wait never
+checks app attachments/generation; graphical disconnection/ambiguity cannot cancel
+it. Cancellation, signals, terminal/process failure or lost origin still end the
 invocation; there is no persistent daemon or detached indefinite controller.
-The watcher checks captured membership/generation and block placement, not which
-tab is active. Merely switching away/back is not cancellation and causes no Rex
-focus mutation or layer recreation. No observed attachment-loss cancellation has
-been established as the reported tab-return bug; those liveness checks remain.
+The watcher does not inspect the active tab. Merely switching away/back is not
+cancellation and causes no Rex focus mutation or layer recreation. Configured
+wait alone also checks its pre-bound app generation.
 
 The actual native path is `LaunchPopup` -> `launchNativePopup` ->
 `runPopupWithLifetime(popupNative)` -> `RunNativePopupTerminal` ->
@@ -207,9 +229,22 @@ the parent; transport/config/result paths contain no action credentials.
 After successful child exit (which follows terminal restoration), the controller
 closes only its returned owned terminal, confirms its layer vanished, restores
 exact origin focus and removes private config/result files, the native lifetime
-pipe when present and their empty directory **before** selected dispatch. Origin placement and live app connection generation
-are rechecked before creation, owned close, focus and dispatch. Native dispatch
-looks up only the retained mapping and uses its trusted action/args once through
+pipe when present and their empty directory **before** selected dispatch or any
+native app lookup. The parent's lifetime-pipe writer is closed in that cleanup
+path too; close failure prevents dispatch. Native owned close inspects the exact
+returned terminal in the captured session and can clean it even if the origin
+block/app disappeared;
+restoring focus still requires the exact origin block. No app is required for
+native cleanup/focus. Configured mode retains its combined origin/app checks
+before creation, close, focus and completion.
+
+Native dispatch validates the retained selection/confirmation, returns immediately
+for cancellation, and looks up only the selected immutable Go-owned mapping.
+It resolves the retained requested selector or unique eligible app, captures full
+ID/`connected_at`, checks only that mapping's native action metadata, then rechecks
+that same generation plus exact origin immediately before execution. A reconnect
+cannot renew the generation or retarget another app. It uses trusted action/args
+once through
 `rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
 --session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
 output is discarded with a shared 64 KiB budget. Dispatch has a three-second
@@ -286,10 +321,10 @@ it cannot change the actual action activation or bypass retained registry checks
 
 1. [`cmd/main.go`](../cmd/main.go) parses no arguments/public flags through
    `runLaunch`, then calls `LaunchPopup`, not private-mode usage or a JSON demo.
-2. [`launch.go`](../launch.go) resolves/fixes endpoint, validates the exact
-   session/block/client connection and reads server registration metadata. The
-   native branch above is used only for an absent implicit default; otherwise it
-   invokes the installed named CONFIG action.
+2. [`launch.go`](../launch.go) resolves/fixes endpoint, validates exact session/block
+   placement and reads server registration metadata without GUI lookup. An absent
+   implicit default selects the native branch above; otherwise it binds/rechecks
+   the exact app connection and invokes the installed named CONFIG action.
 3. [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) registers that action in the
    original VM; its real `run(ctx,args)` calls `menu.launch(ctx, optional_origin)`.
    [`config.lua`](../lua/rex_whichkey/config.lua) setup previously resolves
@@ -425,10 +460,11 @@ explicit endpoint before arming mutations or cleanup. One-shot capability, expir
 configuration generation, retained snapshot, confirmation, focus revalidation,
 original-VM callbacks, owned-only bounded cleanup and no uncertain action retries
 are unchanged. This does not install a daemon, copy callbacks into a new Lua VM,
-select a focused/default client, or edit/reload the user's `init.lua`. The helper,
-Rex CLI and app Remote Control policy remain prerequisites. Original-server Lua
-modules and explicit user-owned action registration are additional prerequisites
-only for the configured route, not the basic native menu.
+select a focused/default client, or edit/reload the user's `init.lua`. The helper
+and Rex CLI remain prerequisites for display. App eligibility and Remote Control gate
+selected native execution or configured activation, not native display/Escape.
+Original-server Lua modules and explicit user-owned action registration are
+additional prerequisites only for the configured route, not the basic menu.
 
 ## Source evidence and verification limits
 
@@ -532,8 +568,9 @@ under `.mtn-tmp/tab-recovery/reproduction/` at the pre-change source retained th
 same native process, layer and terminal menu content through both server window
 focus and app tab-goto round-trips. They do not establish what the app actually
 painted, nor a crash/attachment-loss cause. The captured `session.new_layer` schema
-has no persistence option; this change does not invent one or change client
-selection in response to a separate several-app diagnostic.
+has no persistence option; Phase09 did not invent one or change client selection
+in response to a separate several-app diagnostic. Phase10's separately approved
+binding correction below refines that native display prerequisite.
 
 This source adds the focus-in repaint path and removes default Zoom in both real
 generators. It does not weaken exact origin/app-generation authorization before
@@ -544,3 +581,25 @@ Earlier Phase07/08 gates are not Phase09 passes; terminal captures alone are not
 native GUI visual certification. No builder tests, compilation or product/API
 experiments were run for Phase09. See the [inventory](acceptance.md) for lineage
 and remaining uncertainty.
+
+### Phase10 native display/action boundary
+
+Accepted **REXWHICHKEY-20261102-111430** and REQ-023 refine native launch-time
+app requirements, not action safety or configured original-VM binding. The
+[design](../.tasks/designs/rex-whichkey-app-independent-popup.md) and
+[task](../.tasks/tasks/rex-whichkey-10-01-app-independent-popup.md) index the exact
+source review, coordinator compilation and bounded runtime evidence. The native
+request carries no live client/generation; its optional selector stays in a
+trusted Go closure. `popupNative` is selected only by that Go route, never a
+handoff field or missing configured expiry. Decoded configured handoffs still
+require live origin identities, original authenticated expiry and completion.
+
+Source inspection/formatting is not compilation or runtime proof. Earlier
+single-app gates do not verify zero/several/unknown-app display or deferred target
+refusal. The authorized coordinator gate covers normal startup/navigation/Escape,
+valid-but-nonexistent selector startup/Escape, and one non-destructive selection
+with that nonexistent target refusing after cleanup with no action dispatch.
+Actual app counts and terminal/server frames must be distinguished from native
+GUI presentation; no app is disconnected to fabricate cardinality. No builder
+tests, compilation, product/API/GUI/config/remote experiments or actual native
+selected-action execution are claimed.
