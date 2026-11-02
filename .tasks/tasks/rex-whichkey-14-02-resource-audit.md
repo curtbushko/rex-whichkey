@@ -20,13 +20,13 @@ title: Verify resource actions and document matrix
 mtnCreateRetry:
   key: rex-whichkey-phase14-task2-v1
   intent: 09ff9cce860438cc474f709a2134cfe2836b2dbfd36a2c810aedbf7e2c33a891
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:04.253Z'
-dateModified: '2026-11-02T22:40:55.184Z'
+dateModified: '2026-11-02T22:57:40.338Z'
 tags:
   - task
 type: task
@@ -40,6 +40,7 @@ blockedBy:
     reltype: FINISHTOSTART
   - uid: '[[tasks/rex-whichkey-14-06-client-perform.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-02'
 ---
 # Refresh complete 25-row action audit with API-driven evidence
 
@@ -53,8 +54,8 @@ No leaf builds/tests/TDD/general/unit/race/RPC/nativeUI/clipboard/fonts/config/s
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIxOjAxOjU3LjgyN1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNC10MDItYnVpbGRlci1hMDEvc3VtbWFyeS8xIiwiaW50ZW50IjoiZDdiM2FjMDU1ZGFiOGMxOTBlYjcwMDM2NDgxYjdiNTg1NjU2OTQwODAzZTUyZjgzOWU2MGM3YTY2MjlhYTM4MCJ9 -->
-### 2026-11-02T21:01:57.827Z · summary · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIyOjU3OjQwLjMyN1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNC10MDItYnVpbGRlci1hMDIvc3VtbWFyeS8yIiwiaW50ZW50IjoiYmM3OGRjMDZmYzdjYzQzYTk1NjdjZjczOTNkNGMzN2UzZDAyMzBhYWM2ODRlYTNiNGM4ZTc3NmNhZTRmMjYwNiJ9 -->
+### 2026-11-02T22:57:40.327Z · summary · unspecified
 
-{"acceptedScope":"Verify resource actions and document matrix","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p14-t02-tasks-a01/review/1 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/action-audit/rex-whichkey-p14-t02-builder-a01/integration/integration.json"],"attempt":1,"eventId":"rex-whichkey-p14-t02-builder-a01/summary/1","files":["docs/actions.md"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-14-02-resource-audit.md","requirements":["REQ-030"],"schemaVersion":1,"specHash":"sha256:105b2943f517b48304fedefb82962dece256d990aeb137f3261737054df73a27","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"ef2d7edfdaa85362e9796c50c042b8353ed9b20a","targetTree":"34467c7372611b83ad201da2fd1a9922e537083c","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
+{"acceptedScope":"Verify resource actions and document matrix","approvalSummary":["User explicitly requests all remaining approved phases under corrected plan.","Independent source review rex-whichkey-p14-t02-tasks-a02/review/2 APPROVED current build."],"artifactRefs":["/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/action-audit/rex-whichkey-p14-t02-builder-a02/integration/integration.json"],"attempt":2,"eventId":"rex-whichkey-p14-t02-builder-a02/summary/2","files":["docs/actions.md"],"kind":"summary","limitations":["No project tests, TDD, experiments or live/remote trials; source review/compilation are not runtime verification.","Fresh same-family reviewer context, not cross-family verification."],"recordRef":"tasks/rex-whichkey-14-02-resource-audit.md","requirements":["REQ-030"],"schemaVersion":1,"specHash":"sha256:a6a4d5e197b167ba0fe45cb1f0af6594832ddc20be8a8bb63c5c134b87430994","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"32f6a160c4cca613b17b9a97e2c922e19ed31c08","targetTree":"008b8072783d2e5f617c14694d25adc432178638","verification":[{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./... (combined candidate)","result":"pass"},{"command":"Reviewed changed-file contents unchanged; git diff --check; target commit/tree and ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
