@@ -113,7 +113,7 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 func menuHeader(menu *Menu, config Config, theme Theme) menuLine {
 	var header menuLine
 	if icon := menuDecoration(theme, config.Icon, ""); icon != "" {
-		header = append(header, menuText(ThemePrimary, icon))
+		header = append(header, menuText(ThemeIcon, icon))
 	}
 	if config.Title != "" {
 		if len(header) > 0 {
@@ -124,7 +124,7 @@ func menuHeader(menu *Menu, config Config, theme Theme) menuLine {
 	separator := menuDecoration(theme, config.Icons.Breadcrumb, ">")
 	for _, crumb := range menu.Breadcrumbs() {
 		if len(header) > 0 {
-			header = append(header, menuText(ThemeMuted, " "+separator+" "))
+			header = append(header, menuText(ThemeIcon, " "+separator+" "))
 		}
 		header = append(header, menuText(ThemeGroup, crumb.Label))
 	}
@@ -138,13 +138,13 @@ func menuEntryLine(entry MenuEntry, config Config, theme Theme) menuLine {
 	}
 	line := menuLine{menuText(ThemeKey, key), menuText(ThemeMuted, "  ")}
 	if icon := menuDecoration(theme, entry.Icon, ""); icon != "" {
-		line = append(line, menuText(ThemePrimary, icon+" "))
+		line = append(line, menuText(ThemeIcon, icon+" "))
 	}
 	role := ThemePrimary
 	if entry.Group {
 		role = ThemeGroup
 		if marker := menuDecoration(theme, config.Icons.Group, "+"); marker != "" {
-			line = append(line, menuText(role, marker+" "))
+			line = append(line, menuText(ThemeIcon, marker+" "))
 		}
 	} else if entry.Confirm {
 		role = ThemeCritical

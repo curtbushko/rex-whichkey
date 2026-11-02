@@ -39,6 +39,7 @@ const (
 	ThemeGroup
 	ThemeMuted
 	ThemeCritical
+	ThemeIcon
 )
 
 type themeRGB struct{ r, g, b uint8 }
@@ -48,18 +49,20 @@ type themeRGB struct{ r, g, b uint8 }
 type Theme struct {
 	foreground *themeRGB
 	background *themeRGB
-	accents    [4]*themeRGB
+	accents    [5]*themeRGB
+	ansi       bool
 	noColor    bool
 	ascii      bool
 }
 
 // NewTheme resolves a terminal snapshot. A nonempty NO_COLOR overrides color
-// output even when noColor is false. Unknown backgrounds retain terminal defaults
-// instead of guessing a dark theme. ASCII affects decorations, not user labels.
+// output even when noColor is false. Unknown backgrounds use native ANSI accents
+// and default body text without assuming a dark theme or setting a background.
+// ASCII affects decorations, not user labels.
 // Rebuild from each TerminalPaletteMessage.Palette to apply partial or late
 // replies while retaining the same noColor/ascii configuration.
 func NewTheme(palette TerminalPalette, noColor, ascii bool) Theme {
-	t := Theme{noColor: noColor || os.Getenv("NO_COLOR") != "", ascii: ascii}
+	t := Theme{ansi: true, noColor: noColor || os.Getenv("NO_COLOR") != "", ascii: ascii}
 	background, ok := parseThemeColor(palette.Background)
 	if !ok || t.noColor {
 		return t
@@ -71,25 +74,32 @@ func NewTheme(palette TerminalPalette, noColor, ascii bool) Theme {
 	}
 	t.foreground = &foreground
 
-	// Prefer the user's blue/cyan, magenta, neutral and red palette entries.
-	// Even subdued help text must remain readable at normal text contrast.
-	candidates := [4][]int{{4, 12, 6, 14}, {5, 13}, {8, 7, 15}, {1, 9}}
+	// Prefer the user's cyan/blue keys, magenta groups, neutral help, red
+	// warnings and yellow icons. Missing or low-contrast entries get a readable
+	// semantic fallback, not a wholesale collapse to the body foreground.
+	candidates := [5][]int{{6, 14, 4, 12}, {5, 13}, {8, 7, 15}, {1, 9}, {3, 11}}
+	fallbacks := [5]themeRGB{{0, 175, 215}, {175, 95, 215}, {128, 128, 128}, {215, 0, 0}, {215, 175, 0}}
 	for role, indexes := range candidates {
-		t.accents[role] = t.foreground
+		accent := fallbacks[role]
 		for _, index := range indexes {
 			color, valid := parseThemeColor(palette.Colors[index])
 			if valid && themeContrast(color, background) >= 4.5 {
-				t.accents[role] = &color
+				accent = color
 				break
 			}
 		}
+		accent = themeReadable(accent, background)
+		t.accents[role] = &accent
 	}
 	return t
 }
 
 // Style colors plain menu text and resets only the foreground/background that it
-// sets. Control characters are removed before styling, including in NO_COLOR
-// mode, so a label cannot inject SGR, OSC or cursor-control sequences.
+// sets. Without background metadata, native ANSI colors follow the user's terminal
+// palette; their contrast cannot be measured until replies arrive. Body/help text
+// retain the default foreground in that fallback. Control characters are removed
+// before styling, including in NO_COLOR mode, so a label cannot inject SGR, OSC
+// or cursor-control sequences.
 func (t Theme) Style(role ThemeRole, text string) string {
 	text = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
@@ -97,11 +107,30 @@ func (t Theme) Style(role ThemeRole, text string) string {
 		}
 		return r
 	}, text)
-	if t.noColor || t.foreground == nil || t.background == nil || text == "" {
+	if t.noColor || text == "" {
 		return text
 	}
+	if t.foreground == nil || t.background == nil {
+		if !t.ansi {
+			return text
+		}
+		// No background assignment or faint/dim text: unknown themes keep
+		// readable terminal defaults for labels/help and semantic ANSI accents.
+		foreground := 39
+		switch role {
+		case ThemeKey:
+			foreground = 36
+		case ThemeGroup:
+			foreground = 35
+		case ThemeCritical:
+			foreground = 31
+		case ThemeIcon:
+			foreground = 33
+		}
+		return fmt.Sprintf("\x1b[%dm%s\x1b[39m", foreground, text)
+	}
 	foreground := t.foreground
-	if role >= ThemeKey && role <= ThemeCritical {
+	if role >= ThemeKey && role <= ThemeIcon {
 		foreground = t.accents[role-ThemeKey]
 	}
 	return fmt.Sprintf("\x1b[38;2;%d;%d;%dm\x1b[48;2;%d;%d;%dm%s\x1b[39;49m",
@@ -190,6 +219,23 @@ func themeContrastFallback(background themeRGB) themeRGB {
 		return black
 	}
 	return white
+}
+
+// Move an accent toward the highest-contrast neutral only as far as necessary.
+// This retains semantic hues on light and dark backgrounds without assuming
+// either, and guarantees normal-text contrast even for missing palette entries.
+func themeReadable(color, background themeRGB) themeRGB {
+	target := themeContrastFallback(background)
+	for step := 0; step <= 16; step++ {
+		mix := func(from, to uint8) uint8 {
+			return uint8((int(from)*(16-step) + int(to)*step) / 16)
+		}
+		candidate := themeRGB{mix(color.r, target.r), mix(color.g, target.g), mix(color.b, target.b)}
+		if themeContrast(candidate, background) >= 4.5 {
+			return candidate
+		}
+	}
+	return target
 }
 
 // TerminalPaletteMessage is terminal metadata, never a key or Escape/cancel.
