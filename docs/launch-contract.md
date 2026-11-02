@@ -116,17 +116,17 @@ Rex's documented missing/unknown connection state counts as connected; only `los
 is disconnected. The documented null/empty attachment list means no candidates;
 a missing/malformed list is an inspection error, not a successful empty lookup.
 
-At configured launch or native selected-action binding, without a selector,
-exactly one live attached app succeeds, even when CLI or automation connections
-are also attached. Rex terminals normally need not export
-`REX_CLIENT`; its absence is not a prerequisite failure. No live attached app
-produces guidance to connect the graphical app to the origin session. Several
-live attached apps produce distinct guidance to supply an exact full app client
-ID. A supplied selector must match a live app in that exact session; stale,
-non-app or unattached selectors produce a separate selector error even if another
-app could have been selected automatically. Native failures are identified as
-**action-targeting refusals after popup cleanup**, not launch prerequisites. No
-global, focused, terminal-owner or arbitrary-first fallback is used.
+Without a selector, exactly one live attached app binds directly, even when CLI
+or automation connections are also attached. Rex terminals normally need not
+export `REX_CLIENT`; its absence is not a prerequisite failure. No live attached
+app produces guidance to connect the graphical app to the origin session.
+Configured launch with several apps still requires an exact full app ID. Native
+selected-action binding instead opens an explicit target chooser, described below.
+A supplied selector must match a live app in that exact session; stale, non-app or
+unattached selectors refuse even if another app exists, never falling back to the
+chooser. Native failures are **action-targeting refusals after popup cleanup**,
+not launch prerequisites. No global, focused, terminal-owner or arbitrary-first
+fallback is used.
 
 `popupRequest.originBlock` combines `popupOriginConnection` generation revalidation
 with `resourceOriginBlock`'s exact session and uniquely placed block check.
@@ -197,7 +197,8 @@ mapping token. `RunTerminal` calls `drawTerminal` -> `RenderMenu` on the same
 menu/theme, bypassing `HandleKey`, so submenu/page/confirmation survive. Fragmented
 CSI and OSC-interleaved input retain framing; focus-out (`CSI O`) and other reports
 cannot select or cancel. Existing Escape, mouse and paste protection is unchanged.
-There is no unconditional repaint timer, second layer or focus-stealing callback.
+There is no unconditional repaint timer, tab-return replacement layer or
+focus-stealing callback. A separate later action-target prompt is described below.
 Focus reporting is a terminal protocol, not a claim of native-app layer persistence;
 apps that do not emit it will not trigger this repaint.
 
@@ -239,18 +240,45 @@ restoring focus still requires the exact origin block. No app is required for
 native cleanup/focus. Configured mode retains its combined origin/app checks
 before creation, close, focus and completion.
 
-Native dispatch validates the retained selection/confirmation, returns immediately
-for cancellation, and looks up only the selected immutable Go-owned mapping.
-It resolves the retained requested selector or unique eligible app, captures full
-ID/`connected_at`, checks only that mapping's native action metadata, then rechecks
-that same generation plus exact origin immediately before execution. A reconnect
-cannot renew the generation or retarget another app. It uses trusted action/args
+Native finish only captures the validated retained selection/confirmation; it
+never opens another UI inside its short operation context. After the whole first
+popup lifecycle returns successfully, cancellation returns without app lookup.
+Only the selected immutable Go-owned mapping is retained for execution.
+
+[`native_targets.go`](../native_targets.go) shares strict eligible-app enumeration
+with `popupOriginConnection` without changing configured selector/cardinality
+semantics. An exact requested selector remains strict. With no selector, zero
+apps refuse, one binds its full ID/`connected_at`, and several create a private
+Go-owned choice snapshot. A separate canonical `Config`/`Mapping` menu displays
+full app IDs followed by bounded printable-ASCII label hints. Duplicate, empty or
+unsafe labels cannot become identity; invalid label data gets a neutral fallback.
+Keys use 1–9 and explicit More groups, not conflicting decimal prefixes. The
+private selectable action tag is never dispatched to Rex. Child Completion is
+validated against this retained config and its keys resolve only a retained app
+ID/generation, never replacement original action/args/confirmation.
+
+The chooser starts only after original popup teardown and uses the same native
+FIFO/foreground ownership, resource-only liveness, initial sizing/spacers and
+fixed-rectangle navigation. Its interaction has no idle deadline; Escape at the
+root or unmapped `q` cancels with success and no action. Returning from it requires
+successful owned UI/file/lease cleanup and exact origin focus restoration. Neither
+stage caches an app preference. An outer native signal context spans both stages,
+lookups, cleanup gaps and dispatch, while per-stage cleanup stays bounded and
+parent loss closes each child's FIFO writer. The configured original-VM route,
+capability/expiry and finite controller policy are unchanged.
+
+After choice and cleanup, a fresh three-second dispatch context remains a child
+of that outer signal context. Native dispatch revalidates the original selection,
+checks only its action's metadata on the bound app, then rechecks that exact
+captured generation plus origin immediately before execution. Lost attachments,
+reconnects or stale choices fail; no re-enumeration silently replaces the target.
+The chooser cannot renew the captured generation. It uses trusted action/args
 once through
 `rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
 --session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
 output is discarded with a shared 64 KiB budget. Dispatch has a three-second
-context and is never retried. Dismissal executes no native action. Cleanup errors
-prevent selection dispatch; partial/uncertain creation never triggers broad
+context and is never retried. Dismissal of either stage executes no native action.
+Cleanup errors prevent selection dispatch; partial/uncertain creation never triggers broad
 layer/window/session deletion. Deferred error/cancellation cleanup is bounded to
 five seconds and never retries an uncertain close/focus/dispatch. Stale origins
 can prevent safe cleanup; SIGKILL/server loss cannot be guaranteed recoverable.

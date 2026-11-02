@@ -139,6 +139,31 @@ Rex version. Server VT/HTML/screenshots cannot certify remote native GUI chrome.
 Historical Phase07–10 evidence below is preserved, not promoted to REQ-024–026
 acceptance.
 
+## Native action-time target choice: REQ-031
+
+Accepted **REXWHICHKEY-20261102-151552** in the
+[action-audit design](../.tasks/designs/rex-whichkey-action-audit.md) adds explicit
+late app choice, not a new display prerequisite or a submenu resizing loop.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-031 — explicit late native app choice | [`native.go`](../native.go) captures the first validated result and returns from popup cleanup before resolving apps. [`native_targets.go`](../native_targets.go) retains eligible full IDs/generations and routes multiple apps through a separate canonical menu; safe label hints never grant authority. An explicit selector stays strict, zero apps refuse, one binds directly, chooser cancellation dispatches nothing. Only the target identity changes; original mapping/args/confirmation are revalidated, app metadata and exact generation/origin checked before one dispatch. Outer signal ownership spans both UIs and gaps; the dispatch budget starts after choice/cleanup. Both stages retain native FIFO lifetime, initial sizing/spacers and fixed navigation bounds. Configured original-VM binding/expiry/auth remain unchanged. | Source-only implementation, not compilation or runtime proof. Fresh frozen review, coordinator compilation, actual bare `s` -> explicit work-app choice -> below-origin split, chooser cancellation with no pane, strict invalid selector refusal and exact UI/file/lease cleanup belong to [task 14-01](../.tasks/tasks/rex-whichkey-14-01-action-target.md). No such gate is claimed by this source entry. |
+
+The coordinator's recorded reproduction in the design identifies several attached
+apps as the bare split-down failure; explicit app dispatch produced the expected
+split. Native `pane.split` takes `direction: "down"`, not the CLI spelling `below`;
+this repair intentionally does not alter that correct default mapping.
+
+REQ-030's all-25-default audit is separate from this routing repair. Only the
+coordinator may exercise authorized disposable fixtures and record actual
+resource before/after effects. Source/registry acceptance or a successful action
+receipt is not proof of GUI behavior. Session picker, previous/next selected-session
+view, session/tab rename dialogs, sidebar and palette remain unverified here;
+seven GUI-only behaviors need observable evidence, not an all-actions pass claim.
+Native chrome REQ-026 remains independently blocked. Leaves run source/format/
+whitespace checks only, with no tests/TDD, builds, native/GUI/API/config/font/
+platform experiments or installs.
+
 ## Native display independent of app targeting: REQ-023
 
 Accepted **REXWHICHKEY-20261102-111430** under the
@@ -148,18 +173,19 @@ configured original-VM binding. This is separate from the Phase09 tab-return wor
 
 | Requirement | Implemented source | Evidence boundary |
 | --- | --- | --- |
-| REQ-023 — app-independent native display | [`launch.go`](../launch.go) validates syntax and captured endpoint/session/block, then reads server registration before GUI binding. [`native.go`](../native.go) retains immutable canonical defaults and optional requested selector without app lookup. [`popup.go`](../popup.go) uses resource-only native creation/wait/focus, deadline-free interaction and FIFO parent lease; owned cleanup needs no app and precedes selected-action targeting. Cancellation needs no app. Executable retained selection/confirmation resolves exact requested or unique eligible app, checks only the selected action and rechecks full ID/generation/origin before one dispatch. Configured handoffs retain prelaunch binding, strict decoding, original authenticated expiry and same-VM completion. | Source trace and formatting do not prove compilation or runtime behavior. Earlier single-app gates do not verify the deferred boundary. Exact revision-bound review, coordinator compilation and runtime artifacts belong to [task 10-01](../.tasks/tasks/rex-whichkey-10-01-app-independent-popup.md) and its [phase](../.tasks/phases/rex-whichkey-10-app-independent-popup.md). No runtime pass is asserted here. |
+| REQ-023 — app-independent native display | [`launch.go`](../launch.go) validates syntax and captured endpoint/session/block, then reads server registration before GUI binding. [`native.go`](../native.go) retains immutable canonical defaults and optional requested selector without app lookup. [`popup.go`](../popup.go) uses resource-only native creation/wait/focus, deadline-free interaction and FIFO parent lease; owned cleanup needs no app and precedes selected-action targeting. Cancellation needs no app. Executable retained selection/confirmation resolves an exact requested app, a unique eligible app, or the explicit action-time choice described under REQ-031; it checks only the selected action and rechecks full ID/generation/origin before one dispatch. Configured handoffs retain prelaunch binding, strict decoding, original authenticated expiry and same-VM completion. | Source trace and formatting do not prove compilation or runtime behavior. Earlier single-app gates do not verify the deferred boundary. Exact revision-bound review, coordinator compilation and runtime artifacts belong to [task 10-01](../.tasks/tasks/rex-whichkey-10-01-app-independent-popup.md) and its [phase](../.tasks/phases/rex-whichkey-10-app-independent-popup.md). No runtime pass is asserted here. |
 
 Native display/navigation/Escape do not require a live requested client, a singleton
 app, known attachment kinds or any selected-client action registry. Malformed
-selector syntax still fails early. Missing/ambiguous/unavailable app or unsupported
-selected action refuses **action targeting after popup cleanup**, never silently
-chooses focus/first/last/terminal owner, and never retries uncertainty. Configured
+selector syntax still fails early. Missing/unavailable app, invalid explicit
+selector or unsupported selected action refuses **action targeting after popup
+cleanup**. Multiple apps without a selector now offer explicit choice (REQ-031),
+never focus/first/last/terminal-owner inference or retry of uncertainty. Configured
 launch retains its live app prerequisite. Resource creation is not proof that a
 GUI showed the menu.
 
-The authorized coordinator-only runtime scope is normal startup/navigation/Escape,
-valid-but-nonexistent selector startup/Escape, then one non-destructive selection
+The earlier Phase10 coordinator-only runtime scope was normal startup/navigation/
+Escape, valid-but-nonexistent selector startup/Escape, then one non-destructive selection
 with that nonexistent target refusing after selection/cleanup with zero action
 dispatch. Actual observed app counts remain distinct from source-reviewed zero/
 multiple behavior; no user app disconnection is authorized. Builders use static
@@ -565,8 +591,9 @@ delivery.
 - **L2 — origin/races:** source targets captured server/session/block, following
   block moves within that session, not searching other sessions. Native display
   uses resource liveness alone; app ID/`connected_at` bind after selection/cleanup.
-  Configured mode binds app generation before activation. Missing/ambiguous/lost/
-  changed required identities fail closed at their respective boundary.
+  Configured mode binds app generation before activation and still refuses
+  ambiguous app selection. Native ambiguity offers the explicit REQ-031 chooser;
+  missing/lost/changed required identities fail closed at their respective boundary.
   Inspect/focus/execute are separate Rex operations, not an atomic transaction;
   external moves, disconnects, focus or configuration changes can
   race side effects after the last check. Disconnected-origin rejection and real
@@ -621,9 +648,11 @@ delivery.
   release. Reviews and compilation apply to their recorded frozen revisions;
   later edits require fresh evidence. The narrow native runtime observations
   above are not general acceptance, a coverage claim or authority to execute a
-  final test matrix. Only the bounded coordinator Phase08/09/10/11 gates described
-  above are authorized. REQ-024/025 partial delivery is not full Phase11/project
-  completion while REQ-026 remains blocked.
+  final test matrix. Bounded coordinator gates include the historical
+  Phase08/09/10/11 gates above and Phase14's explicitly authorized disposable-only
+  action audit; none authorizes leaf runtime experiments or user-resource changes.
+  REQ-024/025 partial delivery is not full Phase11/project completion while REQ-026
+  remains blocked.
 - **L9 — ordinary launch/native defaults:** the earlier producer revisions have
   recorded review/compilation/integration, but a later normal invocation failed
   for absent custom registrations. Task `07-05` supplies self-contained native
@@ -634,9 +663,11 @@ delivery.
   are required for native discovery. Present invalid overrides fail rather than
   falling through; controller handoffs never default. Terminal and server-side
   preparation must resolve the same canonical endpoint for custom/shared setups.
-  Full captured session/block are mandatory for display. An exact/unique eligible
+  Full captured session/block are mandatory for display. An exact eligible
   attached app with unchanged generation is mandatory for native selected-action
-  execution or configured launch, not native display/dismissal (REQ-023). No
+  execution or configured launch, not native display/dismissal (REQ-023). Native
+  selection may bind an explicit chooser result when several apps exist (REQ-031);
+  configured launch still needs a selector or unique eligible app. No
   focus/current-client/server substitution is authorized. No-argument configured
   activation may be accepted without popup display, and uncertainty is not retried. Recorded documentation review,
   integration and Go/Nix compilation do not convert skipped tests/runtime gates

@@ -12,7 +12,7 @@ owned-popup cleanup in one Linux Rex session. That does not verify the later
 idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
 compatibility or Home Manager activation. The coordinator's Phase08 gate adds
 35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
-[delivery inventory](docs/acceptance.md) for REQ-001–REQ-029 and revision-bound
+[delivery inventory](docs/acceptance.md) for requirements and revision-bound
 results. Phase09 adds default Zoom removal and focus-in repaint; earlier runtime
 observations do not verify these changes or native GUI tab-return visibility.
 Phase10 separates native display from deferred app-action targeting; earlier
@@ -21,8 +21,11 @@ runtime certification is claimed. Phase11 adds compact status borders, condition
 paging hints and measured content-fitting layer height. Phase12 adds compact
 first-frame sizing and status spacers. The later Phase13 correction retains one
 initial rectangle through navigation, superseding live grow/shrink behavior;
-source changes alone do not verify stable runtime bounds. **Hiding native Rex
-pane/tab/window controls (REQ-026) remains blocked**, not waived or fulfilled;
+source changes alone do not verify stable runtime bounds. Phase14 adds an explicit
+app chooser after native action selection when several apps are attached; this
+source repair does not certify every default action or GUI-only behavior.
+**Hiding native Rex pane/tab/window controls (REQ-026) remains blocked**,
+not waived or fulfilled;
 Phase11/project delivery is partial while that capability is unresolved.
 
 ## Install on the Rex server host
@@ -148,18 +151,28 @@ prevent native display/dismissal. A graphical app still has to present the serve
 terminal for a user to see it; resource creation alone is not graphical proof.
 
 App selector precedence is `--client`, then a present `REX_CLIENT`, otherwise
-exactly one eligible live app in the captured session. Empty/malformed selectors,
-labels and suffixes fail early. Native mode retains that optional selector as
-intent and resolves it **only after executable selection/confirmation and exact
-owned-popup/file cleanup**; Escape returns without app lookup. Configured mode
-binds before launch as before. Rex's native `info.kind == "app"` classification
-excludes CLI/automation and unknown kinds; names, focus and terminal ownership
-are not selection heuristics. `REX_CLIENT` is normally absent. An executable
-selection with no eligible app, several eligible apps without a selector, or a
-stale/non-app/unattached explicit selector is refused as **native action targeting**,
-not a popup launch failure. Only the selected retained action must be available.
-Its exact client ID and `connected_at` generation plus origin placement are
-rechecked immediately before one dispatch; no reconnect retargeting is allowed.
+eligible live apps in the captured session. Empty/malformed selectors, labels and
+suffixes fail early. Native mode resolves that intent **only after executable
+selection/confirmation and exact owned-popup/file cleanup**; Escape returns without
+app lookup. With no selector, one app binds directly; several apps open a separate
+**choose app** menu with numbered choices, safe display labels and full app IDs.
+Escape at its root (or unmapped `q`) cancels with no action. Its initial rectangle
+also stays fixed through navigation. This is an action-target prompt, not live
+submenu resizing or a saved app preference. Configured mode still binds before
+launch and requires an exact selector when several apps are attached.
+
+Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds; names,
+focus and terminal ownership never select a target. `REX_CLIENT` is normally absent.
+No eligible app or a stale/non-app/unattached explicit selector refuses **native
+action targeting**, not popup display. An invalid explicit target never falls back
+to the chooser. The original action, arguments and confirmation survive target
+choice unchanged. Both popups, files and lifetime pipes are cleaned before one
+dispatch. Only the selected action must be available; its exact client ID and
+captured `connected_at` generation plus origin placement are rechecked immediately
+before dispatch, with no reconnect retargeting. Interaction remains deadline-free
+and signal-cancellable across both stages; the short dispatch budget starts after
+choice and cleanup.
+
 Configured success acknowledges activation, not display or callback completion.
 Native success follows child exit, exact cleanup and optional one-shot action
 acceptance. Failed or uncertain activation is never retried automatically.
@@ -358,9 +371,11 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   full `REX_SESSION`/`REX_BLOCK` and execution endpoint. No focus fallback exists.
 - **Native action-targeting refusal / configured client-selection failure:** no
   eligible app means connecting one to that session before trying a new action;
-  several eligible apps require an exact full app ID. CLI/automation/unknown kinds
-  do not count. Fix malformed `--client`/empty `REX_CLIENT` before launch; stale
-  but valid IDs are checked only after native selection, or before configured
+  several eligible apps offer a native action-time chooser when no selector was
+  supplied. Configured launch still requires an exact full app ID in that case.
+  CLI/automation/unknown kinds do not count. Fix malformed `--client`/empty
+  `REX_CLIENT` before launch; stale but valid IDs are checked only after native
+  selection, or before configured
   activation. Native display/Escape need neither a singleton app nor live selector.
   An absent `REX_CLIENT` is normal. Never substitute current focus or guess an app;
   changed generation prevents dispatch. Historical one-app captures do not certify

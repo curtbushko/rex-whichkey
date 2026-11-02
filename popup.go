@@ -155,39 +155,12 @@ func popupBounds(position string) rex.Bounds {
 // bypass that eligibility. Missing/unknown state is connected per Rex's contract;
 // only lost is disconnected. See docs/launch-contract.md for the schema source.
 func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, requested string) (string, string, error) {
-	var result struct {
-		Clients json.RawMessage `json:"clients"`
+	connections, err := popupAppConnections(ctx, client, sessionID)
+	if err != nil {
+		return "", "", err
 	}
-	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": sessionID}, &result); err != nil {
-		return "", "", errors.New("whichkey: cannot inspect origin session clients; check the endpoint and captured REX_SESSION")
-	}
-	var connections []struct {
-		ID          string `json:"client_id"`
-		ConnectedAt string `json:"connected_at"`
-		State       string `json:"connection_state"`
-		Info        struct {
-			Kind string `json:"kind"`
-		} `json:"info"`
-	}
-	// Rex permits null for an empty attachment list. Missing/malformed data is
-	// not an empty list: decoding the required raw field distinguishes the two.
-	if err := json.Unmarshal(result.Clients, &connections); err != nil {
-		return "", "", errors.New("whichkey: origin session returned malformed client attachments")
-	}
-	seen := make(map[string]bool, len(connections))
 	matches, id, generation := 0, "", ""
 	for _, connection := range connections {
-		identity := strings.ToLower(connection.ID)
-		if !popupResourceID(connection.ID, "client") || seen[identity] {
-			return "", "", errors.New("whichkey: origin session returned malformed or duplicate client IDs")
-		}
-		seen[identity] = true
-		if connection.Info.Kind != "app" || connection.State == "lost" {
-			continue
-		}
-		if !popupConnectionGeneration(connection.ConnectedAt) {
-			return "", "", errors.New("whichkey: origin session returned a client without a valid connection generation")
-		}
 		if requested == "" || requested == connection.ID {
 			matches++
 			id, generation = connection.ID, connection.ConnectedAt
