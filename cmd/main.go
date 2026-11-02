@@ -12,7 +12,7 @@ import (
 	whichkey "temp"
 )
 
-// run composes the bounded controller, its PTY child and the standalone menu.
+// run composes the configured controller, native foreground child and standalone menu.
 // Secret handoff/completion data travels on pipes, never command-line arguments.
 // Configured callbacks stay in the original Rex VM; native defaults use exact
 // captured Rex activation after owned-popup and private-file cleanup.
@@ -48,6 +48,7 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		flags.SetOutput(io.Discard)
 		directory := flags.String("directory", "", "invocation-owned private transport directory")
 		deadline := flags.String("deadline", "", "original bounded invocation deadline")
+		native := flags.Bool("native", false, "require a foreground parent's private lifetime pipe instead of a deadline")
 		ascii := flags.Bool("ascii", false, "use ASCII decorations")
 		noColor := flags.Bool("no-color", false, "disable terminal colors")
 		if err := flags.Parse(args[1:]); err != nil {
@@ -55,6 +56,21 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		}
 		if flags.NArg() != 0 {
 			return errors.New("whichkey: popup does not accept positional arguments")
+		}
+		nativeSet, deadlineSet := false, false
+		flags.Visit(func(option *flag.Flag) {
+			switch option.Name {
+			case "native":
+				nativeSet = true
+			case "deadline":
+				deadlineSet = true
+			}
+		})
+		if nativeSet {
+			if !*native || deadlineSet {
+				return errors.New("whichkey: popup requires either its native lifetime pipe or its original deadline, not both")
+			}
+			return whichkey.RunNativePopupTerminal(ctx, *directory, *noColor, *ascii)
 		}
 		expires, err := time.Parse(time.RFC3339, *deadline)
 		if err != nil {
@@ -110,8 +126,10 @@ Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
 execution/server-host helper and Rex CLI, an attached live graphical app and its
 Remote Control permission. Lua customization additionally needs installed modules,
 setup and launch/completion registration. Nothing edits/reloads configuration.
-The native caller waits for its bounded popup; configured launch returns after
-activation. Failed/uncertain activation is never retried or switched to native.
+The native caller waits until selection/dismissal, cancellation or origin loss;
+there is no native idle timeout. Configured launch returns after activation and
+retains its authenticated 30-second expiry. Failed/uncertain activation is never
+retried or switched to native.
 
 Endpoint: --server > nonempty REX_SERVER > Rex native Linux/macOS default.
 Missing, stale or ambiguous origin context fails; no focused/current-client or

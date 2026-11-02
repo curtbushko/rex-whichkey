@@ -287,19 +287,51 @@ func RunPopupController(parent context.Context, input io.Reader) error {
 	})
 }
 
-// runPopupLifecycle shares the owned PTY transport and teardown between native
-// basic startup and the original-VM controller. finish is invocation-local and
-// called once, only after teardown on success. It never receives child action
-// names/args; those stay in the native parent snapshot or original Lua registry.
+// runPopupLifecycle always enforces the configured handoff's original expiry.
+// Missing/zero expiry cannot select the native foreground policy.
 func runPopupLifecycle(parent context.Context, request popupRequest, config Config, executable string,
 	finish func(context.Context, Completion) error,
+) error {
+	return runPopupWithLifetime(parent, request, config, executable, popupConfigured, finish)
+}
+
+type popupLifetime uint8
+
+const (
+	popupConfigured popupLifetime = iota
+	popupNative
+)
+
+// runPopupWithLifetime shares owned transport/teardown, not lifetime authority.
+// Only the Go-native caller supplies popupNative; decoded handoffs cannot do so.
+// finish receives only a retained selection, after cleanup, never child actions.
+func runPopupWithLifetime(parent context.Context, request popupRequest, config Config, executable string,
+	lifetime popupLifetime, finish func(context.Context, Completion) error,
 ) (outcome error) {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
-	ctx, cancel := context.WithDeadline(ctx, time.Unix(request.Expires, 0))
-	defer cancel()
+	var expires, uiDeadline time.Time
+	switch lifetime {
+	case popupConfigured:
+		expires = time.Unix(request.Expires, 0)
+		now := time.Now()
+		if !expires.After(now) || expires.After(now.Add(InvocationLifetimeSeconds*time.Second)) {
+			return errors.New("whichkey: invalid or expired popup lifetime")
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, expires)
+		defer cancel()
+		// Reserve the original five seconds for restoration/cleanup/completion.
+		uiDeadline = expires.Add(-5 * time.Second)
+	case popupNative:
+		if request.Expires != 0 || request.Completion != "" {
+			return errors.New("whichkey: native foreground popup cannot carry a configured lifetime or completion action")
+		}
+	default:
+		return errors.New("whichkey: invalid popup lifetime policy")
+	}
 	client, err := rex.New(rex.Options{Executable: executable, Server: request.Server,
-		Session: request.SessionID, Timeout: InvocationLifetimeSeconds * time.Second})
+		Session: request.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
 		return errors.New("whichkey: cannot construct the origin client")
 	}
@@ -360,9 +392,13 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 		outcome = errors.Join(outcome, removeFiles())
 		if !attempted {
 			attempted = true
-			outcome = errors.Join(outcome, finish(cleanup, Completion{
-				Version: CompletionVersion, Capability: request.Capability, Kind: CompletionCancel,
-			}))
+			// Lua has already revoked an expired capability. Do not activate
+			// completion after expiry, even for cancellation, or retry it.
+			if expires.IsZero() || time.Now().Before(expires) {
+				outcome = errors.Join(outcome, finish(cleanup, Completion{
+					Version: CompletionVersion, Capability: request.Capability, Kind: CompletionCancel,
+				}))
+			}
 		}
 	}()
 	directory, err = os.MkdirTemp("", "rex-whichkey-") // Go creates this with mode 0700.
@@ -379,27 +415,40 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	if err != nil {
 		return errors.New("whichkey: cannot resolve popup child executable")
 	}
-	// Leave five seconds of the original (never renewed) lifetime for terminal
-	// restoration, exact-resource cleanup and the fresh completion activation.
-	uiDeadline := time.Unix(request.Expires, 0).Add(-5 * time.Second)
-	if !uiDeadline.After(time.Now()) {
-		return errors.New("whichkey: insufficient invocation lifetime to open popup")
+	command := []string{self, "popup", "--directory", directory}
+	if lifetime == popupNative {
+		// The child watches this pipe, not a renewable timestamp or PID. EOF
+		// cancels it even if the foreground parent is killed without defers.
+		lease, err := createPopupLease(directory)
+		if err != nil {
+			return err
+		}
+		defer func() { outcome = errors.Join(outcome, lease.Close()) }()
+		command = append(command, "--native")
+	} else {
+		if !uiDeadline.After(time.Now()) {
+			return nil // Too little authenticated lifetime remains; cancel safely.
+		}
+		command = append(command, "--deadline", uiDeadline.UTC().Format(time.RFC3339))
 	}
 	origin, err := request.originBlock(ctx, client)
 	if err != nil {
 		return err
 	}
-	layer, err = origin.NewLayer(ctx, popupBounds(config.Position), []string{
-		self, "popup", "--directory", directory, "--deadline", uiDeadline.UTC().Format(time.RFC3339),
-	})
+	layer, err = origin.NewLayer(ctx, popupBounds(config.Position), command)
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
 	}
-	waitCtx, done := context.WithDeadline(ctx, uiDeadline)
-	err = layer.Wait(waitCtx)
-	done()
+	err = waitPopup(ctx, request, client, executable, layer.BlockID)
 	if err != nil {
-		return errors.New("whichkey: popup child did not exit successfully")
+		if lifetime == popupConfigured && errors.Is(err, context.DeadlineExceeded) &&
+			ctx.Err() == context.DeadlineExceeded && parent.Err() == nil && !time.Now().Before(expires) {
+			return nil // Controller expiry: cleanup only, never a stale selection.
+		}
+		return err
+	}
+	if !expires.IsZero() && !time.Now().Before(expires) {
+		return nil
 	}
 	message, err := readPopupResult(directory, request.Capability, config.Spec)
 	if err != nil {
@@ -425,6 +474,73 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	return finish(dispatch, message)
 }
 
+// waitPopup deliberately does not use Layer.Wait: that wrapper caps the whole
+// CLI process at its RPC timeout. `rex wait --help` documents unbounded event
+// delivery, with --timeout still bounding connections/nonstreaming requests.
+// Watch the captured origin too: an idle UI must not survive app/origin loss.
+func waitPopup(ctx context.Context, request popupRequest, client *rex.Client, executable, blockID string) error {
+	waitCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-waitCtx.Done():
+				return
+			case <-ticker.C:
+				if _, err := request.originBlock(waitCtx, client); err != nil {
+					cancel(err)
+					return
+				}
+			}
+		}
+	}()
+	command := exec.CommandContext(waitCtx, executable,
+		"--server", request.Server, "--autostart=false", "--timeout", "3s",
+		"wait", "--session", request.SessionID, "--", blockID)
+	output := &launchOutput{remaining: popupMessageLimit}
+	command.Stdout, command.Stderr = output, output
+	command.WaitDelay = 250 * time.Millisecond
+	err := command.Run()
+	cause := context.Cause(waitCtx)
+	cancel(nil)
+	<-stopped // No watcher/RPC goroutine outlives teardown.
+	if cause != nil {
+		return cause
+	}
+	if err != nil {
+		return errors.New("whichkey: popup child did not exit successfully or its status was lost; no selected action dispatched")
+	}
+	return nil
+}
+
+// A read end makes opening the writer nonblocking and portable; only the writer
+// is retained by the foreground parent. No bytes, credentials or renewals travel
+// over the pipe. A child sees EOF as soon as the last parent writer disappears.
+func createPopupLease(directory string) (*os.File, error) {
+	path := filepath.Join(directory, "lifetime")
+	if err := unix.Mkfifo(path, 0600); err != nil {
+		return nil, errors.New("whichkey: cannot create native popup lifetime pipe")
+	}
+	reader, err := os.OpenFile(path, os.O_RDONLY|unix.O_NONBLOCK|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, errors.New("whichkey: cannot open native popup lifetime pipe")
+	}
+	writer, err := os.OpenFile(path, os.O_WRONLY|unix.O_NONBLOCK|unix.O_NOFOLLOW, 0)
+	closeErr := reader.Close()
+	if err != nil || closeErr != nil {
+		failure := errors.New("whichkey: cannot retain native popup lifetime pipe")
+		if writer != nil {
+			return nil, errors.Join(failure, writer.Close())
+		}
+		return nil, failure
+	}
+	return writer, nil
+}
+
 func writePopupFile(directory, name string, data []byte) (outcome error) {
 	file, err := os.OpenFile(filepath.Join(directory, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
@@ -437,7 +553,7 @@ func writePopupFile(directory, name string, data []byte) (outcome error) {
 	return nil
 }
 
-// Only the two reserved names inside the private directory are unlinked, then
+// Only the reserved transport names inside the private directory are unlinked, then
 // the empty directory. Root-scoped removal cannot traverse a child symlink;
 // unexpected contents cause directory removal to fail, never recursive deletion.
 func removePopupFiles(directory string) error {
@@ -446,7 +562,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json"} {
+	for _, name := range []string{"config.json", "result.json", "lifetime"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -506,14 +622,69 @@ func readPopupResult(directory, capability string, mappings []Mapping) (message 
 	return message, nil
 }
 
-// RunPopupTerminal is the only PTY-owned child. It sees configuration and a
-// private result path, never the capability or original Lua ticket. Terminal
-// cleanup must succeed before a result is written, closed and acknowledged by
-// process exit. The independent controller owns all Rex cleanup and dispatch.
-func RunPopupTerminal(parent context.Context, directory string, deadline time.Time, noColor, ascii bool) (outcome error) {
+// RunPopupTerminal runs the bounded configured PTY child. Like the native child,
+// it sees only configuration/private results, never capabilities or Lua tickets.
+// Terminal cleanup must succeed before committing a result and acknowledging it
+// by process exit. The independent controller owns all Rex cleanup and dispatch.
+func RunPopupTerminal(parent context.Context, directory string, deadline time.Time, noColor, ascii bool) error {
 	if !deadline.After(time.Now()) || deadline.After(time.Now().Add(InvocationLifetimeSeconds*time.Second)) {
 		return errors.New("whichkey: invalid popup terminal deadline")
 	}
+	return runPopupTerminal(parent, directory, deadline, noColor, ascii)
+}
+
+// RunNativePopupTerminal has no interaction deadline, but requires the native
+// parent's private lifetime pipe. Missing configured deadlines never enter here.
+func RunNativePopupTerminal(parent context.Context, directory string, noColor, ascii bool) (outcome error) {
+	root, err := openPopupDirectory(directory)
+	if err != nil {
+		return err
+	}
+	defer func() { outcome = errors.Join(outcome, root.Close()) }()
+	lease, err := root.OpenFile("lifetime", os.O_RDONLY|unix.O_NONBLOCK|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return errors.New("whichkey: native popup requires its foreground lifetime pipe")
+	}
+	defer func() { outcome = errors.Join(outcome, lease.Close()) }()
+	info, err := lease.Stat()
+	if err != nil || info.Mode()&os.ModeNamedPipe == 0 || info.Mode().Perm() != 0600 {
+		return errors.New("whichkey: invalid native popup lifetime pipe")
+	}
+	ctx, cancel := context.WithCancelCause(parent)
+	defer cancel(nil)
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		var buffer [1]byte
+		for {
+			// Nonblocking read: EAGAIN means a writer is alive; EOF also
+			// catches parent death before the child opened the pipe.
+			n, err := unix.Read(int(lease.Fd()), buffer[:])
+			if err == nil || !terminalRetry(err) {
+				if n > 0 {
+					cancel(errors.New("whichkey: unexpected native popup lifetime data"))
+				} else {
+					cancel(errors.New("whichkey: native popup foreground parent was lost"))
+				}
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	defer func() {
+		cancel(nil)
+		<-stopped
+	}()
+	return runPopupTerminal(ctx, directory, time.Time{}, noColor, ascii)
+}
+
+func runPopupTerminal(parent context.Context, directory string, deadline time.Time, noColor, ascii bool) (outcome error) {
 	root, err := openPopupDirectory(directory)
 	if err != nil {
 		return err
@@ -527,11 +698,23 @@ func RunPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if err := errors.Join(decodeErr, input.Close()); err != nil {
 		return err
 	}
-	ctx, cancel := context.WithDeadline(parent, deadline)
-	defer cancel()
+	ctx := parent
+	if !deadline.IsZero() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(parent, deadline)
+		defer cancel()
+	}
 	event, err := RunTerminal(ctx, config, noColor, ascii)
+	// Only the exact expected deadline error is graceful. Joined terminal
+	// restoration/I/O failures and other child errors must still fail closed.
+	if !deadline.IsZero() && err == context.DeadlineExceeded && ctx.Err() == context.DeadlineExceeded && parent.Err() == nil {
+		event, err = MenuEvent{Dismissed: true}, nil
+	}
 	if err != nil {
 		return err
+	}
+	if !deadline.IsZero() && !time.Now().Before(deadline) {
+		event = MenuEvent{Dismissed: true}
 	}
 	output, err := root.OpenFile("result.json", os.O_WRONLY|os.O_TRUNC|unix.O_NOFOLLOW, 0)
 	if err != nil {

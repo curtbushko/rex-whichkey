@@ -113,11 +113,10 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable s
 	}
 	request := popupRequest{Configuration: string(data), Capability: capability,
 		Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-		ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt,
-		Expires: time.Now().Add(InvocationLifetimeSeconds * time.Second).Unix()}
+		ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}
 	// The parent alone retains this immutable snapshot. The child returns only
 	// canonical keys/confirmation, never a replacement action or arguments.
-	return runPopupLifecycle(parent, request, config, executable, func(ctx context.Context, message Completion) error {
+	return runPopupWithLifetime(parent, request, config, executable, popupNative, func(ctx context.Context, message Completion) error {
 		if err := message.ValidateSelection(config.Spec); err != nil {
 			return errors.New("whichkey: invalid native retained selection")
 		}
