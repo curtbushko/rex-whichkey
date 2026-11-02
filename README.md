@@ -173,6 +173,14 @@ before dispatch, with no reconnect retargeting. Interaction remains deadline-fre
 and signal-cancellable across both stages; the short dispatch budget starts after
 choice and cleanup.
 
+Native `v` (Split right) and `s` (Split down) split the focused pane in the
+**chosen app's currently selected tab/window**, not necessarily the launch terminal's
+window. Only these splits omit session/block overrides when asking the app to act;
+the captured origin still authorizes invocation and liveness, not the destination.
+Other native actions (including close) retain their existing origin-targeted
+context, and configured menus retain their original-VM contract. Server-wide
+active-window state is not used to choose a split destination.
+
 Configured success acknowledges activation, not display or callback completion.
 Native success follows child exit, exact cleanup and optional one-shot action
 acceptance. Failed or uncertain activation is never retried automatically.

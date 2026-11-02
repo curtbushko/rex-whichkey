@@ -272,12 +272,31 @@ of that outer signal context. Native dispatch revalidates the original selection
 checks only its action's metadata on the bound app, then rechecks that exact
 captured generation plus origin immediately before execution. Lost attachments,
 reconnects or stale choices fail; no re-enumeration silently replaces the target.
-The chooser cannot renew the captured generation. It uses trusted action/args
-once through
+The chooser cannot renew the captured generation.
+
+Native `pane.split` alone (`v`/`right`, `s`/`down`) uses documented `client.perform`
+through a separate **unscoped** `rex.Client` pinned to the captured endpoint and a
+three-second timeout. The request contains only the retained `client_id`, `action`,
+`args`, `origin: "cli"` and `timeout_ms: 3000`. Both `session_id` and `block_id` are
+absent: the chosen app splits its currently selected tab/window's focused pane.
+`api call` does not default to ambient `REX_SESSION`/`REX_BLOCK`/`REX_WINDOW`, and
+omitting `Options.Session` prevents the generic adapter injecting an origin session.
+The original scoped client still checks invocation placement, session attachment
+and exact app generation immediately before this one call. Origin is liveness
+and authorization evidence, not split destination; server `active_window_id` is
+not used as app-selected state. `Call(..., nil)` discards a validated JSON result.
+The captured contract is `.mtn-tmp/action-audit/client-perform-api.json`; missing
+`block_id` explicitly means the client's focused block. Arguments stay `right` or
+`down`, never the CLI spelling `below`.
+
+Every other native action keeps trusted action/args once through
 `rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
 --session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
-output is discarded with a shared 64 KiB budget. Dispatch has a three-second
-context and is never retried. Dismissal of either stage executes no native action.
+output is discarded with a shared 64 KiB budget. In particular, destructive close
+targets do not change. Configured original-VM routing is also unchanged. Both
+native dispatch paths have the same three-second context, sanitized failure or
+uncertain-effect errors and no retries or fallback. Dismissal of either stage
+executes no native action.
 Cleanup errors prevent selection dispatch; partial/uncertain creation never triggers broad
 layer/window/session deletion. Deferred error/cancellation cleanup is bounded to
 five seconds and never retries an uncertain close/focus/dispatch. Stale origins

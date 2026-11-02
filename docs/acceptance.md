@@ -144,10 +144,15 @@ acceptance.
 Accepted **REXWHICHKEY-20261102-151552** in the
 [action-audit design](../.tasks/designs/rex-whichkey-action-audit.md) adds explicit
 late app choice, not a new display prerequisite or a submenu resizing loop.
+The later accepted **REXWHICHKEY-20261102-153808** in the
+[selected-window supplement](../.tasks/designs/rex-whichkey-selected-window-splits.md)
+refines split destination only: the chosen app's current selection replaces forced
+launch-origin context for native `pane.split`.
 
 | Requirement | Implemented source | Evidence boundary |
 | --- | --- | --- |
 | REQ-031 — explicit late native app choice | [`native.go`](../native.go) captures the first validated result and returns from popup cleanup before resolving apps. [`native_targets.go`](../native_targets.go) retains eligible full IDs/generations and routes multiple apps through a separate canonical menu; safe label hints never grant authority. An explicit selector stays strict, zero apps refuse, one binds directly, chooser cancellation dispatches nothing. Only the target identity changes; original mapping/args/confirmation are revalidated, app metadata and exact generation/origin checked before one dispatch. Outer signal ownership spans both UIs and gaps; the dispatch budget starts after choice/cleanup. Both stages retain native FIFO lifetime, initial sizing/spacers and fixed navigation bounds. Configured original-VM binding/expiry/auth remain unchanged. | Source-only implementation, not compilation or runtime proof. Fresh frozen review, coordinator compilation, actual bare `s` -> explicit work-app choice -> below-origin split, chooser cancellation with no pane, strict invalid selector refusal and exact UI/file/lease cleanup belong to [task 14-01](../.tasks/tasks/rex-whichkey-14-01-action-target.md). No such gate is claimed by this source entry. |
+| REQ-032 — native splits use chosen app's selected window | [`native.go`](../native.go) sends only native `pane.split` through documented `client.perform` using a separate exact-endpoint, unscoped client. No session/block override or server active-window lookup is used; retained `right`/`down` args and selection/confirmation survive unchanged. The original scoped client still rechecks origin, session attachment and exact app generation immediately before one dispatch. Other native/destructive actions, configured routing, target chooser and cleanup remain unchanged. | Source-only change, not compilation or behavioral proof. [Task 14-04](../.tasks/tasks/rex-whichkey-14-04-selected-window-splits.md) requires coordinator compilation and owned launcher A versus selected tab B with two known panes: both `s`/`v` must split B's focused pane in the expected direction, leave A and B's other anchor unchanged, and clean exact fixtures. Ordinary same-window splits, late choice/cancel and strict missing selector also require verification. No runtime pass is asserted here. |
 
 The coordinator's recorded reproduction in the design identifies several attached
 apps as the bare split-down failure; explicit app dispatch produced the expected
@@ -156,10 +161,13 @@ this repair intentionally does not alter that correct default mapping.
 
 REQ-030's all-25-default audit is separate from this routing repair. Only the
 coordinator may exercise authorized disposable fixtures and record actual
-resource before/after effects. Source/registry acceptance or a successful action
-receipt is not proof of GUI behavior. Session picker, previous/next selected-session
-view, session/tab rename dialogs, sidebar and palette remain unverified here;
-seven GUI-only behaviors need observable evidence, not an all-actions pass claim.
+resource before/after effects. The selected-window supplement records six observed
+resource effects (`v`, `s`, `x`, `tx`, `wn`, `wx`), not an all-actions pass or proof
+of the revised split destination. The earlier assumed 18-resource/7-GUI partition
+was disproved by actual probes: 19 native GUI outcomes remain uncertified. Tab
+navigation did not update server `active_window_id`; `tn` returned success without
+an observed new server window/session and remains unverified, not conclusively
+broken. Source/registry acceptance or a successful receipt is not GUI proof.
 Native chrome REQ-026 remains independently blocked. Leaves run source/format/
 whitespace checks only, with no tests/TDD, builds, native/GUI/API/config/font/
 platform experiments or installs.

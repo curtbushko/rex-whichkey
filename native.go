@@ -153,13 +153,17 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if len(args) == 0 {
 			args = json.RawMessage(`{}`)
 		}
-		command := exec.CommandContext(dispatch, executable,
-			"--server", target.Server, "--client", target.ClientID, "--autostart=false", "--timeout", "3s",
-			"do", mapping.Action, "--session", origin.SessionID, "--block", origin.BlockID, "--args", "-")
-		command.Stdin = bytes.NewReader(args)
-		output := &launchOutput{remaining: popupMessageLimit}
-		command.Stdout, command.Stderr = output, output
-		command.WaitDelay = 250 * time.Millisecond
+		var splitClient *rex.Client
+		if mapping.Action == "pane.split" {
+			// The origin authorizes this invocation, not the split destination.
+			// An unscoped api call omits session/block overrides, including ambient
+			// CLI context, so the chosen app uses its selected tab's focused pane.
+			splitClient, err = rex.New(rex.Options{Executable: executable, Server: target.Server,
+				Timeout: 3 * time.Second})
+			if err != nil {
+				return errors.New("whichkey: native split targeting refused: cannot construct the captured endpoint client")
+			}
+		}
 		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
 		// Recheck the exact captured generation and origin immediately before
@@ -167,6 +171,22 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if _, err := bound.originBlock(dispatch, client); err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
+		if splitClient != nil {
+			if err := splitClient.Call(dispatch, "client.perform", map[string]any{
+				"client_id": target.ClientID, "action": mapping.Action, "args": args,
+				"origin": "cli", "timeout_ms": 3000,
+			}, nil); err != nil {
+				return errors.New("whichkey: native split failed or is uncertain; check app Remote Control and action compatibility; not retried")
+			}
+			return nil
+		}
+		command := exec.CommandContext(dispatch, executable,
+			"--server", target.Server, "--client", target.ClientID, "--autostart=false", "--timeout", "3s",
+			"do", mapping.Action, "--session", origin.SessionID, "--block", origin.BlockID, "--args", "-")
+		command.Stdin = bytes.NewReader(args)
+		output := &launchOutput{remaining: popupMessageLimit}
+		command.Stdout, command.Stderr = output, output
+		command.WaitDelay = 250 * time.Millisecond
 		if err := command.Run(); err != nil {
 			return errors.New("whichkey: native action failed or is uncertain; check app Remote Control and action compatibility; not retried")
 		}
