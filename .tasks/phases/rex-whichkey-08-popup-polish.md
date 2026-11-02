@@ -12,13 +12,13 @@ title: 'Phase08: Popup polish'
 mtnCreateRetry:
   key: rex-whichkey-phase08-popup-polish-v1
   intent: 65c5b228bf90a9f32bb24ba089b8253d6666e70c8d175757c14fc2ad1db6cb09
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T13:16:59.384Z'
-dateModified: '2026-11-02T13:19:27.788Z'
+dateModified: '2026-11-02T14:13:45.860Z'
 tags:
   - task
 type: task
@@ -28,6 +28,7 @@ projects:
 blockedBy:
   - uid: '[[phases/rex-whichkey-07-usability.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-02'
 ---
 # Phase08: Popup polish
 
@@ -49,14 +50,8 @@ Uses delivered Phase07 native popup and canonical Go mapping/provider/terminal i
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDEzOjE5OjAzLjg0MVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3BvcHVwLXBvbGlzaC9waGFzZS1wbGFuLzEiLCJpbnRlbnQiOiIwNmM5MjhhYjcxNmU5YmRhZjgxYjhmOTdmNThiZGE0MGZlODkxYmRlNDM5NjE0MTUwMjkwNThkNjU2Nzc3MzRkIn0 -->
-### 2026-11-02T13:19:03.841Z · plan · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE0OjEzOjQ1Ljg0OFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcGhhc2UwOC9zdW1tYXJ5LzEiLCJpbnRlbnQiOiI4ZTJmYmFkZDIzMjgyNjBhMjAxMmZhMmVkNjBhNDM2MjQyMzE2YjQ1OWExMTAwYjYwODA1ZmQ4NmU2MWJiNzFiIn0 -->
+### 2026-11-02T14:13:45.848Z · summary · unspecified
 
-{"approvedBy":"user requested scope; coordinator task decomposition under delegation","attempt":1,"coverage":{"REQ-018":["tasks/rex-whichkey-08-01-lifetime.md","tasks/rex-whichkey-08-04-docs.md"],"REQ-019":["tasks/rex-whichkey-08-02-defaults.md","tasks/rex-whichkey-08-04-docs.md"],"REQ-020":["tasks/rex-whichkey-08-03-theme.md","tasks/rex-whichkey-08-04-docs.md"]},"decision":"approved","decisionEvidence":"User requests timeout/default/color corrections. Four literal ownership tasks separate three independent producers from final docs/runtime assembly; max2 builders/reviewers and one heavy gate. Native idle removal does not weaken configured expiry. No general tests or config changes authorized.","documents":[{"hash":"sha256:ce42e479546a1181ce61138f0f5d37c88e5ed18ae3b6c39987fca90d89aee8f0","ref":"designs/rex-whichkey-popup-polish.md"}],"eventId":"rex-whichkey/popup-polish/phase-plan/1","kind":"plan","recordRef":"phases/rex-whichkey-08-popup-polish.md","records":[{"ref":"tasks/rex-whichkey-08-01-lifetime.md","specHash":"sha256:eb23f711d55a1496beb05e725256bc7163378f109618c30fee11ce5a484bdf49"},{"ref":"tasks/rex-whichkey-08-02-defaults.md","specHash":"sha256:5b38acfb7f05dc4362b40e8d94198858da08423ba27e249df031dc3c574d1313"},{"ref":"tasks/rex-whichkey-08-03-theme.md","specHash":"sha256:a495094e2fb1c8a0638831f1b057f6f9c5594574a3621daa689067158d1db016"},{"ref":"tasks/rex-whichkey-08-04-docs.md","specHash":"sha256:d489e0bc7508abf668a3b063539b0d828f38d957dba53e9e87283392324974d2"}],"schemaVersion":1,"specHash":"sha256:baf78cecbd7f4271b318cae4cb0bccf51e850a035096b539d55b3e6a6e27802a"}
-<!-- mtn:end-entry:v1 -->
-
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDEzOjE5OjI3Ljc3NloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcnVudGltZS9wb3B1cC1wb2xpc2giLCJpbnRlbnQiOiI5M2Q2MzQ0OWNhMjhjZGQ0NGYyOWJhMjk4MGZhYTgxMGIyOWY4MWFhMzE1ZGVhNDQ5MGRjOTBlNzMzNDZjOGYxIn0 -->
-### 2026-11-02T13:19:27.776Z · runtime · unspecified
-
-{"attempt":1,"continuationEvidence":"Same live coordinator process and immutable runId starts user-requested Phase08 with existing session/window; no restart/duplicate. Display remains coordinator, phase association separately recorded.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/popup-polish","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-08-popup-polish.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:baf78cecbd7f4271b318cae4cb0bccf51e850a035096b539d55b3e6a6e27802a","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
+{"acceptedScope":"Phase08: Popup polish","approvalSummary":["User requests popup timeout/default/color polish; Phase08 ownership/design and targeted35second native idle/color/navigation/dismissal verification are authorized under retained bounded technical authority.","All exact native child summaries bind current independent source approval and delivered target commit/tree; ancestry verified."],"artifactRefs":[".mtn-tmp/menu-polish/phase08-final/validate.json",".mtn-tmp/menu-polish/phase08-final/worktrees.txt",".mtn-tmp/menu-polish/runtime/combined-source-check-2/result.json"],"attempt":1,"coverage":{"REQ-018":["tasks/rex-whichkey-08-01-lifetime.md","tasks/rex-whichkey-08-04-docs.md"],"REQ-019":["tasks/rex-whichkey-08-02-defaults.md","tasks/rex-whichkey-08-04-docs.md"],"REQ-020":["tasks/rex-whichkey-08-03-theme.md","tasks/rex-whichkey-08-04-docs.md"]},"eventId":"rex-whichkey-p03-coordinator-a01/phase08/summary/1","files":["README.md","cmd/main.go","defaults.go","docs/acceptance.md","docs/appearance.md","docs/launch-contract.md","lua/rex_whichkey/defaults/init.lua","lua/rex_whichkey/defaults/panes.lua","native.go","popup.go","render.go","theme.go"],"kind":"summary","limitations":["No unit/race/TDD/general suites, destructive native actions, configured Lua callbacks, remote/Darwin trials or configuration reloads. One bounded user-authorized Linux/Rex idle35seconds/reduced-defaults/VT-color/navigation/dismissal/owned-cleanup check was observed; broader runtime compatibility remains unverified. Final documentation-only candidate could not repeat display after graphical app disconnected; prior actual UI observation is reused only for mechanically verified identical tracked runtime source, not claimed as a new-frame/full-tree final runtime pass.","Independent fresh contexts used the same authenticated model family, not cross-family review.","Prior transferred coordinator process status remains unverified; ownership transfer did not assert remote/local stoppage.","No global cleanup or push; retained worktrees/artifacts remain available."],"recordRef":"phases/rex-whichkey-08-popup-polish.md","records":["tasks/rex-whichkey-08-01-lifetime.md","tasks/rex-whichkey-08-02-defaults.md","tasks/rex-whichkey-08-03-theme.md","tasks/rex-whichkey-08-04-docs.md"],"requirements":["REQ-018","REQ-019","REQ-020"],"schemaVersion":1,"specHash":"sha256:baf78cecbd7f4271b318cae4cb0bccf51e850a035096b539d55b3e6a6e27802a","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"6090379edb0d43f7d56b01b81cc413ac9cc5fa5b","targetTree":"c98f2454d8e4d9288353b1dfd26e6944f71f82da","verification":[{"command":"Actual native Linux/Rex popup idle35seconds/reduced defaults/VT colors/Tabs/Escape/exit0/owned cleanup on identical tracked runtime source; documentation-only final candidate compiled, source equivalence verified","result":"pass"},{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...; make build (combined delivered revision and refreshed CLI artifact)","result":"pass"},{"command":"git diff --check; native graph/schema validation; exact completed child scope and Git delivery identities/ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->

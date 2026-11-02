@@ -42,7 +42,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T12:39:45.166Z'
-dateModified: '2026-11-02T13:19:25.105Z'
+dateModified: '2026-11-02T14:11:47.741Z'
 tags:
   - task
 type: task
@@ -112,4 +112,10 @@ User explicitly requests Phase07 for zero-argument popup launch (REQ-016) and Li
 ### 2026-11-02T13:19:25.094Z · approval · unspecified
 
 {"approvedBy":"user requested scope; coordinator bounded implementation choices under delegation","attempt":1,"decision":"approved","decisionEvidence":"User reports idle popup exit, requests removing Focus/known-hosts and separate colors inspired by linked Neovim configuration. Coordinator chooses idle-until-dismiss native interaction, retains configured capability expiry, removes only default groups and uses semantic ANSI/palette colors. Standing targeted live UI verification is extended to the reported idle/color/default behavior; no general test, destructive action or config/remote probe authority inferred.","decisionRegisterEntry":{"decision":"Polish native popup idle lifetime, trim defaults and add visible semantic key/icon/label color with no-color/contrast safeguards.","id":"REXWHICHKEY-20261102-081654","previousState":"Open","state":"Accepted"},"eventId":"rex-whichkey/popup-polish/decision/1","kind":"approval","recordRef":"projects/rex-whichkey.md","requirements":["REQ-018","REQ-019","REQ-020"],"schemaVersion":1,"specHash":"sha256:46a78c487fbcac9e038222faa9572c0926b368b481e6f4a9e279ea49f734291c"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE0OjExOjQ3LjcyOVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiYXBwcm92YWwiLCJyZXRyeUtleSI6InJleC13aGljaGtleS9wb3B1cC1wb2xpc2gvcHJvamVjdC1ydW50aW1lLWVxdWl2YWxlbmNlLWFwcHJvdmFsLzEiLCJpbnRlbnQiOiJhYThmYjExMjVmY2E3YWU1ODBhMTQzYjkyYmMxYWUxMGNkMjU0YWVlZDUxZTgzMTgyNTYyMjYzODEwN2IwZjk1In0 -->
+### 2026-11-02T14:11:47.729Z · approval · unspecified
+
+{"approvedBy":"coordinator bounded verification choice under existing user delegation","attempt":1,"decision":"approved","decisionEvidence":"Actual make-run popup idle35seconds/reduced defaults/VT and HTML colors/Tabs/Escape/exit0/owned cleanup passed at ca03b464ad8cbe1a4d31b367d73a2784fe4be56e. Final documentation-only candidate 6090379edb0d43f7d56b01b81cc413ac9cc5fa5b refused launch after attached graphical app disconnected; native client listing confirms only CLI remains. Frozen candidate differs only in four owned Markdown documents and managed records; all tracked runtime/config/build source is identical to actual runtime-passed source. Retain prior exact runtime-source evidence plus fresh candidate compilation and independent docs review; no new-frame/full-tree runtime pass claimed, no app selection weakened. This is a narrow final-gate refinement, not permission for tests, config changes or remote/destructive trials.","decisionRegisterEntry":{"decision":"Accept prior real UI observation for byte-identical tracked runtime source in final documentation-only candidate when graphical app disconnected; compile candidate afresh and disclose lineage.","id":"REXWHICHKEY-20261102-091138","rationale":"New external app disconnection prevented repeated display; full runtime-source equivalence is mechanically verified and runtime changes already passed actual35second gate.","refines":"REXWHICHKEY-20261102-081654","state":"Accepted"},"eventId":"rex-whichkey/popup-polish/project-runtime-equivalence-approval/1","kind":"approval","recordRef":"projects/rex-whichkey.md","requirements":["REQ-018","REQ-019","REQ-020"],"schemaVersion":1,"specHash":"sha256:46a78c487fbcac9e038222faa9572c0926b368b481e6f4a9e279ea49f734291c"}
 <!-- mtn:end-entry:v1 -->
