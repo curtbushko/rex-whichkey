@@ -12,6 +12,8 @@ workflowDocuments:
     hash: 'sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2'
   - ref: designs/rex-whichkey-numbered-tabs.md
     hash: 'sha256:12ac821b41273e253346ac9c5f0776ec7e836a9fdba1e3287a197b9bd392a90f'
+  - ref: designs/rex-whichkey-client-perform.md
+    hash: 'sha256:94636573720ef04607582a3b78a83f2484a1533224f1356fbac92f5fb8131c51'
 title: 'Phase14: Native action audit and late targeting'
 mtnCreateRetry:
   key: rex-whichkey-phase14-v1
@@ -22,7 +24,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:15:57.031Z'
-dateModified: '2026-11-02T21:58:11.310Z'
+dateModified: '2026-11-02T22:14:42.282Z'
 tags:
   - task
 type: task
@@ -97,4 +99,16 @@ Latest user asks verify every action, specifically broken split down. REQ031 rep
 ### 2026-11-02T21:58:11.299Z · runtime · unspecified
 
 {"attempt":1,"continuationEvidence":"Same live coordinator process/session/runId; continuing user-authorized all-action verification and numeric route bugfix.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/numbered-tabs","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-14-action-audit.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:54225f677c93d99f55acd43d01b4d98be952a0d077c855fd64866536755d3046","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIyOjE0OjEwLjU0MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2FjdGlvbi1hdWRpdC9waGFzZS1wbGFuLzUiLCJpbnRlbnQiOiJkZjAzZjU2MjE2NWViMmU4Mzg1NWNjODk4NTQwY2IyYTk5ZDM5MjA3OWYxMDkxZmU2ZmQ5OTkzOGY1YWNlZDA1In0 -->
+### 2026-11-02T22:14:10.540Z · plan · unspecified
+
+{"approvedBy":"Explicit selected-window correction and original full action audit/delegation","attempt":1,"coverage":{"REQ-030":["tasks/rex-whichkey-14-02-resource-audit.md","tasks/rex-whichkey-14-03-gui-action-verification.md","tasks/rex-whichkey-14-05-numbered-tabs.md","tasks/rex-whichkey-14-06-client-perform.md"],"REQ-031":["tasks/rex-whichkey-14-01-action-target.md"],"REQ-032":["tasks/rex-whichkey-14-04-selected-window-splits.md"]},"decision":"approved","decisionEvidence":"Keep full all25 scope and existing source repairs; explicit transport afterTask05, all7 actual resource effects required. Native UI investigations remain separate incomplete work, chrome stillblocked.","documents":[{"hash":"sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8","ref":"designs/rex-whichkey-action-audit.md"},{"hash":"sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2","ref":"designs/rex-whichkey-selected-window-splits.md"},{"hash":"sha256:12ac821b41273e253346ac9c5f0776ec7e836a9fdba1e3287a197b9bd392a90f","ref":"designs/rex-whichkey-numbered-tabs.md"},{"hash":"sha256:94636573720ef04607582a3b78a83f2484a1533224f1356fbac92f5fb8131c51","ref":"designs/rex-whichkey-client-perform.md"}],"eventId":"rex-whichkey/action-audit/phase-plan/5","kind":"plan","recordRef":"phases/rex-whichkey-14-action-audit.md","records":[{"ref":"tasks/rex-whichkey-14-01-action-target.md","specHash":"sha256:96e3d8f88d25c2635ed78d7ca7de32eff427d5b07798c755451b9fdce4022e1e"},{"ref":"tasks/rex-whichkey-14-02-resource-audit.md","specHash":"sha256:105b2943f517b48304fedefb82962dece256d990aeb137f3261737054df73a27"},{"ref":"tasks/rex-whichkey-14-03-gui-action-verification.md","specHash":"sha256:27c75d06e39f01153b986fa112aefc430a6526bd6b5ada8dd2395479c5d7f74b"},{"ref":"tasks/rex-whichkey-14-04-selected-window-splits.md","specHash":"sha256:e45606dee536698ab72e65b3246de1ec7fdb375d1d3c80cdceb7eaf3e0fe50ad"},{"ref":"tasks/rex-whichkey-14-05-numbered-tabs.md","specHash":"sha256:fafed68b85cab74b8c794bde2cd749aefe007d0b22dac6ce7465c35b9aec53cb"},{"ref":"tasks/rex-whichkey-14-06-client-perform.md","specHash":"sha256:159e1d60bd846892e331f958182ac5a3842a6629c388da80eee9d4a9ca655882"}],"schemaVersion":1,"specHash":"sha256:469a08aaf1b34f9247434e1eae4a21eb26b251066b955fd34efbe442fab75c01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIyOjE0OjQyLjI3MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcnVudGltZS9jbGllbnQtcGVyZm9ybSIsImludGVudCI6ImM0MzYyMDRhMWE4NDJmYzc4MGQ2MzRjMTg1MmViMDg1OTFkODM3OTU3YjQ3MDQxZmRmNDA1NGVjYzQ4YWQ5Y2IifQ -->
+### 2026-11-02T22:14:42.270Z · runtime · unspecified
+
+{"attempt":1,"continuationEvidence":"Same live coordinator/session/runId, bounded explicit native transport repair while continuing all25 verification.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/client-perform","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-14-action-audit.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:469a08aaf1b34f9247434e1eae4a21eb26b251066b955fd34efbe442fab75c01","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
 <!-- mtn:end-entry:v1 -->
