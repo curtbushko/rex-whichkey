@@ -171,7 +171,7 @@ focus and terminal ownership never select a target. `REX_CLIENT` is normally abs
 No eligible app or a stale/non-app/unattached explicit selector refuses **native
 action targeting**, not popup display. An invalid explicit target never falls back
 to the chooser. The retained action, arguments and confirmation survive target
-choice unchanged; native numbered tabs are compiled as described below. Both
+choice unchanged; native New Tab intent is compiled as described below. Both
 popups, files and lifetime pipes are cleaned before one dispatch. The actual
 dispatched action must be available; its exact client ID and captured
 `connected_at` generation plus origin placement are rechecked immediately
@@ -185,15 +185,8 @@ window. These splits omit destination session/block overrides when asking the ap
 to act; the captured origin still authorizes invocation and liveness, not the
 destination.
 
-Native `t1`–`t9` retain their canonical `client.tab.goto` one-based integer intent,
-but Go compiles it to documented `session.select` with the captured origin session
-and an exact parent-resolved window ID. After all UI cleanup, Go reads that
-session's ordered tabs, resolves the index once and freezes the ID. It rechecks
-origin/app generation and window membership before dispatch; a missing index or
-removed/moved tab refuses without fallback. Reordering never substitutes a new
-ID. The chosen app must register `session.select`; the child cannot replace the
-action or args. This is intent translation, not a claim that native numeric goto
-was repaired. Configured Lua defaults keep their direct native action route.
+Numbered “Go to tab” entries (`t1`–`t9`) are not included in the default menu.
+Tabs retain New, Previous, Next, Rename and Close.
 
 Native `tn` retains Go-owned `client.tab.new` intent with empty arguments, but Go
 creates exactly one default-terminal tab in the captured origin session through
@@ -331,7 +324,6 @@ optional `rex_whichkey.defaults` Lua fragments supply the same keys/intent:
 | --- | --- |
 | `wn`, `ws`, `wh`, `wl`, `wr`, `wx` | Session new, switch, previous, next, rename, close. Switch delegates Rex's picker; no enumerated session submenu is added. |
 | `tn`, `th`, `tl`, `tr`, `tx` | Tab new, previous, next, rename, close. |
-| `t1`–`t9` | Go to a tab by its one-based index. |
 | `v`, `s` | Split right / down. |
 | `x`, `e`, `c` | Close pane, toggle sidebar, toggle command palette. |
 

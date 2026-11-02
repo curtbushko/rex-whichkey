@@ -14,16 +14,4 @@ local spec = {
     { "tx", "client.tab.close", desc = "Close tab", icon = "󰅖", confirm = true },
 }
 
--- Preserve the old t1..t9 bindings. Rex's client.tab.goto index is one-based;
--- pass numbers as action data, not key strings, window IDs or shell fragments.
-for index = 1, 9 do
-    spec[#spec + 1] = {
-        "t" .. index,
-        "client.tab.goto",
-        desc = "Go to tab " .. index,
-        icon = "",
-        args = { index = index },
-    }
-end
-
 return spec

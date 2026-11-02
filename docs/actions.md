@@ -1,6 +1,29 @@
 # Native default action audit
 
-## Scope and current result
+## Current menu and user confirmation
+
+The user subsequently requested removal of all numbered “Go to tab” entries
+(`t1`–`t9`). Both Go and Lua defaults now contain **16 executable actions**:
+six session actions, five tab actions and five pane/app actions. The unused native
+numbered-tab adapter was retired along with those entries. Custom configured Lua
+mappings can still invoke Rex actions; no user configuration was changed.
+
+The user confirmed that **session rename (`wr`) and tab rename (`tr`) work**.
+This is user-reported verification, separate from the coordinator's earlier
+experiments. Of the retained defaults, twelve have recorded coordinator behavior
+evidence and two rename actions have user confirmation; `ws` and `c` remain
+unverified. The user stopped further testing; no new runtime checks were run for
+this menu change.
+
+## Historical 25-action audit
+
+The remainder records the earlier source and evidence, before that explicit menu
+change and rename confirmation. Its counts, numbered bindings and outstanding
+rename checks are historical, not the current default menu or current status.
+Historical numbered-tab implementation is available at commit
+`54a577bee6481ebe5110d7b280c03bcf307542c3`.
+
+### Scope and result at that revision
 
 REQ-030 requires behavioral verification of **all 25 executable defaults**.
 Current coordinator evidence supports **21 functional outcomes: seven resource
@@ -91,7 +114,7 @@ closes, retain explicit bound-origin context.
 Two native intent families compile parent-owned selections rather than execute
 their original Rex verbs verbatim:
 
-- **`t1`–`t9`:** [`native_tabs.go`](../native_tabs.go) validates the retained integer
+- **`t1`–`t9`:** the historical `native_tabs.go` validates the retained integer
   and matching key, resolves the ordered **captured origin-session** windows once,
   freezes the exact window ID, rechecks membership/origin/app generation and sends
   `client.perform session.select` with exact `session_id`/`window_id` args and no

@@ -165,11 +165,12 @@ tabs, panes and app fragments; no provider marker means no inventory
 lookup in [`hosts.go`](../hosts.go). Custom `pane.focus` mappings and explicit
 `provider = "known-hosts"` groups remain supported; the optional
 [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) fragment is retained.
-The canonical `client.tab.goto` intent uses a one-based integer index;
-`pane.split` uses `right`/`down`; custom `pane.focus` uses
-`left`/`down`/`up`/`right`. No app registry is required to open the menu. Only the
-actual action to dispatch must be reported as `kind: "client"` by the app selected
-after cleanup; for native `t1`–`t9` this is `session.select`, as described below.
+Numbered “Go to tab” bindings (`t1`–`t9`) are not included in either default
+set; custom configured Lua actions remain supported. `pane.split` uses
+`right`/`down`; custom `pane.focus` uses `left`/`down`/`up`/`right`.
+No app registry is required to open the menu. Only the actual action to dispatch
+must be reported as `kind: "client"` by the app selected after cleanup;
+for native New Tab intent this is `session.select`, as described below.
 Unrelated unavailable defaults do not block display or that selection.
 Incompatibility refuses targeting with the actual Go-owned dispatch action name;
 there is no speculative fallback. Rex remains responsible for final
@@ -344,17 +345,21 @@ and manual inspection/selection guidance. The tab is not automatically closed,
 recreated or replaced; there is no fallback to `client.tab.new`. Success denotes
 one creation plus accepted exact-ID activation, not a generic GUI certificate.
 This compiles Go-owned intent rather than claiming native `client.tab.new` ran.
-Configured Lua defaults/original-VM dispatch, numbered-tab compilation, split
-selected-app context and destructive origin targets remain unchanged. Fresh review,
+Configured Lua original-VM dispatch, split selected-app context and destructive
+origin targets retain their existing contracts. Fresh review,
 coordinator compilation and all seven actual resource effects remain required;
 the failed a01 gate is not relabeled a pass.
 
-### Native numbered-tab intent compilation
+### Historical native numbered-tab intent compilation
+
+The user subsequently removed `t1`–`t9` from both default menus. This adapter and
+its native routing branch were retired; the description below preserves the
+previous design, not current source behavior.
 
 Accepted **REXWHICHKEY-20261102-165714** in the
 [numbered-tabs supplement](../.tasks/designs/rex-whichkey-numbered-tabs.md)
 supersedes verbatim dispatch only for native `t1`–`t9`.
-[`native_tabs.go`](../native_tabs.go) strictly decodes the original parent-retained
+Historical `native_tabs.go` at commit `54a577bee6481ebe5110d7b280c03bcf307542c3` strictly decodes the original parent-retained
 `client.tab.goto` Args as one integer `index` from 1 through 9, matching its retained
 `tN` key. Missing/null/duplicate/unknown fields, coercions or out-of-range indices
 refuse; no guessed zero-based/string args are sent. The canonical Go/Lua defaults,
@@ -389,7 +394,7 @@ This is intentional Go-owned intent compilation, not a repair of Rex's numeric
 and Lua defaults remain direct native actions. Native previous/next, splits and
 all destructive actions retain their existing behavior.
 
-Apart from the two tab-intent adapters above, every remaining native action sends
+Apart from the retained New Tab intent adapter, every remaining native action sends
 trusted action/JSON args once through the
 explicit `client.perform` request above, with captured origin session/block
 context; no native `rex do` dispatch wrapper remains. Metadata still legitimately

@@ -1,5 +1,24 @@
 # Release delivery inventory and limitations
 
+## Latest user correction
+
+The user confirmed session rename (`wr`) and tab rename (`tr`) work, stopped
+further testing, and requested removal of numbered “Go to tab” entries (`t1`–`t9`).
+Both default menus now have 16 executable actions; the unused native numbered-tab
+adapter was retired. Earlier all-25 counts and numbered-tab delivery sections
+below are historical. See [current action status](actions.md#current-menu-and-user-confirmation)
+for coordinator evidence versus user confirmation. No new runtime verification or
+whole-project completion is claimed.
+
+The user clarified that the popup's remaining top bar is Rex's **pane header**,
+not an OS window title bar. Rex documents **Settings > Interface > Panes > Show
+pane headers** ([setting reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)).
+That is an app-wide preference, not a documented per-popup override. Current
+server/layer/terminal schemas and the Work app's registered actions expose no
+pane-header override. No global preference was changed; popup-only pane-header
+suppression remains unresolved. This conclusion is from metadata/documentation,
+not a new UI trial.
+
 ## Fixed navigation bounds: REQ-029
 
 Accepted **REXWHICHKEY-20261102-143748** under the
@@ -187,7 +206,7 @@ positive controls worked. This is not evidence that every native route is broken
 
 | Requirement | Implemented source | Evidence boundary |
 | --- | --- | --- |
-| REQ-030 — reliable native numbered tabs | [`native.go`](../native.go) checks the actual `session.select` native registration after original selection, optional target choice and all cleanup. [`native_tabs.go`](../native_tabs.go) strictly reads parent-retained integer `index` 1–9 matching its `tN` key; existing typed session/window APIs resolve ordered origin-session tabs once and freeze an exact ID. Immediately before one unscoped exact-endpoint `client.perform`, origin placement, chosen app attachment/generation and frozen window membership are rechecked. Action args explicitly name origin session and resolved window; missing/moved targets refuse, reorder never substitutes another ID, and errors/uncertain effects are not retried. Canonical defaults, original completion/confirmation, configured original-VM route, split current-app context, destructive targets and both UI lifecycles remain unchanged. | Source-only implementation; no leaf tests, compilation, RPC or behavioral pass. [Task 14-05](../.tasks/tasks/rex-whichkey-14-05-numbered-tabs.md) requires frozen review and coordinator combined compilation, then actual real-menu `t1`–`t9` against nine fresh hidden targets in exact verified order and a separate visible caller. Observe target-specific app Work geometry after each action, without explicit target selection between dispatch and measurement. Verify missing index, removed/moved target, stale app/origin and cleanup/refusal boundaries. Server focus or action receipts alone are insufficient; no screenshot/pixel certificate or all-25 completion is claimed. |
+| REQ-030 — reliable native numbered tabs | [`native.go`](../native.go) checks the actual `session.select` native registration after original selection, optional target choice and all cleanup. Historical `native_tabs.go` at commit `54a577bee6481ebe5110d7b280c03bcf307542c3` strictly reads parent-retained integer `index` 1–9 matching its `tN` key; existing typed session/window APIs resolve ordered origin-session tabs once and freeze an exact ID. Immediately before one unscoped exact-endpoint `client.perform`, origin placement, chosen app attachment/generation and frozen window membership are rechecked. Action args explicitly name origin session and resolved window; missing/moved targets refuse, reorder never substitutes another ID, and errors/uncertain effects are not retried. Canonical defaults, original completion/confirmation, configured original-VM route, split current-app context, destructive targets and both UI lifecycles remain unchanged. | Source-only implementation; no leaf tests, compilation, RPC or behavioral pass. [Task 14-05](../.tasks/tasks/rex-whichkey-14-05-numbered-tabs.md) requires frozen review and coordinator combined compilation, then actual real-menu `t1`–`t9` against nine fresh hidden targets in exact verified order and a separate visible caller. Observe target-specific app Work geometry after each action, without explicit target selection between dispatch and measurement. Verify missing index, removed/moved target, stale app/origin and cleanup/refusal boundaries. Server focus or action receipts alone are insufficient; no screenshot/pixel certificate or all-25 completion is claimed. |
 
 The translation is parent-owned intent compilation, not a claim to have repaired
 Rex's native numeric `client.tab.goto` action. The all-25 action audit remains open;

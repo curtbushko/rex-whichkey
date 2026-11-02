@@ -145,7 +145,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
 		dispatchAction := mapping.Action
-		if mapping.Action == "client.tab.goto" || mapping.Action == "client.tab.new" {
+		if mapping.Action == "client.tab.new" {
 			// Compile only retained tab intent; the child cannot supply this
 			// action or its exact session/window arguments.
 			dispatchAction = "session.select"
@@ -157,9 +157,6 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
-		if mapping.Action == "client.tab.goto" {
-			return nativeNumberedTab(dispatch, client, bound, executable, mapping)
-		}
 		if mapping.Action == "client.tab.new" {
 			return nativeNewTab(dispatch, client, bound, executable, mapping)
 		}

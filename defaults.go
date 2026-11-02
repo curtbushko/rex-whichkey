@@ -1,9 +1,6 @@
 package whichkey
 
-import (
-	"encoding/json"
-	"strconv"
-)
+import "encoding/json"
 
 // nativeDefaults supplies the basic menu without requiring a server Lua action.
 // It uses the canonical Mapping/Config types and the same keys and native action
@@ -27,17 +24,11 @@ func nativeDefaults() (Config, error) {
 		{Keys: "tl", Action: "client.tab.next", Desc: "Next", Icon: ""},
 		{Keys: "tr", Action: "client.tab.rename", Desc: "Rename", Icon: "󰏫"},
 		{Keys: "tx", Action: "client.tab.close", Desc: "Close tab", Icon: "󰅖", Confirm: true},
+		{Keys: "v", Action: "pane.split", Desc: "Split right", Icon: "", Args: json.RawMessage(`{"direction":"right"}`)},
+		{Keys: "s", Action: "pane.split", Desc: "Split down", Icon: "", Args: json.RawMessage(`{"direction":"down"}`)},
+		{Keys: "x", Action: "pane.close", Desc: "Close pane", Icon: "󰅖", Confirm: true},
+		{Keys: "e", Action: "client.sidebar.toggle", Desc: "Sidebar", Icon: "󰙀"},
+		{Keys: "c", Action: "client.palette.toggle", Desc: "Command palette", Icon: ""},
 	}
-	for index := 1; index <= 9; index++ {
-		config.Spec = append(config.Spec, Mapping{Keys: "t" + strconv.Itoa(index), Action: "client.tab.goto",
-			Desc: "Go to tab " + strconv.Itoa(index), Icon: "", Args: json.RawMessage(`{"index":` + strconv.Itoa(index) + `}`)})
-	}
-	config.Spec = append(config.Spec,
-		Mapping{Keys: "v", Action: "pane.split", Desc: "Split right", Icon: "", Args: json.RawMessage(`{"direction":"right"}`)},
-		Mapping{Keys: "s", Action: "pane.split", Desc: "Split down", Icon: "", Args: json.RawMessage(`{"direction":"down"}`)},
-		Mapping{Keys: "x", Action: "pane.close", Desc: "Close pane", Icon: "󰅖", Confirm: true},
-		Mapping{Keys: "e", Action: "client.sidebar.toggle", Desc: "Sidebar", Icon: "󰙀"},
-		Mapping{Keys: "c", Action: "client.palette.toggle", Desc: "Command palette", Icon: ""},
-	)
 	return ResolveConfig(config, nil, nil)
 }
