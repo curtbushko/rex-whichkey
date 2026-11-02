@@ -137,25 +137,50 @@ begins, no outcome can select native mode or retry that activation.
 
 [`defaults.go`](../defaults.go) constructs real canonical `Mapping`/`Config` data,
 not an independent schema or a demo. Its ordered session/tab/pane/application keys,
-icons, native picker/rename semantics, close confirmations and inventory-only
-`known-hosts` provider match the shipped Lua fragments. `client.tab.goto` takes a
-one-based integer index; `pane.split` uses `right`/`down`; `pane.focus` uses
-`left`/`down`/`up`/`right`. Every built-in action must be reported as `kind: "client"`
-by the captured app's metadata before the popup opens; an incompatible app fails
+icons, native picker/rename semantics and close confirmations match the shipped
+Lua fragments. Neither default set includes the Focus group or a `known-hosts`
+provider. [`defaults/init.lua`](../lua/rex_whichkey/defaults/init.lua) composes only
+sessions, tabs, panes and app fragments; no provider marker means no inventory
+lookup in [`hosts.go`](../hosts.go). Custom `pane.focus` mappings and explicit
+`provider = "known-hosts"` groups remain supported; the optional
+[`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) fragment is retained.
+`client.tab.goto` takes a one-based integer index; `pane.split` uses `right`/`down`;
+custom `pane.focus` uses `left`/`down`/`up`/`right`. Every built-in action must be
+reported as `kind: "client"` by the captured app's metadata before the popup opens; an incompatible app fails
 with the Go-owned missing action name, not a fabricated action or a silent route
 switch. Rex remains responsible for final action/schema/Remote Control checks.
 
 [`native.go`](../native.go) retains an independent immutable parent snapshot and
-passes only canonical configuration to the shared `runPopupLifecycle` in
-[`popup.go`](../popup.go). The native CLI is the invocation-scoped controller and
-may wait for its PTY child; it does not become a daemon. Its finite 30-second
-invocation starts before transport creation; five seconds are reserved for
-teardown/dispatch. Existing configured controllers remain detached and finite.
-Both paths use the same `RunPopupTerminal`/`RunTerminal`/`RenderMenu`/`HandleKey`.
+passes canonical configuration to `runPopupWithLifetime` in
+[`popup.go`](../popup.go) with the trusted native lifetime policy. The native CLI
+stays in the foreground while its PTY child is usable, with **no fixed interaction
+or idle deadline**. `RunNativePopupTerminal` requires a private 0600 lifetime pipe;
+parent loss cancels the child even if parent defers cannot run. `waitPopup` waits
+for the child's exit without capping interactive time at the RPC timeout, while
+checking exact origin placement and app connection generation every second.
+Cancellation, signals, terminal/process failure or lost origin still end the
+invocation; there is no persistent daemon or detached indefinite controller.
+
+Configured controllers use `runPopupLifecycle`, which always selects the finite
+configured policy. Handoffs require the original future expiry within the canonical
+30-second bound; absent/zero expiry cannot enable native mode. The launcher starts
+its lifetime before evaluation/preparation, and the UI deadline is five seconds
+before expiry to reserve teardown/completion time. `RunPopupTerminal` treats only
+the exact expected deadline error, with successful terminal restoration, as null
+dismissal. Expected controller expiry performs cleanup without stale completion;
+no capability is renewed and no expired selection is dispatched. Invalid deadlines,
+unexpected child status, I/O and restoration failures remain errors. Both child
+routes share `runPopupTerminal` -> `RunTerminal` -> `RenderMenu`/`HandleKey`.
+
+Preflight and individual RPCs remain bounded (20-second public preflight context,
+three-second metadata/resource calls); selected dispatch is bounded to three
+seconds and deferred cleanup to five. These operation limits are not native user
+idle limits. Removing the Focus group does not remove exact origin-focus safety.
 
 The shared lifecycle creates 0700 invocation-owned directories and exclusive
-0600 config/result files. The child returns only keys, optional opaque callback
-identity and explicit confirmation (or null dismissal). The strict canonical
+0600 config/result files (plus the native-only lifetime pipe). The child returns
+only keys, optional opaque callback identity and explicit confirmation (or null
+dismissal). The strict canonical
 completion decoder rejects replacement action/args and checks confirmation and
 identity against the retained snapshot. The native snapshot has **no callbacks**;
 Go refuses callback references rather than evaluating Lua. Capabilities stay in
@@ -163,8 +188,8 @@ the parent; transport/config/result paths contain no action credentials.
 
 After successful child exit (which follows terminal restoration), the controller
 closes only its returned owned terminal, confirms its layer vanished, restores
-exact origin focus and unlinks both private files and their empty directory
-**before** selected dispatch. Origin placement and live app connection generation
+exact origin focus and removes private config/result files, the native lifetime
+pipe when present and their empty directory **before** selected dispatch. Origin placement and live app connection generation
 are rechecked before creation, owned close, focus and dispatch. Native dispatch
 looks up only the retained mapping and uses its trusted action/args once through
 `rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
@@ -389,6 +414,8 @@ only for the configured route, not the basic native menu.
 
 ## Source evidence and verification limits
 
+### Contract inputs and historical observations
+
 Native startup uses coordinator-captured `.mtn-tmp/live-launch/actions.json`
 (server actions), `client-actions.json` (native client names and `.args` JSON
 schemas), `new-layer-api.json` (`session.new_layer` input/output/layout contract)
@@ -400,9 +427,12 @@ explicit session/block/client selectors and JSON stdin arguments. No new live
 API request or product run was made by the builder. Captured normal invocation
 failed for absent custom actions; renderer-only diagnostic display/navigation/
 dismissal is not evidence of successful normal floating-popup startup. The
-coordinator owns the later combined compilation and user-authorized actual
-launch/navigation/Escape/cleanup gate; this source revision claims no such pass.
-
+[07-05 delivery record](../.tasks/tasks/rex-whichkey-07-05-native-default-popup.md)
+subsequently records an independent source review, compilation and a real native
+popup launch/Tabs navigation/Escape/exit0/owned-cleanup pass at `9f9b903`. Its runtime
+artifact is `.mtn-tmp/live-launch/rex-whichkey-p07-t05-builder-a01/result.json`.
+That observation predates Phase08 lifetime/default/color changes; it is not their
+runtime result.
 
 The native attachment classification is documented in the retained Rex
 `session.list_clients` method schema at
@@ -452,9 +482,26 @@ delivered source. These are supplied revision-bound results, not commands run by
 this documentation builder or approval of later corrections. No unrecorded
 `task build` result or runtime acceptance is inferred.
 
-This revision's builder performed no project tests/TDD, example/product
-execution, new live identity queries, GUI/remote trials or configuration reloads.
-Formatting and source checks do not verify runtime or Darwin behavior; combined
-compilation and the later authorized bounded popup check belong to the
-coordinator. The routes above are source traces, not claimed popup, Remote
-Control or callback passes. Private preparation is not the normal entrypoint.
+### Popup-polish evidence boundary
+
+The authoritative [lifetime](../.tasks/tasks/rex-whichkey-08-01-lifetime.md),
+[defaults](../.tasks/tasks/rex-whichkey-08-02-defaults.md) and
+[theme](../.tasks/tasks/rex-whichkey-08-03-theme.md) delivery records bind fresh
+source reviews and coordinator compilation to `ca03b46`, `3ad78d6` and `3e9a1fd`,
+respectively. [Appearance](appearance.md) traces actual semantic render roles,
+immediate ANSI fallback, palette updates and NO_COLOR/ASCII behavior.
+
+The [assembly record](../.tasks/tasks/rex-whichkey-08-04-docs.md) and
+[phase record](../.tasks/phases/rex-whichkey-08-popup-polish.md) are the durable
+pointers for the reviewed frozen combined candidate, actual compilation and the
+coordinator's user-authorized Linux runtime gate: normal popup, at least 35 seconds
+without input, still-alive UI, absent default Focus/host groups, VT/HTML color spans,
+Tabs navigation and Escape dismissal with exit0/exact owned cleanup. See the
+[acceptance inventory](acceptance.md) for artifact locations and interpretation.
+Only recorded observations count as runtime evidence, not this gate description.
+
+Documentation builders/reviewers use static source/whitespace inspection only;
+they do not run compilation, project tests/TDD, experiments, product/API/GUI/remote
+probes or configuration reloads. The targeted coordinator gate executes no native
+menu action or configured callback and certifies neither Darwin nor remote use.
+Private preparation is not the normal entrypoint.

@@ -5,18 +5,15 @@ Go owns navigation, terminal rendering and the basic native-action menu. Optiona
 server-side Lua integration loads custom mappings and executes callbacks in the
 originating Rex runtime. There is no daemon.
 
-**Delivery status:** implementation has recorded independent source reviews,
-Git integration, Go compilation and Nix package builds—not runtime acceptance.
-Project tests and graphical/remote trials were not baseline delivery gates.
-A later normal launch failed because custom actions were unregistered; a separate
-renderer diagnostic displayed/navigated/dismissed, but was not a normal popup
-pass. The native-startup correction below has no claimed runtime pass here;
-its coordinator-owned gate is actual floating-popup launch/navigation/Escape
-and owned cleanup. Disconnected-origin behavior, Darwin runtime compatibility
-and Home Manager activation remain unverified. See the
-[delivery inventory and limitations](docs/acceptance.md) for REQ-001–REQ-017,
-revision-bound evidence and historical caveats. No minimum tested Rex build is
-claimed.
+**Verification:** recorded evidence distinguishes independent source review,
+Git integration, Go/Nix builds and targeted runtime observations. Phase07 records
+a normal native popup launch, Tabs navigation, Escape dismissal, exit0 and exact
+owned-popup cleanup in one Linux Rex session. That does not verify the later
+idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
+compatibility or Home Manager activation. The coordinator's Phase08 gate adds
+35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
+[delivery inventory](docs/acceptance.md) for REQ-001–REQ-020 and revision-bound
+results. No minimum tested Rex build or general runtime certification is claimed.
 
 ## Install on the Rex server host
 
@@ -116,10 +113,12 @@ original-VM configured menu. An explicit `--action NAME` always requires that
 registered action, even `--action whichkey`; missing registration fails clearly.
 Failed or uncertain configured activation never falls back to native mode.
 
-The native caller waits for its bounded popup and performs teardown before any
-selected native action. The configured route keeps its detached controller and
-prompt-return behavior. Neither route is a greeting, demo or standalone JSON
-menu; no private subcommand, new script VM or user-written resolved JSON is
+The native caller stays in the foreground until selection/dismissal, cancellation
+or a real terminal/origin failure, with no idle timeout. It performs teardown
+before any selected native action. The configured route keeps its detached
+controller, prompt-return behavior and authenticated 30-second expiry. Neither
+route is a greeting, demo or standalone JSON menu; no private subcommand, new
+script VM or user-written resolved JSON is
 required. `rex-whichkey --help` (or `-h`) describes public options without contacting Rex:
 
 | Option | Meaning |
@@ -197,7 +196,6 @@ return {
         { "w", group = "Sessions" },
         { "wn", "session.new", desc = "New session" },
         { "x", "pane.close", desc = "Close pane", confirm = true },
-        { "h", group = "Rex-known hosts (listing only)", provider = "known-hosts" },
     },
 }
 ```
@@ -206,8 +204,8 @@ Then use `menu.setup({}, "my_whichkey")` in the wiring above. For inline-only
 configuration, pass the options table directly to `menu.setup(options)`.
 Precedence is **defaults < imported module < inline options**. Present `spec` and
 `icons` replace whole values, not merge them: `spec = {}` intentionally clears
-all bindings, including built-ins and host listing. A failed setup retains the
-previous installed configuration; successful replacement invalidates old pending
+all bindings. A failed setup retains the previous installed configuration;
+successful replacement invalidates old pending
 invocations. Ordinary Lua `require` caching applies; this is not hot reload.
 
 Full key sequences, nested inherited attributes, hidden-but-active mappings,
@@ -218,6 +216,19 @@ Lua. Imported modules are trusted code, not a sandbox. See the
 [Go-owned mapping standard](docs/mapping-format.md) for exact fields, validation,
 provider rules, callback lifetimes and completion safety; the
 [configuration examples](examples/README.md) explain loader semantics.
+
+Focus actions remain available in custom mappings, for example
+`{ "fl", "pane.focus", desc = "Focus right", args = { direction = "right" } }`.
+The Focus group and Rex-known-hosts listing are **not defaults**. To opt into
+inventory explicitly, include a provider group in your own `spec`:
+
+```lua
+{ "h", group = "Rex-known hosts (listing only)", provider = "known-hosts" }
+```
+
+The optional `rex_whichkey.defaults.hosts` fragment is also retained for explicit
+composition. With no enabled provider marker, no host inventory lookup occurs.
+Adding a custom `spec` replaces the defaults rather than appending to them.
 
 ## Use the menu
 
@@ -242,24 +253,35 @@ optional `rex_whichkey.defaults` Lua fragments supply the same keys/intent:
 | `tn`, `th`, `tl`, `tr`, `tx` | Tab new, previous, next, rename, close. |
 | `t1`–`t9` | Go to a tab by its one-based index. |
 | `v`, `s` | Split right / down. |
-| `fh`, `fj`, `fk`, `fl` | Focus left / down / up / right. |
 | `z`, `x`, `e`, `c` | Zoom, close pane, toggle sidebar, toggle command palette. |
-| `h` | Rex-known host inventory and warnings; details only, no connection action. |
 
 Session/tab/pane close bindings require confirmation. Named actions and callbacks
-share the confirmation path. The popup has a 30-second total invocation lifetime
-starting before configured evaluation or native popup preparation; preparation
-reduces available menu time, and the controller reserves five seconds for
-teardown/completion. Both routes close the exact owned popup and unlink private
-files before selected dispatch, including actions that may close the caller. There is no automatic
-retry of uncertain action execution.
+share the confirmation path. Native interaction has **no fixed idle deadline**;
+RPC/preflight, dispatch and cleanup operations still have bounded timeouts. The
+foreground parent watches the captured origin/app generation, and the child is
+tied to that parent by a private lifetime pipe, not a daemon.
+
+Configured Lua invocations retain their authenticated 30-second lifetime, starting
+before mapping evaluation/preparation, with five seconds reserved for teardown
+and completion. Expected UI expiry dismisses without a selection; an expired
+capability is never renewed or used for completion. Real child, terminal-restoration
+or cleanup failures remain errors. Both routes restore exact origin focus, close
+only the owned popup and unlink private transport before selected dispatch,
+including actions that may close the caller. Removing the Focus menu does not
+remove that safety restoration. Uncertain actions are never retried.
 
 Positions are `top`, `bottom`, `left`, `right` and `center`. Columns and paging
 adapt to terminal size; very small viewports omit chrome before content. Unicode
-cell-width calculation is not proof of actual client glyph geometry. A nonempty
-`NO_COLOR` in the execution environment disables colors. Low-level `menu` and
-`popup` modes accept `--ascii` and `--no-color`; these are not Lua setup options,
-and the delivered launcher does not forward those flags. ASCII decorations do
+cell-width calculation is not proof of actual client glyph geometry. Keys use
+cyan/blue accents, icons yellow and labels separate primary/group roles. Colors
+appear immediately using terminal-native ANSI accents even without palette replies;
+valid replies enable contrast-aware styling. See [appearance](docs/appearance.md)
+for fallback and accessibility limits. A nonempty `NO_COLOR` in the **rendering
+process's** environment disables colors; normal rendering runs in a Rex-created
+server-host child, and the launcher does not forward the caller's environment
+as a popup override. Low-level `menu` and `popup` modes accept `--ascii` and
+`--no-color`; these are not Lua setup options, and the delivered launchers do not
+forward those flags. ASCII decorations do
 not transliterate user labels. `menu` consumes resolved JSON and returns a
 selection/null; it is not the normal Lua launch or an action executor. `prepare`,
 `controller` and `popup` are internal plumbing, not manual invocation examples.
@@ -284,7 +306,7 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   Never substitute focus/current-client selection. A reconnect's changed
   connection generation requires a new invocation. Captured delivery evidence
   later showed one attached app; that observation does not certify other sessions
-  or the native-startup correction.
+  or later revisions.
 - **Discovery/endpoint failure:** check the already-running execution-host server,
   Rex runtime/home settings and CLI compatibility. Fix malformed explicit or
   `REX_SERVER` values; a custom/shared endpoint may need both a public override and
@@ -304,8 +326,8 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   connection-generation changes, expiry and configuration replacement can reject
   a selection. Do not work around this by retargeting the popup/current client,
   replaying completion or retrying an uncertain destructive operation.
-- **Host list empty or warning:** inventory belongs to the execution host and its
-  configured Rex home, not the graphical client or `--server` target. Listing can
+- **Explicit host list empty or warning:** inventory is opt-in, not a default menu
+  entry. It belongs to the execution host and its configured Rex home, not the graphical client or `--server` target. Listing can
   include Rex-managed home synchronization; it is not a reachability check. It
   implements no attach, remote connection, Wake-on-LAN or SSH workflow.
 - **Popup remains after failure:** cleanup closes only the returned owned terminal;
