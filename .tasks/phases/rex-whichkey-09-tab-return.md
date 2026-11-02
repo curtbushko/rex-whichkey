@@ -11,13 +11,13 @@ title: 'Phase09: Native popup tab return'
 mtnCreateRetry:
   key: rex-whichkey-phase09-v1
   intent: bd2997b0827c959b84c20447a09ed5c26902a37669a7f796410c0b3da0ccf3be
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T15:22:57.739Z'
-dateModified: '2026-11-02T15:23:34.206Z'
+dateModified: '2026-11-02T15:36:59.595Z'
 tags:
   - task
 type: task
@@ -27,6 +27,7 @@ projects:
 blockedBy:
   - uid: '[[phases/rex-whichkey-08-popup-polish.md]]'
     reltype: FINISHTOSTART
+completedDate: '2026-11-02'
 ---
 # Phase09: Tab-return reliability
 
@@ -34,14 +35,8 @@ User correction: the popup stops showing when returning to its tab. Implement RE
 
 <!-- mtn:evidence:v1 -->
 
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE1OjIzOjA4LjQ0OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3RhYi1yZXR1cm4vcGhhc2UtcGxhbi8xIiwiaW50ZW50IjoiNWRhNjc5MzY1MzVmMDE0OGMxN2UzMWRkZmYzYzlkMDBkOThjNGRmNTdmNmRkMzIyOWU2NzYxZGIwYThmMjY5OSJ9 -->
-### 2026-11-02T15:23:08.449Z · plan · unspecified
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE1OjM2OjU5LjU4NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcGhhc2UwOS9zdW1tYXJ5LzEiLCJpbnRlbnQiOiJmOWMzNjJmM2FmOGNmZDUzY2VmN2E2ZTIwZmM3YTUzMTI1M2E0YmU3OTIzNjc4NmFjNzZhZmFiZDFjZGRiYTkzIn0 -->
+### 2026-11-02T15:36:59.585Z · summary · unspecified
 
-{"approvedBy":"explicit user scope; coordinator bounded decomposition","attempt":1,"coverage":{"REQ-021":["tasks/rex-whichkey-09-01-tab-return.md"],"REQ-022":["tasks/rex-whichkey-09-01-tab-return.md"]},"decision":"approved","decisionEvidence":"One literal ownership task covers Go/Lua default removal and foreground return lifecycle/docs with independent mixed source review and coordinator compilation/actual owned-tab runtime check; no source changes accepted yet.","documents":[{"hash":"sha256:a616c835e37588e3c673b289849b40573db242126626bcdc1597a9c2a76607c9","ref":"designs/rex-whichkey-tab-return.md"}],"eventId":"rex-whichkey/tab-return/phase-plan/1","kind":"plan","recordRef":"phases/rex-whichkey-09-tab-return.md","records":[{"ref":"tasks/rex-whichkey-09-01-tab-return.md","specHash":"sha256:dac01498d83ae0c4fb515581056d97877eac4a4497674cf55a5acf8e92760622"}],"schemaVersion":1,"specHash":"sha256:09e27ea5551f6f2f7417863af724d156049413d7452b7d608d111ee7ab61e7b8"}
-<!-- mtn:end-entry:v1 -->
-
-<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE1OjIzOjM0LjE5NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcnVudGltZS90YWItcmV0dXJuIiwiaW50ZW50IjoiZjI4MjBhNGUyZjRkZGFkNDRhNGQ1ZmViYTI0MjNlZmE3NTNmZWViOGVmZDMwYWFhZGI2ZDZiMzc1NDU2MjcyMSJ9 -->
-### 2026-11-02T15:23:34.194Z · runtime · unspecified
-
-{"attempt":1,"continuationEvidence":"Same live coordinator process/runId/session/window resumes user-corrected Phase09; no replacement/restart. Display coordinator retained.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/tab-return","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-09-tab-return.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:09e27ea5551f6f2f7417863af724d156049413d7452b7d608d111ee7ab61e7b8","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
+{"acceptedScope":"Phase09: Native popup tab return","approvalSummary":["User requests removing Zoom and corrects bug scope to popup visibility on tab return. Phase09 implementation/source review and bounded actual owned-tab/focus/navigation/dismissal check are authorized under retained delegation; no new client-selection policy.","All exact native child summaries bind current independent source approval and delivered target commit/tree; ancestry verified."],"artifactRefs":[".mtn-tmp/tab-recovery/phase09-final/validate.json",".mtn-tmp/tab-recovery/phase09-final/worktrees.txt",".mtn-tmp/tab-recovery/runtime/rex-whichkey-p09-t01-builder-a01/result.json"],"attempt":1,"coverage":{"REQ-021":["tasks/rex-whichkey-09-01-tab-return.md"],"REQ-022":["tasks/rex-whichkey-09-01-tab-return.md"]},"eventId":"rex-whichkey-p03-coordinator-a01/phase09/summary/1","files":["README.md","defaults.go","docs/acceptance.md","docs/appearance.md","docs/launch-contract.md","lua/rex_whichkey/defaults/panes.lua","popup.go","terminal.go"],"kind":"summary","limitations":["No tests/TDD/general suites, destructive selections, configured Lua callbacks, config changes/reloads or remote/Darwin trials. Native app root/submenu tab-round-trip and focus reports were checked through server menu/process/layer state. Original remote graphical disappearance was not reproduced and the remote app presentation was not directly observed; no full GUI repair certificate. Several-app launch guard is unchanged.","Independent fresh contexts used the same authenticated model family, not cross-family review.","Prior transferred coordinator process status remains unverified; ownership transfer did not assert remote/local stoppage.","No global cleanup or push; retained worktrees/artifacts remain available."],"recordRef":"phases/rex-whichkey-09-tab-return.md","records":["tasks/rex-whichkey-09-01-tab-return.md"],"requirements":["REQ-021","REQ-022"],"schemaVersion":1,"specHash":"sha256:09e27ea5551f6f2f7417863af724d156049413d7452b7d608d111ee7ab61e7b8","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"4e03865091daff8a96144f878f959efddcc4d8b5","targetTree":"4cd9f3b8fbd551b872dd3069dddf78897621f5a2","verification":[{"command":"Actual native popup excludes Zoom; focus1004 enabled; native-app root/submenu tab-away/back and fragmented focus notifications retained same process/layer/menu; Escape exit0/exact owned cleanup","result":"pass"},{"command":"GOTOOLCHAIN=local GOMAXPROCS=16 go build ./...; make build (combined delivered revision and refreshed CLI artifact)","result":"pass"},{"command":"git diff --check; native graph/schema validation; exact completed child scope and Git delivery identities/ancestry verified","result":"pass"}]}
 <!-- mtn:end-entry:v1 -->
