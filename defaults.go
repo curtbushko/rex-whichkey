@@ -35,7 +35,6 @@ func nativeDefaults() (Config, error) {
 	config.Spec = append(config.Spec,
 		Mapping{Keys: "v", Action: "pane.split", Desc: "Split right", Icon: "", Args: json.RawMessage(`{"direction":"right"}`)},
 		Mapping{Keys: "s", Action: "pane.split", Desc: "Split down", Icon: "", Args: json.RawMessage(`{"direction":"down"}`)},
-		Mapping{Keys: "z", Action: "pane.zoom", Desc: "Zoom pane", Icon: "󰊓"},
 		Mapping{Keys: "x", Action: "pane.close", Desc: "Close pane", Icon: "󰅖", Confirm: true},
 		Mapping{Keys: "e", Action: "client.sidebar.toggle", Desc: "Sidebar", Icon: "󰙀"},
 		Mapping{Keys: "c", Action: "client.palette.toggle", Desc: "Command palette", Icon: ""},

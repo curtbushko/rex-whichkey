@@ -478,6 +478,8 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 // CLI process at its RPC timeout. `rex wait --help` documents unbounded event
 // delivery, with --timeout still bounding connections/nonstreaming requests.
 // Watch the captured origin too: an idle UI must not survive app/origin loss.
+// originBlock checks placement/membership/generation, not active-tab visibility;
+// switching tabs alone must neither cancel the UI nor refocus its origin.
 func waitPopup(ctx context.Context, request popupRequest, client *rex.Client, executable, blockID string) error {
 	waitCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)

@@ -6,7 +6,6 @@ return {
     -- downward action takes "down", whereas the CLI uses "below".
     { "v", "pane.split", desc = "Split right", icon = "", args = { direction = "right" } },
     { "s", "pane.split", desc = "Split down", icon = "", args = { direction = "down" } },
-    { "z", "pane.zoom", desc = "Zoom pane", icon = "󰊓" },
     -- Shared menu/dispatch confirmation requires y; cancellation queues nothing.
     { "x", "pane.close", desc = "Close pane", icon = "󰅖", confirm = true },
 }

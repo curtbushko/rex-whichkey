@@ -22,7 +22,7 @@ import (
 const (
 	terminalPollInterval = 20 // milliseconds; also bounds cancellation latency during I/O
 	terminalEscapeDelay  = 50 * time.Millisecond
-	terminalSetup        = "\x1b[?7l\x1b[?25l\x1b[?2004h"
+	terminalSetup        = "\x1b[?7l\x1b[?25l\x1b[?1004h\x1b[?2004h"
 )
 
 // RunTerminal owns one short-lived menu on the controlling popup terminal. The
@@ -32,9 +32,10 @@ const (
 // result on stdout. Linux and Darwin use the same ordered, nonblocking I/O loop.
 //
 // The popup owns the viewport: redraw clears it, then places RenderMenu's frame.
-// Cursor/rendition and xterm wrap, visibility and paste modes are saved/restored;
-// termios is restored on selection, dismissal, cancellation, errors and caught
-// HUP/INT/QUIT/TERM/PIPE/TSTP. TSTP cancels rather than suspending in raw mode.
+// Cursor/rendition and xterm wrap, visibility, focus-reporting and paste modes
+// are saved/restored; termios is restored on selection, dismissal, cancellation,
+// errors and caught HUP/INT/QUIT/TERM/PIPE/TSTP. TSTP cancels rather than suspending
+// in raw mode.
 // SIGKILL, SIGSTOP, process/terminal loss cannot run cleanup. Darwin may transiently
 // expose PENDIN while restoring; restore the captured state unchanged, never mask
 // other configured flags or claim a byte-for-byte platform comparison here.
@@ -101,7 +102,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			cleanup.WriteString("\x1b8")
 		}
 		if modesSaved {
-			cleanup.WriteString("\x1b[?7;25;2004r")
+			cleanup.WriteString("\x1b[?7;25;1004;2004r")
 		}
 		// Cleanup outlives canceled input, but a lost/non-reading terminal
 		// must not hold the process forever. The earlier termios defer runs
@@ -119,7 +120,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		return MenuEvent{}, err
 	}
 	cursorSaved = true
-	if err := writeTerminal(ctx, fd, "\x1b[?7;25;2004s"); err != nil {
+	if err := writeTerminal(ctx, fd, "\x1b[?7;25;1004;2004s"); err != nil {
 		return MenuEvent{}, err
 	}
 	modesSaved = true
@@ -152,13 +153,17 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			if cancel {
 				return MenuEvent{}, context.Canceled
 			}
-			if key == "" {
+			if key == "" && !input.focusIn {
 				continue
 			}
-			event := menu.HandleKey(key, frame.Pages)
-			if menu.Done() {
-				return event, nil
+			if key != "" {
+				event := menu.HandleKey(key, frame.Pages)
+				if menu.Done() {
+					return event, nil
+				}
 			}
+			// Focus-in repaints the retained menu without HandleKey: even a
+			// pending confirmation must survive returning to this terminal.
 			// Refresh Pages before handling another key in this same read.
 			var err error
 			frame, err = drawTerminal(ctx, fd, menu, config, theme)
@@ -308,8 +313,10 @@ func terminalRetry(err error) bool {
 // terminalKeys consumes non-OSC input after PaletteDecoder. Only complete literal
 // Unicode tokens and the menu's three navigation keys can reach HandleKey.
 // Terminal reports, function/mouse keys, Alt chords and bracketed paste are not
-// bindings. State is bounded even for unterminated or oversized terminal strings.
+// bindings. Complete focus-in reports separately request a repaint; focus-out
+// does nothing. State is bounded even for unterminated or oversized strings.
 type terminalKeys struct {
+	focusIn    bool // set only for the byte completing an unparameterized CSI I
 	state      uint8
 	sequence   [32]byte
 	sequenceN  int
@@ -335,6 +342,7 @@ const (
 )
 
 func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
+	d.focusIn = false
 	if d.state == terminalKeyMouse {
 		// Legacy CSI M has three trailing coordinates, unlike SGR mouse
 		// reports whose coordinates precede the final M/m. Consume UTF-8
@@ -413,6 +421,10 @@ func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
 		case b == 0x18:
 			d.state = terminalKeyGround
 		case b >= 0x40 && b <= 0x7e:
+			// xterm mode 1004 reports CSI I/O, with no parameters. Do not
+			// release any part as keys or treat SS3/parameterized I as focus.
+			// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-FocusIn_FocusOut
+			d.focusIn = d.state == terminalKeyCSI && b == 'I' && d.sequenceN == 0
 			paste := d.state == terminalKeyCSI && b == '~' && d.sequenceN == 3 && string(d.sequence[:3]) == "200"
 			mouse := d.state == terminalKeyCSI && b == 'M' && d.sequenceN == 0
 			d.state = terminalKeyGround

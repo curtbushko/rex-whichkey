@@ -12,8 +12,10 @@ owned-popup cleanup in one Linux Rex session. That does not verify the later
 idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
 compatibility or Home Manager activation. The coordinator's Phase08 gate adds
 35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
-[delivery inventory](docs/acceptance.md) for REQ-001–REQ-020 and revision-bound
-results. No minimum tested Rex build or general runtime certification is claimed.
+[delivery inventory](docs/acceptance.md) for REQ-001–REQ-022 and revision-bound
+results. Phase09 adds default Zoom removal and focus-in repaint; earlier runtime
+observations do not verify these changes or native GUI tab-return visibility.
+No minimum tested Rex build or general runtime certification is claimed.
 
 ## Install on the Rex server host
 
@@ -219,6 +221,8 @@ provider rules, callback lifetimes and completion safety; the
 
 Focus actions remain available in custom mappings, for example
 `{ "fl", "pane.focus", desc = "Focus right", args = { direction = "right" } }`.
+Zoom also remains available explicitly as
+`{ "z", "pane.zoom", desc = "Zoom pane" }`, but is not a default binding.
 The Focus group and Rex-known-hosts listing are **not defaults**. To opt into
 inventory explicitly, include a provider group in your own `spec`:
 
@@ -253,13 +257,19 @@ optional `rex_whichkey.defaults` Lua fragments supply the same keys/intent:
 | `tn`, `th`, `tl`, `tr`, `tx` | Tab new, previous, next, rename, close. |
 | `t1`–`t9` | Go to a tab by its one-based index. |
 | `v`, `s` | Split right / down. |
-| `z`, `x`, `e`, `c` | Zoom, close pane, toggle sidebar, toggle command palette. |
+| `x`, `e`, `c` | Close pane, toggle sidebar, toggle command palette. |
 
 Session/tab/pane close bindings require confirmation. Named actions and callbacks
 share the confirmation path. Native interaction has **no fixed idle deadline**;
 RPC/preflight, dispatch and cleanup operations still have bounded timeouts. The
 foreground parent watches the captured origin/app generation, and the child is
-tied to that parent by a private lifetime pipe, not a daemon.
+tied to that parent by a private lifetime pipe, not a daemon. Switching tabs alone
+is not cancellation. The terminal saves/enables/restores xterm focus-reporting
+mode 1004; a complete focus-in report repaints the existing menu with its current
+submenu/page/confirmation and theme, without navigation or action dispatch.
+Focus-out does not cancel or steal focus. No periodic repaint or replacement
+popup is created. This depends on the terminal delivering focus reports; it is
+not a guarantee that every native app restores a floating layer visually.
 
 Configured Lua invocations retain their authenticated 30-second lifetime, starting
 before mapping evaluation/preparation, with five seconds reserved for teardown

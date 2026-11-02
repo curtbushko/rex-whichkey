@@ -1,5 +1,46 @@
 # Release delivery inventory and limitations
 
+## Tab-return and default Zoom removal: REQ-021/022
+
+Accepted **REXWHICHKEY-20261102-102253** under the
+[Phase09 design](../.tasks/designs/rex-whichkey-tab-return.md) removes default Zoom
+and addresses native popup return to its originating tab. This is a new source
+delivery, not a reinterpretation of Phase07/08 runtime passes.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-021 — remove default Zoom | [`defaults.go`](../defaults.go) and [`defaults/panes.lua`](../lua/rex_whichkey/defaults/panes.lua) no longer generate `z`/Zoom. The Lua composer still imports that real panes fragment. Split/close/session/tab/app bindings and confirmation remain; explicit custom `pane.zoom` remains available. | Static source trace only here. Fresh mixed Go/Lua/docs review and coordinator compilation/root-menu inspection must cover the frozen Phase09 revision. |
+| REQ-022 — native tab return | [`terminal.go`](../terminal.go) saves/enables/restores xterm focus-reporting mode 1004. The real popup's ordered `PaletteDecoder` -> `terminalKeys` input path recognizes only complete unparameterized `CSI I` as focus-in. `RunTerminal` repaints via `drawTerminal` -> `RenderMenu` without `HandleKey`, preserving submenu/page/confirmation and current theme. Focus-out does nothing; no timer, focus stealing or replacement layer is added. | Decoder/render tracing is not runtime proof of native GUI visibility or terminal focus-report delivery. Fragmented/multiple/OSC-interleaved report framing, other terminal-input protection, resize/zero-size and restoration are statically inspected, not experimentally verified by the leaf. |
+
+The native no-argument path remains `LaunchPopup` -> `launchNativePopup` ->
+`runPopupWithLifetime(popupNative)` -> `RunNativePopupTerminal` -> `RunTerminal`
+through `runPopupTerminal`. [`popup.go`](../popup.go) retains deadline-free native
+interaction, the private parent-lifetime pipe, captured endpoint/session/block/app
+generation checks, exact owned-only cleanup and no uncertain retry. Its origin
+watcher checks membership/placement, not active-tab visibility. No evidence here
+establishes transient attachment loss as the reported cause, so its liveness and
+selection-authorization policy is unchanged. The configured original-VM route
+still enforces authenticated 30-second expiry and graceful expected dismissal;
+absence of native idle expiry does not renew configured authority.
+
+Coordinator artifacts under `.mtn-tmp/tab-recovery/reproduction/` retained the same
+native process/layer/menu through pre-change server focus and app tab-goto
+round-trips. They did **not** establish actual GUI frame visibility, a crash or an
+attachment-loss root cause. The captured new-layer API has no persistence option.
+The separately reported several-app diagnostic is not an explanation of tab-return
+visibility, and no client-selection policy is changed to work around it.
+
+[Task 09-01](../.tasks/tasks/rex-whichkey-09-01-tab-return.md) and the
+[phase record](../.tasks/phases/rex-whichkey-09-tab-return.md) own fresh review,
+compilation and the coordinator-only bounded normal-popup gate: idle/color,
+root/submenu tab-away/back via owned diagnostic tabs, genuine focus-in repaint,
+retained navigation, Escape exit0 and exact popup cleanup. Actual observations
+must identify frozen head/tree, process/layer/focus/frame and whether disappearance
+was reproduced. Terminal/server captures alone do not certify the native app's
+GUI or every platform. No Phase09 compilation, tests, TDD, product/API/GUI
+experiments or configuration changes were run by this builder; no pending gate
+is reported as passed. L1–L5/L8/L9 remain applicable.
+
 ## Popup polish: source delivery and targeted runtime evidence
 
 Accepted **REXWHICHKEY-20261102-081654** adds REQ-018/019/020 under the
@@ -104,7 +145,8 @@ Requirements come from `.tasks/prds/rex-whichkey.md`, with stable REQ-001–REQ-
 `.tasks/prds/rex-whichkey-usability.md` adds REQ-016/017 without renumbering or
 reopening completed phases02–06. The popup-polish design adds REQ-018–REQ-020;
 its accepted lifetime/default/color refinements supersede earlier source descriptions
-where noted below.
+where noted below. The tab-return design adds REQ-021/022 without rewriting that
+history.
 
 The later direction **REXWHICHKEY-20261031-072107** supersedes earlier experimental,
 TDD, live-Rex and final acceptance-matrix execution requirements, not product
@@ -126,7 +168,8 @@ checks, live API probes, remote trials, disconnected-origin exercises and
 configuration reloads. Go compilation and Nix package builds did run, as recorded
 below; they are not test or runtime passes. No new acceptance runner is
 introduced. The targeted task `07-05` runtime gate above is the later explicit
-exception, extended by Phase08 to the idle/default/color gate above. Only the
+exception, extended by Phase08 to the idle/default/color gate and by Phase09 to
+the bounded tab-return gate above. Only the
 revision-bound recorded observations count as passes. Existing test files and
 historical evidence are preserved, not converted into current passes.
 
@@ -160,7 +203,7 @@ Phase07 startup/default-endpoint paths.
 | REQ-007 — confirmation | [`menu.go`](../menu.go) accepts exactly y at the prompt; any other key cancels without fallthrough. [`mapping.go`](../mapping.go), [`popup.go`](../popup.go) and [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua) validate confirmation against the retained mapping for named actions and callbacks. Reviews 04-01/03-05/03-04/04-05. | No confirmation/cancellation/destructive-action runtime exercise. Confirmation is an authenticated popup assertion, not cryptographic proof of a physical keypress. L2/L4. |
 | REQ-008 — geometry/rendering | [`layout.go`](../layout.go)/[`render.go`](../render.go) constrain cell-based columns, paging, grapheme-safe clipping, breadcrumbs/icons/help; [`popup.go`](../popup.go) selects native top/bottom/left/right/center bounds. [`terminal.go`](../terminal.go) consumes actual frame placements/Lines and passes Pages to key handling. Reviews 04-02/04-04/04-05. | All five positions, native floating-layer clipping, resize and tiny-terminal geometry remain graphically unverified. No old full-window overlay workaround is adopted. L1/L5. |
 | REQ-009 — theme/terminal safety | [`theme.go`](../theme.go) supplies palette decoding, semantic contrast-aware styles, default/fallback colors, NO_COLOR and ASCII decorations; [`render.go`](../render.go) uses styles/decorations. [`terminal.go`](../terminal.go) orders palette metadata before keys and restores terminal state before returning a result. Reviews 04-03/04-02/04-04/04-05. | Real palette behavior, glyph widths and restoration were not exercised. Unknown background uses immediate ANSI semantic accents with default body text/background; measured palette contrast applies only when background metadata is valid. ASCII does not transliterate user labels. Phase08 review above. L1/L3/L5. |
-| REQ-010 — built-ins/session parity | [`defaults/sessions.lua`](../lua/rex_whichkey/defaults/sessions.lua), [`tabs.lua`](../lua/rex_whichkey/defaults/tabs.lua), [`panes.lua`](../lua/rex_whichkey/defaults/panes.lua), [`app.lua`](../lua/rex_whichkey/defaults/app.lua), [`init.lua`](../lua/rex_whichkey/defaults/init.lua) and dispatcher provide session/tab lifecycle/navigation, split/zoom/close, sidebar and palette. Default Focus and host groups were removed in 08-02; custom focus actions and explicit host providers remain. Reviews 05-01–05-03/05-04, 03-04 and 08-02. | Each actual Rex action, native rename/picker interaction and old-plugin runtime parity remain unexecuted. Session switch delegates Rex's picker, not an enumerated popup session list. L1/L2. |
+| REQ-010 — built-ins/session parity | [`defaults/sessions.lua`](../lua/rex_whichkey/defaults/sessions.lua), [`tabs.lua`](../lua/rex_whichkey/defaults/tabs.lua), [`panes.lua`](../lua/rex_whichkey/defaults/panes.lua), [`app.lua`](../lua/rex_whichkey/defaults/app.lua), [`init.lua`](../lua/rex_whichkey/defaults/init.lua) and dispatcher provide session/tab lifecycle/navigation, split/close, sidebar and palette. Default Focus and host groups were removed in 08-02 and Zoom in Phase09; custom focus/zoom actions and explicit host providers remain. Reviews 05-01–05-03/05-04, 03-04 and 08-02. | Each actual Rex action, native rename/picker interaction and old-plugin runtime parity remain unexecuted. Session switch delegates Rex's picker, not an enumerated popup session list. L1/L2. |
 | REQ-011 — origin/focus/cleanup | [`rex/block.go`](../rex/block.go)/[`layer.go`](../rex/layer.go), [`dispatch.lua`](../lua/rex_whichkey/dispatch.lua), [`popup.go`](../popup.go), Lua launcher: captured server/session/block/client/connection generation, current placement lookup, origin focus and returned-owned-terminal cleanup. Reviews 02-03/03-04/04-05 and documentation 05-05. | Recorded native dismissal cleanup is limited to the frozen targeted gate above. Moved-block, reconnect, error cleanup and disconnected-origin behavior remain unverified. No local/current-client fallback or broad cascading cleanup is intended. L2/L3/L4. |
 | REQ-012 — known hosts | [`rex/hosts.go`](../rex/hosts.go) decodes `rex hosts --json`; [`hosts.go`](../hosts.go)/[`terminal.go`](../terminal.go), [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) expand explicit known-hosts provider groups once per invocation. IDs, labels, home metadata and warnings remain distinct; generated rows are non-executable. Reviews 02-04/05-04. | No current discovery or reachability trial. A failed listing produces a warning, not successful empty inventory. Execution-host inventory differs from origin-server selection. L6. |
 | REQ-013 — remote compatibility | Captured targeting in [`rex/`](../rex), server-local loading/launch in Lua/config/popup paths, and [remote-compatibility.md](remote-compatibility.md). Reviews 02-01–02-04/03-01/03-04/04-05/05-05. | No remote deployment/trial. Helper/controller/child must share the Rex server host's executable and temporary filesystem; client-local installation does not install remotely. L1/L2/L3/L4/L6. |
@@ -403,7 +446,8 @@ delivery.
   release. Reviews and compilation apply to their recorded frozen revisions;
   later edits require fresh evidence. The narrow native runtime observations
   above are not general acceptance, a coverage claim or authority to execute a
-  final test matrix. Only the bounded coordinator Phase08 gate is authorized.
+  final test matrix. Only the bounded coordinator Phase08/09 gates described above
+  are authorized.
 - **L9 — ordinary launch/native defaults:** the earlier producer revisions have
   recorded review/compilation/integration, but a later normal invocation failed
   for absent custom registrations. Task `07-05` supplies self-contained native

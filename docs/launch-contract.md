@@ -138,9 +138,10 @@ begins, no outcome can select native mode or retry that activation.
 [`defaults.go`](../defaults.go) constructs real canonical `Mapping`/`Config` data,
 not an independent schema or a demo. Its ordered session/tab/pane/application keys,
 icons, native picker/rename semantics and close confirmations match the shipped
-Lua fragments. Neither default set includes the Focus group or a `known-hosts`
-provider. [`defaults/init.lua`](../lua/rex_whichkey/defaults/init.lua) composes only
-sessions, tabs, panes and app fragments; no provider marker means no inventory
+Lua fragments. Neither default set includes Zoom (`z`), the Focus group or a
+`known-hosts` provider. Explicit custom `pane.zoom` remains supported.
+[`defaults/init.lua`](../lua/rex_whichkey/defaults/init.lua) composes only sessions,
+tabs, panes and app fragments; no provider marker means no inventory
 lookup in [`hosts.go`](../hosts.go). Custom `pane.focus` mappings and explicit
 `provider = "known-hosts"` groups remain supported; the optional
 [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) fragment is retained.
@@ -160,6 +161,23 @@ for the child's exit without capping interactive time at the RPC timeout, while
 checking exact origin placement and app connection generation every second.
 Cancellation, signals, terminal/process failure or lost origin still end the
 invocation; there is no persistent daemon or detached indefinite controller.
+The watcher checks captured membership/generation and block placement, not which
+tab is active. Merely switching away/back is not cancellation and causes no Rex
+focus mutation or layer recreation. No observed attachment-loss cancellation has
+been established as the reported tab-return bug; those liveness checks remain.
+
+The actual native path is `LaunchPopup` -> `launchNativePopup` ->
+`runPopupWithLifetime(popupNative)` -> `RunNativePopupTerminal` ->
+`runPopupTerminal` -> `RunTerminal`. Terminal ownership saves/enables/restores
+xterm mode 1004. After ordered `PaletteDecoder` processing, `terminalKeys` consumes
+complete unparameterized `CSI I` as a separate focus-in repaint signal, not a
+mapping token. `RunTerminal` calls `drawTerminal` -> `RenderMenu` on the same
+menu/theme, bypassing `HandleKey`, so submenu/page/confirmation survive. Fragmented
+CSI and OSC-interleaved input retain framing; focus-out (`CSI O`) and other reports
+cannot select or cancel. Existing Escape, mouse and paste protection is unchanged.
+There is no unconditional repaint timer, second layer or focus-stealing callback.
+Focus reporting is a terminal protocol, not a claim of native-app layer persistence;
+apps that do not emit it will not trigger this repaint.
 
 Configured controllers use `runPopupLifecycle`, which always selects the finite
 configured policy. Handoffs require the original future expiry within the canonical
@@ -505,3 +523,24 @@ they do not run compilation, project tests/TDD, experiments, product/API/GUI/rem
 probes or configuration reloads. The targeted coordinator gate executes no native
 menu action or configured callback and certifies neither Darwin nor remote use.
 Private preparation is not the normal entrypoint.
+
+### Phase09 tab-return evidence boundary
+
+Accepted **REXWHICHKEY-20261102-102253** adds REQ-021/022 in the
+[tab-return design](../.tasks/designs/rex-whichkey-tab-return.md). Coordinator captures
+under `.mtn-tmp/tab-recovery/reproduction/` at the pre-change source retained the
+same native process, layer and terminal menu content through both server window
+focus and app tab-goto round-trips. They do not establish what the app actually
+painted, nor a crash/attachment-loss cause. The captured `session.new_layer` schema
+has no persistence option; this change does not invent one or change client
+selection in response to a separate several-app diagnostic.
+
+This source adds the focus-in repaint path and removes default Zoom in both real
+generators. It does not weaken exact origin/app-generation authorization before
+selection or alter configured original-VM expiry. Fresh mixed Go/Lua/docs review,
+coordinator compilation and the bounded root/submenu tab-away/back, focus,
+navigation/Escape/owned-cleanup gate must bind to the new frozen revision.
+Earlier Phase07/08 gates are not Phase09 passes; terminal captures alone are not
+native GUI visual certification. No builder tests, compilation or product/API
+experiments were run for Phase09. See the [inventory](acceptance.md) for lineage
+and remaining uncertainty.

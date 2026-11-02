@@ -54,6 +54,26 @@ background, not a guessed one. Individual roles can converge under extreme
 palette/contrast constraints; distinct roles are not a promise of fixed RGB
 values or universally distinct hues.
 
+## Foreground return
+
+The real popup child retains one menu and theme throughout `RunTerminal`. Its
+terminal ownership now includes saving, enabling and restoring xterm focus-reporting
+mode 1004 alongside wrap, cursor visibility and bracketed paste. The single input
+reader passes bytes through `PaletteDecoder`, then `terminalKeys`; only a complete,
+unparameterized `CSI I` marks focus-in. It requests `drawTerminal` -> `RenderMenu`
+without `HandleKey`, preserving submenu, page and pending confirmation. Fragmented
+reports retain decoder state across reads; multiple reports and interleaved OSC
+replies stay ordered. Focus-out (`CSI O`) and other terminal reports are consumed
+without navigation, dismissal or an action. An incomplete CSI never times out
+into mapping keys.
+
+Repaint uses the current viewport size and theme, including partial palette
+metadata and no-color/ASCII settings. It does not query the palette again, change
+Rex focus, recreate a popup or run an idle redraw timer. See xterm's published
+[focus protocol](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-FocusIn_FocusOut).
+This source path depends on terminal focus-report delivery; it cannot by itself
+prove that a native app restores/displays its floating layer on tab return.
+
 ## Opt-outs, width and terminal safety
 
 - A **nonempty** `NO_COLOR` in the execution environment disables theme color
@@ -91,4 +111,7 @@ observations. The [assembly record](../.tasks/tasks/rex-whichkey-08-04-docs.md) 
 frames. A plain text screenshot or this source description alone proves no color
 pass. The gate covers one existing Linux Rex session, not all palettes, fonts,
 Darwin/remote deployments or configured Lua callbacks. No runtime check is run by
-the documentation builder/reviewer.
+the documentation builder/reviewer. Phase09's focus-in repaint has no new runtime
+result here; earlier Phase07/08 observations do not verify that later path. The
+[tab-return inventory](acceptance.md#tab-return-and-default-zoom-removal-req-021022)
+separates retained server/process evidence from native GUI visibility.
