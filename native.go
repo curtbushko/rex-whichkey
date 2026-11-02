@@ -144,10 +144,21 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
-		if actions[mapping.Action] != "client" {
-			// Only this retained Go-owned action matters; other defaults
-			// need not be available on the selected app.
-			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: selected app does not provide native action %s", mapping.Action)
+		dispatchAction := mapping.Action
+		if mapping.Action == "client.tab.goto" {
+			// Compile only retained numbered-tab intent; the child cannot supply
+			// this action or its exact session/window arguments.
+			dispatchAction = "session.select"
+		}
+		if actions[dispatchAction] != "client" {
+			// Check the actual action being sent, not the translated intent's
+			// name or unrelated defaults on the selected app.
+			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: selected app does not provide native action %s", dispatchAction)
+		}
+		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
+			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
+		if mapping.Action == "client.tab.goto" {
+			return nativeNumberedTab(dispatch, client, bound, executable, mapping)
 		}
 		args := mapping.Args
 		if len(args) == 0 {
@@ -164,8 +175,6 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 				return errors.New("whichkey: native split targeting refused: cannot construct the captured endpoint client")
 			}
 		}
-		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
 		// Recheck the exact captured generation and origin immediately before
 		// one dispatch. A reconnect never renews or silently selects another app.
 		if _, err := bound.originBlock(dispatch, client); err != nil {

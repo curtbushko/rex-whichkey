@@ -164,13 +164,34 @@ coordinator may exercise authorized disposable fixtures and record actual
 resource before/after effects. The selected-window supplement records six observed
 resource effects (`v`, `s`, `x`, `tx`, `wn`, `wx`), not an all-actions pass or proof
 of the revised split destination. The earlier assumed 18-resource/7-GUI partition
-was disproved by actual probes: 19 native GUI outcomes remain uncertified. Tab
-navigation did not update server `active_window_id`; `tn` returned success without
-an observed new server window/session and remains unverified, not conclusively
-broken. Source/registry acceptance or a successful receipt is not GUI proof.
+was disproved by actual probes: that snapshot left 19 native GUI outcomes
+uncertified. The later numbered-tabs supplement records functional evidence for
+`th` and `e`, but not an all-25 pass. Tab navigation did not update server
+`active_window_id`; `tn` returned success without an observed new server
+window/session and remains unverified, not conclusively broken. Source/registry
+acceptance or a successful receipt is not GUI proof.
 Native chrome REQ-026 remains independently blocked. Leaves run source/format/
 whitespace checks only, with no tests/TDD, builds, native/GUI/API/config/font/
 platform experiments or installs.
+
+## Native numbered tabs by exact identity: REQ-030 bounded repair
+
+Accepted **REXWHICHKEY-20261102-165714** in the
+[numbered-tabs supplement](../.tasks/designs/rex-whichkey-numbered-tabs.md)
+refines verbatim native dispatch only for `t1`–`t9`. The coordinator's recorded
+fresh-hidden-target matrix acknowledged all nine numeric goto requests without
+observing expected target geometry; explicit window-ID selection and previous/last
+positive controls worked. This is not evidence that every native route is broken.
+
+| Requirement | Implemented source | Evidence boundary |
+| --- | --- | --- |
+| REQ-030 — reliable native numbered tabs | [`native.go`](../native.go) checks the actual `session.select` native registration after original selection, optional target choice and all cleanup. [`native_tabs.go`](../native_tabs.go) strictly reads parent-retained integer `index` 1–9 matching its `tN` key; existing typed session/window APIs resolve ordered origin-session tabs once and freeze an exact ID. Immediately before one unscoped exact-endpoint `client.perform`, origin placement, chosen app attachment/generation and frozen window membership are rechecked. Action args explicitly name origin session and resolved window; missing/moved targets refuse, reorder never substitutes another ID, and errors/uncertain effects are not retried. Canonical defaults, original completion/confirmation, configured original-VM route, split current-app context, destructive targets and both UI lifecycles remain unchanged. | Source-only implementation; no leaf tests, compilation, RPC or behavioral pass. [Task 14-05](../.tasks/tasks/rex-whichkey-14-05-numbered-tabs.md) requires frozen review and coordinator combined compilation, then actual real-menu `t1`–`t9` against nine fresh hidden targets in exact verified order and a separate visible caller. Observe target-specific app Work geometry after each action, without explicit target selection between dispatch and measurement. Verify missing index, removed/moved target, stale app/origin and cleanup/refusal boundaries. Server focus or action receipts alone are insufficient; no screenshot/pixel certificate or all-25 completion is claimed. |
+
+The translation is parent-owned intent compilation, not a claim to have repaired
+Rex's native numeric `client.tab.goto` action. The all-25 action audit remains open;
+REQ-026 native chrome remains independently blocked. Leaf validation is limited
+to source, formatting and whitespace checks; runtime effects belong to the
+coordinator's frozen candidate gate.
 
 ## Native display independent of app targeting: REQ-023
 

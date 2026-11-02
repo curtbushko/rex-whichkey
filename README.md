@@ -22,8 +22,9 @@ paging hints and measured content-fitting layer height. Phase12 adds compact
 first-frame sizing and status spacers. The later Phase13 correction retains one
 initial rectangle through navigation, superseding live grow/shrink behavior;
 source changes alone do not verify stable runtime bounds. Phase14 adds an explicit
-app chooser after native action selection when several apps are attached; this
-source repair does not certify every default action or GUI-only behavior.
+app chooser after native action selection when several apps are attached, and
+translates native numbered-tab intent to exact window IDs. These source repairs
+do not certify every default action or GUI-only behavior.
 **Hiding native Rex pane/tab/window controls (REQ-026) remains blocked**,
 not waived or fulfilled;
 Phase11/project delivery is partial while that capability is unresolved.
@@ -165,18 +166,31 @@ Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds; nam
 focus and terminal ownership never select a target. `REX_CLIENT` is normally absent.
 No eligible app or a stale/non-app/unattached explicit selector refuses **native
 action targeting**, not popup display. An invalid explicit target never falls back
-to the chooser. The original action, arguments and confirmation survive target
-choice unchanged. Both popups, files and lifetime pipes are cleaned before one
-dispatch. Only the selected action must be available; its exact client ID and
-captured `connected_at` generation plus origin placement are rechecked immediately
+to the chooser. The retained action, arguments and confirmation survive target
+choice unchanged; native numbered tabs are compiled as described below. Both
+popups, files and lifetime pipes are cleaned before one dispatch. The actual
+dispatched action must be available; its exact client ID and captured
+`connected_at` generation plus origin placement are rechecked immediately
 before dispatch, with no reconnect retargeting. Interaction remains deadline-free
 and signal-cancellable across both stages; the short dispatch budget starts after
 choice and cleanup.
 
 Native `v` (Split right) and `s` (Split down) split the focused pane in the
 **chosen app's currently selected tab/window**, not necessarily the launch terminal's
-window. Only these splits omit session/block overrides when asking the app to act;
-the captured origin still authorizes invocation and liveness, not the destination.
+window. These splits omit destination session/block overrides when asking the app
+to act; the captured origin still authorizes invocation and liveness, not the
+destination.
+
+Native `t1`–`t9` retain their canonical `client.tab.goto` one-based integer intent,
+but Go compiles it to documented `session.select` with the captured origin session
+and an exact parent-resolved window ID. After all UI cleanup, Go reads that
+session's ordered tabs, resolves the index once and freezes the ID. It rechecks
+origin/app generation and window membership before dispatch; a missing index or
+removed/moved tab refuses without fallback. Reordering never substitutes a new
+ID. The chosen app must register `session.select`; the child cannot replace the
+action or args. This is intent translation, not a claim that native numeric goto
+was repaired. Configured Lua defaults keep their direct native action route.
+
 Other native actions (including close) retain their existing origin-targeted
 context, and configured menus retain their original-VM contract. Server-wide
 active-window state is not used to choose a split destination.

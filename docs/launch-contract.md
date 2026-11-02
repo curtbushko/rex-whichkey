@@ -165,13 +165,15 @@ tabs, panes and app fragments; no provider marker means no inventory
 lookup in [`hosts.go`](../hosts.go). Custom `pane.focus` mappings and explicit
 `provider = "known-hosts"` groups remain supported; the optional
 [`defaults/hosts.lua`](../lua/rex_whichkey/defaults/hosts.lua) fragment is retained.
-`client.tab.goto` takes a one-based integer index; `pane.split` uses `right`/`down`;
-custom `pane.focus` uses `left`/`down`/`up`/`right`. No app registry is required to
-open the menu. Only the executable retained selection must be reported as
-`kind: "client"` by the app selected after cleanup; unrelated unavailable defaults
-do not block display or that selection. Incompatibility refuses action targeting
-with the Go-owned selected action name, never a fabricated action or route switch.
-Rex remains responsible for final action/schema/Remote Control checks.
+The canonical `client.tab.goto` intent uses a one-based integer index;
+`pane.split` uses `right`/`down`; custom `pane.focus` uses
+`left`/`down`/`up`/`right`. No app registry is required to open the menu. Only the
+actual action to dispatch must be reported as `kind: "client"` by the app selected
+after cleanup; for native `t1`–`t9` this is `session.select`, as described below.
+Unrelated unavailable defaults do not block display or that selection.
+Incompatibility refuses targeting with the actual Go-owned dispatch action name;
+there is no speculative fallback. Rex remains responsible for final
+action/schema/Remote Control checks.
 
 [`native.go`](../native.go) retains an independent immutable parent snapshot and
 passes canonical configuration to `runPopupWithLifetime` in
@@ -269,8 +271,8 @@ capability/expiry and finite controller policy are unchanged.
 
 After choice and cleanup, a fresh three-second dispatch context remains a child
 of that outer signal context. Native dispatch revalidates the original selection,
-checks only its action's metadata on the bound app, then rechecks that exact
-captured generation plus origin immediately before execution. Lost attachments,
+checks the actual dispatch action's metadata on the bound app, then rechecks its
+exact captured generation plus origin immediately before execution. Lost attachments,
 reconnects or stale choices fail; no re-enumeration silently replaces the target.
 The chooser cannot renew the captured generation.
 
@@ -289,11 +291,51 @@ The captured contract is `.mtn-tmp/action-audit/client-perform-api.json`; missin
 `block_id` explicitly means the client's focused block. Arguments stay `right` or
 `down`, never the CLI spelling `below`.
 
-Every other native action keeps trusted action/args once through
+### Native numbered-tab intent compilation
+
+Accepted **REXWHICHKEY-20261102-165714** in the
+[numbered-tabs supplement](../.tasks/designs/rex-whichkey-numbered-tabs.md)
+supersedes verbatim dispatch only for native `t1`–`t9`.
+[`native_tabs.go`](../native_tabs.go) strictly decodes the original parent-retained
+`client.tab.goto` Args as one integer `index` from 1 through 9, matching its retained
+`tN` key. Missing/null/duplicate/unknown fields, coercions or out-of-range indices
+refuse; no guessed zero-based/string args are sent. The canonical Go/Lua defaults,
+original completion and confirmation remain immutable. Child data still carries
+only selection identity/confirmation, never replacement actions or arguments.
+
+Only after both menu/chooser lifecycles and all private files/leases are cleaned,
+the parent uses existing typed `rex.Client.Session` / `Session.Windows` APIs to
+read the captured origin session's ordered windows. It resolves the one-based
+position once and freezes that exact window ID. A missing index refuses. Before
+one dispatch it rechecks exact origin placement, chosen app attachment and
+`connected_at`, then uses `Window.Inspect` to recheck the frozen ID's membership
+in the same origin session. Removal or movement out of the session refuses;
+reordering does not cause index re-resolution or substitute another window.
+These are bounded pre-dispatch checks, not an atomic lock on Rex resources.
+
+The actual app action must be registered as native `session.select`; checking only
+`client.tab.goto` registration would not authorize this translated request. The
+retained action contract in `.mtn-tmp/action-audit/work-actions.json` documents
+`session.select` with required `session_id` and optional `window_id`. Go sends both
+explicitly as action args, using one documented `client.perform` through a separate
+unscoped exact-endpoint client: `client_id`, `action: "session.select"`,
+`args: {session_id: ORIGIN_SESSION, window_id: RESOLVED_WINDOW}`, `origin: "cli"`,
+`timeout_ms: 3000`. There is no outer session/block override or ambient current
+client/server selection. All lookup/recheck/dispatch work shares the fresh
+three-second signal-cancellable context. No missing-window/app fallback or retry
+follows errors, including uncertain mutation/timeout/decode failures. A successful
+receipt alone is not evidence that the app displayed the target tab.
+
+This is intentional Go-owned intent compilation, not a repair of Rex's numeric
+`client.tab.goto` implementation. Configured authenticated original-VM dispatch
+and Lua defaults remain direct native actions. Native previous/next, splits and
+all destructive actions retain their existing behavior.
+
+Every remaining native action keeps trusted action/args once through
 `rex --server ENDPOINT --client FULL_CLIENT --autostart=false --timeout 3s do ACTION
 --session FULL_SESSION --block FULL_BLOCK --args -`; args travel on stdin and
 output is discarded with a shared 64 KiB budget. In particular, destructive close
-targets do not change. Configured original-VM routing is also unchanged. Both
+targets do not change. Configured original-VM routing is also unchanged. All
 native dispatch paths have the same three-second context, sanitized failure or
 uncertain-effect errors and no retries or fallback. Dismissal of either stage
 executes no native action.
