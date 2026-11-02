@@ -17,6 +17,14 @@ type MenuFrame struct {
 	X, Y, Width, Height int
 	Page, Pages         int
 	Lines               []string
+
+	// PreferredHeight is the natural row count at the supplied viewport width:
+	// all current entries (or the confirmation/empty message), both status
+	// borders, and no blank padding. It is independent of viewport height,
+	// page clipping and the selected page; it can exceed Height, even when
+	// Height is zero. Counts saturate at the largest int. Inactive menus and
+	// nonpositive widths report zero.
+	PreferredHeight int
 }
 
 type menuSpan struct {
@@ -34,17 +42,10 @@ type menuLine []menuSpan
 // preserves user titles, keys and labels, rather than transliterating them.
 func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuFrame {
 	frame := MenuFrame{Pages: 1}
-	if menu == nil || menu.Done() || width <= 0 || height <= 0 {
+	if menu == nil || menu.Done() || width <= 0 {
 		return frame
 	}
 	header := menuHeader(menu, config, theme)
-	help := "Keys: select/open  Esc/Backspace: back"
-	if menu.Prefix() == "" {
-		help = "Keys: select/open  Esc/Backspace: quit"
-	}
-	if menu.QuitWithQ() {
-		help += "  q: quit"
-	}
 
 	entries := menu.Entries()
 	items := make([]menuLine, 0, max(1, len(entries)))
@@ -56,7 +57,6 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 		// Keep confirmation keys on the content row as well as help: content
 		// is the only guaranteed row in an extremely short terminal.
 		items = []menuLine{{menuText(ThemeCritical, "y=yes / other=cancel: "+pending.Label)}}
-		help = "y: confirm  Any other key: cancel"
 	} else if len(items) == 0 {
 		items = []menuLine{{menuText(ThemeMuted, "No visible mappings")}}
 	}
@@ -64,18 +64,17 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	for i, item := range items {
 		itemWidths[i] = uniseg.StringWidth(item.plain())
 	}
-	// Use the largest possible page digits when sizing chrome, so the menu
-	// rectangle and its page capacity do not jump as Tab changes pages.
-	footerWidth := uniseg.StringWidth(menuFooter(len(items)-1, len(items), confirming))
-	layout := layoutMenu(width, height, config.Position, itemWidths,
-		uniseg.StringWidth(header.plain()), uniseg.StringWidth(help), footerWidth, menu.Page())
+	layout := layoutMenu(width, height, config.Position, itemWidths, menu.Page())
+	frame.PreferredHeight = layout.preferredHeight
+	if height <= 0 {
+		return frame
+	}
 	frame.X, frame.Y = layout.x, layout.y
 	frame.Width, frame.Height = layout.width, layout.height
 	frame.Page, frame.Pages = layout.page, layout.pages
 
 	if layout.header {
-		line, _ := header.render(theme, layout.width)
-		frame.Lines = append(frame.Lines, line)
+		frame.Lines = append(frame.Lines, menuStatus(header, theme, layout.width))
 	}
 	cellWidth := (layout.width - (layout.columns-1)*menuColumnGap) / layout.columns
 	start := layout.page * layout.capacity
@@ -83,10 +82,11 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	for row := 0; row < layout.rows; row++ {
 		var line strings.Builder
 		for column := 0; column < layout.columns; column++ {
-			index := start + row*layout.columns + column
-			if index >= end {
+			index := start + row*layout.columns
+			if column >= end-index {
 				break
 			}
+			index += column
 			text, used := items[index].render(theme, cellWidth)
 			line.WriteString(text)
 			if column+1 < layout.columns && index+1 < end {
@@ -96,16 +96,12 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 		frame.Lines = append(frame.Lines, line.String())
 	}
 	if layout.help {
-		line, _ := (menuLine{menuText(ThemeMuted, help)}).render(theme, layout.width)
-		frame.Lines = append(frame.Lines, line)
-	}
-	if layout.footer {
 		role := ThemeMuted
 		if confirming {
 			role = ThemeCritical
 		}
-		line, _ := (menuLine{menuText(role, menuFooter(layout.page, layout.pages, confirming))}).render(theme, layout.width)
-		frame.Lines = append(frame.Lines, line)
+		help := menuHelp(menu, confirming, layout.page, layout.pages, layout.width)
+		frame.Lines = append(frame.Lines, menuStatus(menuLine{menuText(role, help)}, theme, layout.width))
 	}
 	return frame
 }
@@ -155,15 +151,67 @@ func menuEntryLine(entry MenuEntry, config Config, theme Theme) menuLine {
 	return append(line, menuText(role, entry.Label))
 }
 
-func menuFooter(page, pages int, confirming bool) string {
+// Choose complete hints before grapheme clipping, using the whole row so
+// decoration yields before essential keys. At tiny widths prefer Escape over
+// a partial page counter; confirmation always keeps a cancellation hint.
+func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
+	var hints []string
 	if confirming {
-		return "Confirmation required"
+		hints = []string{
+			"y: confirm  Any other key: cancel",
+			"y=yes other=cancel",
+			"y=yes Esc=cancel",
+			"Esc: cancel",
+		}
+	} else {
+		navigation := "back"
+		if menu.Prefix() == "" {
+			navigation = "quit"
+		}
+		navigationHint := "Esc/Backspace: " + navigation
+		full := navigationHint + "  key: select/open"
+		if menu.QuitWithQ() {
+			full += "  q: quit"
+		}
+		if pages > 1 {
+			counter := fmt.Sprintf("%d/%d", page+1, pages)
+			paging := counter + " Tab: next  "
+			hints = []string{
+				paging + full,
+				paging + navigationHint,
+				counter + " Tab Esc: " + navigation,
+				counter + " Tab Esc",
+				"Tab Esc",
+			}
+		} else {
+			hints = []string{full, navigationHint, "Esc: " + navigation}
+		}
 	}
-	footer := fmt.Sprintf("Page %d/%d", page+1, pages)
-	if pages > 1 {
-		footer += "  Tab: next page"
+	for _, hint := range hints {
+		if uniseg.StringWidth(hint) <= width {
+			return hint
+		}
 	}
-	return footer
+	return "Esc"
+}
+
+// Status text shares its row with a horizontal rule, not an extra border row.
+// Narrow terminals spend their cells on hints rather than decorative padding.
+func menuStatus(line menuLine, theme Theme, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	rule := theme.Decoration("─", "-")
+	if line.plain() == "" {
+		return theme.Style(ThemeMuted, strings.Repeat(rule, width))
+	}
+	if uniseg.StringWidth(line.plain()) > width-4 {
+		text, used := line.render(theme, width)
+		return text + theme.Style(ThemeMuted, strings.Repeat(rule, width-used))
+	}
+	text, used := line.render(theme, width-4)
+	return theme.Style(ThemeMuted, rule+" ") + text +
+		theme.Style(ThemeMuted, " "+strings.Repeat(rule, width-used-3))
 }
 
 func menuDecoration(theme Theme, glyph, fallback string) string {
