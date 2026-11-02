@@ -6,6 +6,84 @@ roles live in [`theme.go`](../theme.go), not in a second Lua/Nix theme schema.
 [`terminal.go`](../terminal.go) writes the styled frames and updates the theme
 when terminal palette metadata arrives.
 
+## Compact status borders and paging
+
+[`render.go`](../render.go) and [`layout.go`](../layout.go) separate three regions:
+a full-width top status border containing title/icon/breadcrumbs, the menu entries,
+and a full-width bottom status border containing concise key hints. Status text
+shares its row with the horizontal rule (`─`, or `-` in ASCII mode); no additional
+blank padding, `Keys:` prefix or separate page-footer row is generated. These are
+terminal text borders, not native Rex pane/tab/window controls.
+
+A single-page menu has no page counter or Tab hint. Multiple pages retain a
+`current/total` counter and Tab navigation in the bottom border where width permits.
+Paging shares that row rather than allocating another row that could itself
+cause pagination. The renderer picks shorter complete hints before grapheme
+clipping; at narrow widths Escape takes priority over decoration/counter text.
+Hidden and off-page bindings remain active, and Tab still wraps through pages.
+
+Content takes priority: three available rows permit both status borders, two
+permit content plus bottom hints, and one permits content alone. Confirmation
+replaces the entries with `y=yes / other=cancel: …` in the critical role, so
+confirmation/cancellation instructions remain on the content row even without
+status borders, subject to width clipping. A zero-height viewport draws nothing
+but does not mutate navigation. Semantic roles and text warnings remain intact
+without color; ASCII mode changes decorations, not user labels.
+
+## Actual layer height and measurement limits
+
+`MenuFrame.PreferredHeight` is the natural terminal-row count at the current
+width: all current entries (or one confirmation/empty message) plus both status
+borders, with no blank padding. It is independent of viewport-height clipping,
+pagination and selected page. `Height`/`Lines` still describe only the constrained
+visible frame. The geometry controller consumes this exact producer value, not
+a second menu measurement or the already-clipped frame height.
+
+The popup child publishes preferred rows and its actual terminal columns/rows
+only when those values change. The parent uses the existing liveness watcher to
+fit the **same owned floating layer**, through `Layer.Resize`, rather than centering
+a small frame inside the old fixed-height rectangle. Popup frames start at row
+zero during settling; standalone `RunTerminal` positioning is unchanged. See the
+[launch contract](launch-contract.md#private-preferred-row-hints-and-owned-layer-sizing)
+for private-file validation, ownership and cleanup.
+
+Sizing uses current normalized layer bounds and applied terminal rows whose
+current owner has exactly one matching, timestamped desired-size report. Seeded
+80×24 defaults alone are not measurements. Missing provenance pauses adaptation
+without canceling native display; zero or child/server-disagreeing dimensions do
+not drive a resize. Optional cell-pixel dimensions help detect geometry changes;
+applied rows suffice when pixels are absent. No font size is guessed or changed.
+Owner, width, row/cell-geometry and natural-content changes trigger reevaluation.
+
+The original position rectangle caps height: top/bottom use at most 40% of the
+window height, center 60%, and left/right 100%. Width and horizontal placement
+stay unchanged. Shrinking/growing preserves the original top edge, bottom edge,
+or vertical center (center/side positions). Menus too tall for that cap paginate.
+Half-row headroom and a one-row deadband tolerate rounding, so fitting is not a
+promise of pixel-tight native borders. Newer owner reports and stable samples
+bound successive corrections; missing fresh reports after a resize,
+nonconvergence or uncertain resize fail closed rather than looping or dispatching
+a selection. Report timestamps
+are not native layer-application acknowledgements. There is no idle repaint
+timer, replacement popup, daemon, app-action lookup or global font/settings edit.
+
+### Native controls remain blocked (REQ-026)
+
+The requested per-popup hiding of native Rex pane/tab/window controls is **not
+implemented and not deferred by the user**. Retained `session.new_layer` and
+`session.resize_layer` schemas expose bounds/layout/focus, not a chrome switch;
+the shell creator rejects unknown options. The captured connected-app action
+registry and published Lua layout reference provide no supported per-popup
+control/header/toolbar suppression. This is a limitation of the inspected Rex
+capabilities, not proof that no future Rex version can support it.
+
+No undocumented flag, global setting, font change or clipped-over control is a
+substitute. A supported Rex capability/update or explicit user deferral is needed;
+Phase11/project completion remains blocked by this requirement. The
+[acceptance inventory](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
+indexes the API evidence and distinguishes measured server layer/terminal frames
+from native GUI chrome, including remote clients.
+
 ## Roles and inspiration
 
 | Content | Role | Preferred treatment |
@@ -102,6 +180,14 @@ prove that a native app restores/displays its floating layer on tab return.
   bounded best effort, not a guarantee after SIGKILL or server/terminal loss.
 
 ## Evidence
+
+The [compact-presentation inventory](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
+records supplied producer review/compilation and coordinator measurements at
+`3c68b784`, including actual root/Tabs/back normalized bounds, terminal rows and
+VT/HTML status frames. That one font/viewport observation is not a font-change,
+five-position, multipage, tiny-viewport, ASCII or no-color runtime matrix, nor
+native-controls-removal proof. Documentation leaves run static checks only;
+revision-bound assembly outcomes belong to task 11-04 and its phase record.
 
 [Theme task 08-03](../.tasks/tasks/rex-whichkey-08-03-theme.md) records fresh source
 review and coordinator compilation at `3e9a1fd`; those are not graphical

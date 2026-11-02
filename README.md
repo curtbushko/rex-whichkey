@@ -12,12 +12,15 @@ owned-popup cleanup in one Linux Rex session. That does not verify the later
 idle-lifetime/color changes or certify configured callbacks, remote/Darwin runtime
 compatibility or Home Manager activation. The coordinator's Phase08 gate adds
 35 seconds of idle time, reduced defaults and VT/HTML color evidence. See the
-[delivery inventory](docs/acceptance.md) for REQ-001–REQ-023 and revision-bound
+[delivery inventory](docs/acceptance.md) for REQ-001–REQ-026 and revision-bound
 results. Phase09 adds default Zoom removal and focus-in repaint; earlier runtime
 observations do not verify these changes or native GUI tab-return visibility.
 Phase10 separates native display from deferred app-action targeting; earlier
 observations do not verify that boundary. No minimum tested Rex build or general
-runtime certification is claimed.
+runtime certification is claimed. Phase11 adds compact status borders, conditional
+paging hints and measured content-fitting layer height. **Hiding native Rex
+pane/tab/window controls (REQ-026) remains blocked**, not waived or fulfilled;
+Phase11/project delivery is partial while that capability is unresolved.
 
 ## Install on the Rex server host
 
@@ -258,7 +261,7 @@ remain active.
 | --- | --- |
 | Esc / Backspace | Up one submenu; dismiss at the root. |
 | `q` | Dismiss at any depth only when `q` is not mapped in that submenu. |
-| Tab | Next page, wrapping to the first. |
+| Tab | Next page when the menu spans multiple pages, wrapping to the first. |
 | `y` in confirmation | Confirm the pending action. |
 | Any other key in confirmation | Cancel that prompt without dispatch or navigation fallthrough. |
 
@@ -294,10 +297,27 @@ only the owned popup and unlink private transport before selected dispatch,
 including actions that may close the caller. Removing the Focus menu does not
 remove that safety restoration. Uncertain actions are never retried.
 
-Positions are `top`, `bottom`, `left`, `right` and `center`. Columns and paging
-adapt to terminal size; very small viewports omit chrome before content. Unicode
-cell-width calculation is not proof of actual client glyph geometry. Keys use
-cyan/blue accents, icons yellow and labels separate primary/group roles. Colors
+Positions are `top`, `bottom`, `left`, `right` and `center`. The title/breadcrumbs
+and concise key hints occupy separate full-width status-border rows above/below
+the entries, without a `Keys:` prefix or a redundant `Page1/1` row. A real
+multi-page menu retains a counter and Tab hints when space permits; tiny viewports
+omit decoration/status rows before content. These terminal borders are not Rex's
+native controls.
+
+The parent fits the **actual owned floating layer's height**, not just the text
+inside it, to current-width natural menu rows, including submenu/back changes.
+It uses measured terminal rows and normalized bounds, with optional cell-pixel
+metadata, not a guessed font size. The original position rectangle remains the
+maximum; capped menus paginate. Unmeasured terminals keep their current bounds
+until usable viewer measurements arrive. No app lookup is added for geometry,
+and no font/settings changes are made. Native controls are **not hidden**: no
+supported per-popup option was found in the retained Rex API evidence, and no
+global workaround is used. See [appearance](docs/appearance.md) and the
+[compact-presentation evidence](docs/acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
+for the one-context observations and remaining limits.
+
+Unicode cell-width calculation is not proof of actual client glyph geometry.
+Keys use cyan/blue accents, icons yellow and labels separate primary/group roles. Colors
 appear immediately using terminal-native ANSI accents even without palette replies;
 valid replies enable contrast-aware styling. See [appearance](docs/appearance.md)
 for fallback and accessibility limits. A nonempty `NO_COLOR` in the **rendering
