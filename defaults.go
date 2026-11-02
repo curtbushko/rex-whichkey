@@ -35,18 +35,10 @@ func nativeDefaults() (Config, error) {
 	config.Spec = append(config.Spec,
 		Mapping{Keys: "v", Action: "pane.split", Desc: "Split right", Icon: "", Args: json.RawMessage(`{"direction":"right"}`)},
 		Mapping{Keys: "s", Action: "pane.split", Desc: "Split down", Icon: "", Args: json.RawMessage(`{"direction":"down"}`)},
-		group("f", "Focus", "󱡁"),
-		Mapping{Keys: "fh", Action: "pane.focus", Desc: "Left", Icon: "", Args: json.RawMessage(`{"direction":"left"}`)},
-		Mapping{Keys: "fj", Action: "pane.focus", Desc: "Down", Icon: "", Args: json.RawMessage(`{"direction":"down"}`)},
-		Mapping{Keys: "fk", Action: "pane.focus", Desc: "Up", Icon: "", Args: json.RawMessage(`{"direction":"up"}`)},
-		Mapping{Keys: "fl", Action: "pane.focus", Desc: "Right", Icon: "", Args: json.RawMessage(`{"direction":"right"}`)},
 		Mapping{Keys: "z", Action: "pane.zoom", Desc: "Zoom pane", Icon: "󰊓"},
 		Mapping{Keys: "x", Action: "pane.close", Desc: "Close pane", Icon: "󰅖", Confirm: true},
 		Mapping{Keys: "e", Action: "client.sidebar.toggle", Desc: "Sidebar", Icon: "󰙀"},
 		Mapping{Keys: "c", Action: "client.palette.toggle", Desc: "Command palette", Icon: ""},
 	)
-	hosts := group("h", "Rex-known hosts (listing only)", "")
-	hosts.Provider = "known-hosts"
-	config.Spec = append(config.Spec, hosts)
 	return ResolveConfig(config, nil, nil)
 }
