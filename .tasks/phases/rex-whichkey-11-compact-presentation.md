@@ -12,13 +12,13 @@ title: 'Phase11: Compact popup presentation'
 mtnCreateRetry:
   key: rex-whichkey-phase11-v1
   intent: 9172ba9b4338588a4faac2117b870be97dcdd6d5416d8048f22e5fa1f0dc32eb
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T17:33:39.158Z'
-dateModified: '2026-11-02T17:34:38.259Z'
+dateModified: '2026-11-02T18:41:40.924Z'
 tags:
   - task
 type: task
@@ -45,4 +45,10 @@ Implement accepted REQ-024 status borders/conditional pagination and REQ-025 act
 ### 2026-11-02T17:34:38.247Z · runtime · unspecified
 
 {"attempt":1,"continuationEvidence":"Same live coordinator process/runId/session/window starts Phase11; no replacement/restart or identity rename. Chrome blocker does not authorize full completion.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/presentation","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-11-compact-presentation.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:df29725a00be8007579da79d1dc9a7e882768879378b3f23f6b38009c7638d3b","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE4OjQxOjQwLjkxNFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiYmxvY2tlciIsInJldHJ5S2V5IjoicGhhc2VzL3JleC13aGljaGtleS0xMS1jb21wYWN0LXByZXNlbnRhdGlvbi5tZC9uYXRpdmUtY2hyb21lLWJsb2NrZXItY2hlY2twb2ludC8xIiwiaW50ZW50IjoiNzkyMTI5MjQ1ZGEwYTI0ZjNmMmRhZmFhMDlmZTJmODU1ODU4ZmQxOGI1YTc1ZGYwYTUyOGI1NTBlMzk4NjhhNCJ9 -->
+### 2026-11-02T18:41:40.914Z · blocker · unspecified
+
+{"actualVerification":[{"command":"Combined final Go/Taskfile and Nix compilation (tests/checks disabled), graph/schema validation and ancestry","result":"pass"},{"command":"Actual final main make run compact root/submenu/back measured bounds/rows/status frame/stability/Escape/owned cleanup","result":"pass"}],"affectedRefs":["tasks/rex-whichkey-11-03-popup-chrome.md","phases/rex-whichkey-11-compact-presentation.md","projects/rex-whichkey.md"],"artifactRefs":[".mtn-tmp/popup-presentation/runtime/final-make-run/result.json",".mtn-tmp/popup-presentation/partial-final/validate.json",".mtn-tmp/popup-presentation/chrome-blocker.json"],"attempt":1,"completedSourceRefs":["tasks/rex-whichkey-11-01-render-frame.md","tasks/rex-whichkey-11-02-popup-height.md","tasks/rex-whichkey-11-04-appearance-docs.md"],"deliveredRequirements":["REQ-024","REQ-025"],"eventId":"phases/rex-whichkey-11-compact-presentation.md/native-chrome-blocker-checkpoint/1","kind":"blocker","limitations":["No phase/project completion or user deferral. Native controls remain visible/unverified, not hidden by a global workaround.","One observed font/viewport context, no font/settings/config changes/reloads, project tests/TDD/general suites, native/destructive selections, configured Lua callback, remote or Darwin trials; server capture not remote GUI certificate."],"openRequirements":["REQ-026"],"reason":"Supported compact presentation work is reviewed/integrated/compiled and actual geometry/navigation/cleanup checked, but accepted REQ026 native pane/tab/window controls hiding remains blocked: installed API/options/actions provide no documented per-popup chrome control. No user deferral or full scope completion.","recordRef":"phases/rex-whichkey-11-compact-presentation.md","requiredRecovery":"Documented supported per-popup capability/approved Rex integration or explicit user deferral; resolve original chrome-task blocker and these parent blockers before further completion.","schemaVersion":1,"sourceCommit":"178d3f80c1d7efeab898e17ae07c883439570f66","sourceTree":"0b71f55d20052f408a1f9533dfe0ba4747b56969","specHash":"sha256:df29725a00be8007579da79d1dc9a7e882768879378b3f23f6b38009c7638d3b"}
 <!-- mtn:end-entry:v1 -->

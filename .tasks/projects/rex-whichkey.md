@@ -48,13 +48,13 @@ title: Rex WhichKey
 mtnCreateRetry:
   key: rex-whichkey-project-registration-v1
   intent: 88f6130a530897fbf1d685eb4890b643d2eff028279c0c073787edf1bf24891f
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T12:39:45.166Z'
-dateModified: '2026-11-02T17:34:35.568Z'
+dateModified: '2026-11-02T18:41:46.305Z'
 tags:
   - task
 type: task
@@ -124,4 +124,10 @@ User explicitly requests Phase07 for zero-argument popup launch (REQ-016) and Li
 ### 2026-11-02T17:34:35.557Z · approval · unspecified
 
 {"approvedBy":"explicit user presentation requests; coordinator bounded design/decomposition","attempt":1,"decision":"approved","decisionEvidence":"User requests no Page1/1, compact content/font-aware height, native controls hidden and separated title/key-hint status borders. Coordinator chooses natural-row renderer contract and bounded private parent-owned geometry adaptation. Native controls capability absent from documented installed schemas/actions; requirement stays open, not waived. No global settings/font changes/tests/destructive/remote authority inferred.","decisionRegisterEntry":{"decision":"Compact status-border rendering and content-fitting owned layer using actual cells; retain native controls hiding as explicitly blocked requirement, no invented flags or full completion.","id":"REXWHICHKEY-20261102-123334","state":"Accepted"},"eventId":"rex-whichkey/presentation/project-decision/1","kind":"approval","recordRef":"projects/rex-whichkey.md","requirements":["REQ-024","REQ-025","REQ-026"],"schemaVersion":1,"specHash":"sha256:cbca9c24c0d3abdb4f41fa323625dcff166bc1b9cb5f2d05c778a7845a30473c"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE4OjQxOjQ2LjI5NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiYmxvY2tlciIsInJldHJ5S2V5IjoicHJvamVjdHMvcmV4LXdoaWNoa2V5Lm1kL25hdGl2ZS1jaHJvbWUtYmxvY2tlci1jaGVja3BvaW50LzEiLCJpbnRlbnQiOiJhYTcwZjYwNmU4ZjRhMzQ0MTFmNjM2N2QxZWM1NGIwODExZjM1NmVhYTdlN2E3MDZiZGI0MTRhNWQwM2IxY2MxIn0 -->
+### 2026-11-02T18:41:46.294Z · blocker · unspecified
+
+{"actualVerification":[{"command":"Combined final Go/Taskfile and Nix compilation (tests/checks disabled), graph/schema validation and ancestry","result":"pass"},{"command":"Actual final main make run compact root/submenu/back measured bounds/rows/status frame/stability/Escape/owned cleanup","result":"pass"}],"affectedRefs":["tasks/rex-whichkey-11-03-popup-chrome.md","phases/rex-whichkey-11-compact-presentation.md","projects/rex-whichkey.md"],"artifactRefs":[".mtn-tmp/popup-presentation/runtime/final-make-run/result.json",".mtn-tmp/popup-presentation/partial-final/validate.json",".mtn-tmp/popup-presentation/chrome-blocker.json"],"attempt":1,"completedSourceRefs":["tasks/rex-whichkey-11-01-render-frame.md","tasks/rex-whichkey-11-02-popup-height.md","tasks/rex-whichkey-11-04-appearance-docs.md"],"deliveredRequirements":["REQ-024","REQ-025"],"eventId":"projects/rex-whichkey.md/native-chrome-blocker-checkpoint/1","kind":"blocker","limitations":["No phase/project completion or user deferral. Native controls remain visible/unverified, not hidden by a global workaround.","One observed font/viewport context, no font/settings/config changes/reloads, project tests/TDD/general suites, native/destructive selections, configured Lua callback, remote or Darwin trials; server capture not remote GUI certificate."],"openRequirements":["REQ-026"],"reason":"Supported compact presentation work is reviewed/integrated/compiled and actual geometry/navigation/cleanup checked, but accepted REQ026 native pane/tab/window controls hiding remains blocked: installed API/options/actions provide no documented per-popup chrome control. No user deferral or full scope completion.","recordRef":"projects/rex-whichkey.md","requiredRecovery":"Documented supported per-popup capability/approved Rex integration or explicit user deferral; resolve original chrome-task blocker and these parent blockers before further completion.","schemaVersion":1,"sourceCommit":"178d3f80c1d7efeab898e17ae07c883439570f66","sourceTree":"0b71f55d20052f408a1f9533dfe0ba4747b56969","specHash":"sha256:cbca9c24c0d3abdb4f41fa323625dcff166bc1b9cb5f2d05c778a7845a30473c"}
 <!-- mtn:end-entry:v1 -->
