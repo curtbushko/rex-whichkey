@@ -26,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:08.762Z'
-dateModified: '2026-11-02T20:38:15.981Z'
+dateModified: '2026-11-02T20:52:56.031Z'
 tags:
   - task
 type: task
@@ -42,3 +42,11 @@ blockedBy:
 REQ030 remains incomplete until all25 verified. After real resource probes, six resource effects can be observed (v/s/x/tx/wn/wx);19 remaining bindings need genuine GUI observability: tn, th/tl/tr/t1..t9, ws/wh/wl/wr, e/c. This corrects unverified initial18-resource/7-UI planning assumption, not scope waiver. Evidence .mtn-tmp/action-audit/observability-correction.md: client.tab.goto null result leaves server active_window_id unchanged; server field is not chosen app's selected tab. Native tn exited0 but no server window or session appeared; may be native UI/client-local tab, not certified working or conclusively broken.
 
 Need actual selected tab/session, sidebar/palette, picker/rename modal and completed rename/new-tab behavior. client.inspect exposes metadata/actions/attached IDs only; terminal send-key drives block PTY, not native app dialogs. Investigate documented capability before pass. If none, BLOCKED recovery approved genuine GUI observation/control or explicit observed user evidence, not invented screenshot/action/args, not stale server focus/palette state or RPC acknowledgment. Do not open unclosable prompts or pretend user deferred requirement. No general tests/settings/font/config/reload/remote/Darwin trials, no destructive user resources. Depends on resource documentation; reserved ownership docs/gui-action-verification.md for future real evidence. Preserve independent native chrome blocker. Source repair can complete while this and entire phase/project stay incomplete.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIwOjUyOjU2LjAyMFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiYmxvY2tlciIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2FjdGlvbi1hdWRpdC9uYXRpdmUtZ3VpLW9ic2VydmFiaWxpdHktYmxvY2tlci8xIiwiaW50ZW50IjoiODZjYTc0ZTE0ZGJlOGQxNGE0ZTcwY2Y4N2RkY2U2NTc1NjBmMDRkNGE5YWMzNmRlOWUzOGY1Y2Y2ZTQ0ZmZhOCJ9 -->
+### 2026-11-02T20:52:56.020Z · blocker · unspecified
+
+{"affectedRefs":["tasks/rex-whichkey-14-03-gui-action-verification.md","phases/rex-whichkey-14-action-audit.md","projects/rex-whichkey.md"],"artifactRefs":[".mtn-tmp/action-audit/api-list.json",".mtn-tmp/action-audit/client-inspect-api.json",".mtn-tmp/action-audit/client-key-api.json",".mtn-tmp/action-audit/tab-navigation-before.json",".mtn-tmp/action-audit/tab-navigation-after.json",".mtn-tmp/action-audit/tab-navigation-probe.json",".mtn-tmp/action-audit/resource-runtime/integrated-selected-source/result.json",".mtn-tmp/action-audit/observability-correction.md"],"attempt":1,"eventId":"rex-whichkey/action-audit/native-gui-observability-blocker/1","kind":"blocker","reason":"Nineteen native GUI outcomes remain behaviorally unverified. Installed client.inspect exposes metadata/actions/attached IDs only; client.key drives a block PTY/Lua bindings, not native app dialogs. A real tab.goto probe returned null without changing shared server active_window_id, so that field cannot certify app tab state. Native tn acknowledged with exit0 but produced no new server window/session, leaving actual app behavior unknown. No safe documented native UI observation/input mechanism for tab/session selected state, new-tab/picker/rename/sidebar/palette. Do not count schema/receipt/server survival as visible behavior or claim every action works.","recordRef":"tasks/rex-whichkey-14-03-gui-action-verification.md","recovery":"Provide approved genuine native-app observation/control capability or explicit observed user evidence for all19 remaining binding outcomes; never invent screenshot/actions/args or waive request silently. Six resource effects and current-window splits can complete independently.","schemaVersion":1,"specHash":"sha256:27c75d06e39f01153b986fa112aefc430a6526bd6b5ada8dd2395479c5d7f74b"}
+<!-- mtn:end-entry:v1 -->
