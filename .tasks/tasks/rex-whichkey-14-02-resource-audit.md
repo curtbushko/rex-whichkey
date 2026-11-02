@@ -7,6 +7,8 @@ workflowRequirements:
 workflowDocuments:
   - ref: designs/rex-whichkey-action-audit.md
     hash: 'sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8'
+  - ref: designs/rex-whichkey-selected-window-splits.md
+    hash: 'sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2'
 workflowOwnership:
   paths:
     - docs/actions.md
@@ -24,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:04.253Z'
-dateModified: '2026-11-02T20:16:06.086Z'
+dateModified: '2026-11-02T20:38:19.628Z'
 tags:
   - task
 type: task
@@ -34,7 +36,13 @@ projects:
 blockedBy:
   - uid: '[[tasks/rex-whichkey-14-01-action-target.md]]'
     reltype: FINISHTOSTART
+  - uid: '[[tasks/rex-whichkey-14-04-selected-window-splits.md]]'
+    reltype: FINISHTOSTART
 ---
-# Verify native default resource effects and document honest action matrix
+# Audit every native default honestly and document observed effects
 
-REQ030, depends on late-targeting repair. Coordinator drives actual native menu selections on disposable action fixtures, before/after resource assertions, exact cleanup; builder documents provided frozen results in docs/actions.md and updates acceptance pointer if owned.18 resource bindings: wn wx tn th tl tx t1..t9 v s x.25 total schema comparisons on both current apps, no guessed action args. Record each binding, expected result, actual observation/status/evidence path. Distinguish initial bare-ambiguity failure, corrected explicit target chooser behavior, confirmed effects, and seven pending native GUI-only bindings (ws wh wl wr tr e c). No all-actions/full-project completion claim. Do not convert receipts or source contracts into behavioral pass. No destructive/user resources; test only owned disposable IDs. No compiler/general tests/config/font/native RPC trials by leaves; coor owns actual runtime. Source ownership docs/actions.md only. Full independent review and combined checks required for completion; UI-only task remains separately required.
+REQ030, depends on completed late-targeting repair and later selected-window split correction. User explicitly requests verification of all25. Actual evidence disproved original planning assumption that shared server active_window_id certifies selected-app tab navigation. It does not (tab-navigation-before/after/probe.json); current app tab state is client-local/unobservable through installed API. Later selected-window design and observability-correction.md refine earlier18/7 partition without waiving any verification.
+
+Coordinator native resource-runtime/frozen-a01 verified effects for six bindings v s x tx wn wx; tn exited0 but no new server window/session was observed, so UNVERIFIED rather than passing or conclusively broken. Native selected-window s/v must be rerun after newest explicit user correction; original launcher-only split evidence is historical, not desired selected-window proof. Other19 bindings tn th tl tr t1..t9 ws wh wl wr e c require native app observation; registration/RPC receipts do not count as behavioral pass.
+
+Builder documents coordinator's frozen final-source evidence in docs/actions.md: all25 binding/action/args/contracts on both live apps, expected result, actual source revision/observations/status/evidence, strict distinction verified effect versus acknowledged/unobserved/pending. Source audit confirms matrix matches native defaults/Lua defaults and directions correct. No fake full all-action/phase/project completion; GUI-only task remains blocked separately and native chrome remains blocked. No live trials/build/tests/compiler-heavy checks by leaves; coordinator only disposable IDs, never user/worker/coordinator resources or settings/fonts/config. Full frozen independent review/combined compilation for documentation completion, no remote GUI certificate.

@@ -4,20 +4,23 @@ workflowOrder: 14
 workflowRequirements:
   - REQ-030
   - REQ-031
+  - REQ-032
 workflowDocuments:
   - ref: designs/rex-whichkey-action-audit.md
     hash: 'sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8'
+  - ref: designs/rex-whichkey-selected-window-splits.md
+    hash: 'sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2'
 title: 'Phase14: Native action audit and late targeting'
 mtnCreateRetry:
   key: rex-whichkey-phase14-v1
   intent: 78526c197c066e6d45f239adde9c381d8850ec6ab6e9aefc13e222b42c0a7a73
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:15:57.031Z'
-dateModified: '2026-11-02T20:19:34.358Z'
+dateModified: '2026-11-02T20:39:08.552Z'
 tags:
   - task
 type: task
@@ -50,4 +53,16 @@ Latest user asks verify every action, specifically broken split down. REQ031 rep
 ### 2026-11-02T20:19:34.346Z · plan · unspecified
 
 {"approvedBy":"Explicit all-action verification and delegated decomposition","attempt":1,"coverage":{"REQ-030":["tasks/rex-whichkey-14-02-resource-audit.md","tasks/rex-whichkey-14-03-gui-action-verification.md"],"REQ-031":["tasks/rex-whichkey-14-01-action-target.md"]},"decision":"approved","decisionEvidence":"Source repair after completed fixed navigation; dependent resource audit18 and distinct GUI-only7 verification. Missing GUI observation is blocker, not pass or silent requirement waiver. GUI verification owns its future concrete evidence document; semantics unchanged.","documents":[{"hash":"sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8","ref":"designs/rex-whichkey-action-audit.md"}],"eventId":"rex-whichkey/action-audit/phase-plan/2","kind":"plan","recordRef":"phases/rex-whichkey-14-action-audit.md","records":[{"ref":"tasks/rex-whichkey-14-01-action-target.md","specHash":"sha256:96e3d8f88d25c2635ed78d7ca7de32eff427d5b07798c755451b9fdce4022e1e"},{"ref":"tasks/rex-whichkey-14-02-resource-audit.md","specHash":"sha256:b621b5b66ba40eba979553ae608dfa32b50aa1da4ff8baaa7ef4b2c998b06490"},{"ref":"tasks/rex-whichkey-14-03-gui-action-verification.md","specHash":"sha256:89d37457c7f33042dbf5f62f87d0f3726fd10c4b1cf9d118060533dad8f084cb"}],"schemaVersion":1,"specHash":"sha256:6132d927b1d5f34e423883d519b2da44374ebf01a6dc14e1c2190cf13316684a"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIwOjM4OjMzLjc4MVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicGxhbiIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2FjdGlvbi1hdWRpdC9waGFzZS1wbGFuLzMiLCJpbnRlbnQiOiIzN2FkYzQxODg0MGYwYWFhZDQxOGZmYWEzNTUyMGYzMmY1OWRlMjhjNTVjYzcwN2Y4NTU0ZjRkMTgwMTM2MzNiIn0 -->
+### 2026-11-02T20:38:33.781Z · plan · unspecified
+
+{"approvedBy":"Explicit selected-window correction and original full action audit/delegation","attempt":1,"coverage":{"REQ-030":["tasks/rex-whichkey-14-02-resource-audit.md","tasks/rex-whichkey-14-03-gui-action-verification.md"],"REQ-031":["tasks/rex-whichkey-14-01-action-target.md"],"REQ-032":["tasks/rex-whichkey-14-04-selected-window-splits.md"]},"decision":"approved","decisionEvidence":"Task04 after delivered task01; resource audit waits04. Preserve task01 frozen history. Correct GUI observability partition from actual probe, not waived all25 requirement; keep GUI test blocked absent capability.","documents":[{"hash":"sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8","ref":"designs/rex-whichkey-action-audit.md"},{"hash":"sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2","ref":"designs/rex-whichkey-selected-window-splits.md"}],"eventId":"rex-whichkey/action-audit/phase-plan/3","kind":"plan","recordRef":"phases/rex-whichkey-14-action-audit.md","records":[{"ref":"tasks/rex-whichkey-14-01-action-target.md","specHash":"sha256:96e3d8f88d25c2635ed78d7ca7de32eff427d5b07798c755451b9fdce4022e1e"},{"ref":"tasks/rex-whichkey-14-02-resource-audit.md","specHash":"sha256:105b2943f517b48304fedefb82962dece256d990aeb137f3261737054df73a27"},{"ref":"tasks/rex-whichkey-14-03-gui-action-verification.md","specHash":"sha256:27c75d06e39f01153b986fa112aefc430a6526bd6b5ada8dd2395479c5d7f74b"},{"ref":"tasks/rex-whichkey-14-04-selected-window-splits.md","specHash":"sha256:e45606dee536698ab72e65b3246de1ec7fdb375d1d3c80cdceb7eaf3e0fe50ad"}],"schemaVersion":1,"specHash":"sha256:b646049ff40610a30099741b3a521686e590a4358f90b47ff4dc219c4c898a3b"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDIwOjM5OjA4LjU0MVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAwMy1jb29yZGluYXRvci1hMDEvcnVudGltZS9zZWxlY3RlZC13aW5kb3ciLCJpbnRlbnQiOiI1YjI4Y2ViNDI4OTJlYmJlMmUxZjk1NTA5YTYzYTRlYmRhMDljNTk1NDYxZDIyMjVkMjRkZTg0YjY5NWMwMjViIn0 -->
+### 2026-11-02T20:39:08.541Z · runtime · unspecified
+
+{"attempt":1,"continuationEvidence":"Same live coordinator, runId/session/window; latest explicit selected-window correction, no restart.","eventId":"rex-whichkey-p03-coordinator-a01/runtime/selected-window","handoff":true,"host":{"endpoint":"unix:///run/user/1000/rex/server.sock","hostId":"cf7ceda2-6cd7-468c-9360-3b7d68de6f91","instanceId":"0f6bfb2f-6739-42b6-a8cb-b226b8a8ec14"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","piSessionId":"rex-whichkey-p03-coordinator-a01","piSessionName":"coordinator","recordRef":"phases/rex-whichkey-14-action-audit.md","rexBlockId":"block:01a1927e-9c44-7693-8d92-6ec72cd57f67","rexSessionId":"session:01a1927e-9c44-7614-b3bc-0de3fd331a9d","rexSessionName":"rex-whichkey-main","rexWindowId":"window:01a1927e-9c45-7176-82af-1a472289ecc4","rexWindowName":"coordinator","role":"coordinator","runId":"rex-whichkey-p03-coordinator-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-team","specHash":"sha256:b646049ff40610a30099741b3a521686e590a4358f90b47ff4dc219c4c898a3b","stage":"launched","thinking":"high","transportDir":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p03-coordinator-a01","windowName":"coordinator","worktree":"/home/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main"}
 <!-- mtn:end-entry:v1 -->

@@ -7,6 +7,8 @@ workflowRequirements:
 workflowDocuments:
   - ref: designs/rex-whichkey-action-audit.md
     hash: 'sha256:2d2d664eb4bbc5828b2f0d6d4a98346becfbbd03d90e8f9abc5a9874edc8b7a8'
+  - ref: designs/rex-whichkey-selected-window-splits.md
+    hash: 'sha256:1d5e6297352b97b84e3ba7730e586130b4103ddb4ad32ed03d35b6ac2ad6e4f2'
 workflowOwnership:
   paths:
     - docs/gui-action-verification.md
@@ -24,7 +26,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T20:16:08.762Z'
-dateModified: '2026-11-02T20:19:29.930Z'
+dateModified: '2026-11-02T20:38:15.981Z'
 tags:
   - task
 type: task
@@ -35,6 +37,8 @@ blockedBy:
   - uid: '[[tasks/rex-whichkey-14-02-resource-audit.md]]'
     reltype: FINISHTOSTART
 ---
-# Verify seven native GUI-only action outcomes
+# Verify nineteen native GUI-local action outcomes
 
-REQ030 completion needs actual observable behavior for ws(session picker), wh/wl(previous/next selected session view), wr/tr(session/tab rename dialog and successful rename), e(sidebar), c(palette). RPC acknowledgement or registration is not behavior proof. Current documented client.inspect only returns metadata/actions/attached session IDs, no chosen session/dialog/sidebar state; terminal key injection controls block TTY, not native app dialogs. Investigate installed documented API/capability evidence. If no native app observation/control exists, mark BLOCKED with exact gap, recovery approved GUI observation/control or explicit observed user evidence; do not open unclosable modal dialogs or invent hidden args/screenshots/actions. Do not claim user deferred requirement. Depends on completed resource matrix. No code ownership until recovery approved; no settings/font/config/remote/Darwin/destructive trials. Root chrome blocker stays unrelated/open. No whole phase/project completion until verified or explicit user changes scope.
+REQ030 remains incomplete until all25 verified. After real resource probes, six resource effects can be observed (v/s/x/tx/wn/wx);19 remaining bindings need genuine GUI observability: tn, th/tl/tr/t1..t9, ws/wh/wl/wr, e/c. This corrects unverified initial18-resource/7-UI planning assumption, not scope waiver. Evidence .mtn-tmp/action-audit/observability-correction.md: client.tab.goto null result leaves server active_window_id unchanged; server field is not chosen app's selected tab. Native tn exited0 but no server window or session appeared; may be native UI/client-local tab, not certified working or conclusively broken.
+
+Need actual selected tab/session, sidebar/palette, picker/rename modal and completed rename/new-tab behavior. client.inspect exposes metadata/actions/attached IDs only; terminal send-key drives block PTY, not native app dialogs. Investigate documented capability before pass. If none, BLOCKED recovery approved genuine GUI observation/control or explicit observed user evidence, not invented screenshot/action/args, not stale server focus/palette state or RPC acknowledgment. Do not open unclosable prompts or pretend user deferred requirement. No general tests/settings/font/config/reload/remote/Darwin trials, no destructive user resources. Depends on resource documentation; reserved ownership docs/gui-action-verification.md for future real evidence. Preserve independent native chrome blocker. Source repair can complete while this and entire phase/project stay incomplete.
