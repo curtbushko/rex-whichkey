@@ -24,7 +24,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-02T17:33:46.520Z'
-dateModified: '2026-11-02T17:34:08.962Z'
+dateModified: '2026-11-02T19:11:37.266Z'
 tags:
   - task
 type: task
@@ -44,4 +44,10 @@ Recover only with documented supported current Rex control or an explicitly appr
 ### 2026-11-02T17:34:08.951Z · blocker · unspecified
 
 {"affectedRefs":["tasks/rex-whichkey-11-03-popup-chrome.md","phases/rex-whichkey-11-compact-presentation.md","projects/rex-whichkey.md"],"artifactRefs":[".mtn-tmp/popup-presentation/new-layer-api.json",".mtn-tmp/popup-presentation/resize-layer-api.json",".mtn-tmp/popup-presentation/terminal-creator.json",".mtn-tmp/popup-presentation/client-actions.json",".mtn-tmp/popup-presentation/lua-reference.md"],"attempt":1,"eventId":"rex-whichkey/presentation/native-chrome-blocker/1","kind":"blocker","reason":"No documented per-popup native header/controls/chrome option in installed session.new_layer/resize_layer/terminal creator schemas or connected app actions and published Lua layout docs. Terminal options reject additional properties. Global settings/user init/Rex source changes are outside authority.","recordRef":"tasks/rex-whichkey-11-03-popup-chrome.md","recovery":"Supply documented supported per-popup Rex capability/update or explicit user requirement deferral. Do not invent flags, modify global settings or mark full phase/project complete.","schemaVersion":1,"specHash":"sha256:00961722dcf9a5f2b742e8fcd91be861c00d825b1f0ed3de4a4f293486ca6250"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTAyVDE5OjExOjM3LjI1NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2ZpcnN0LWZyYW1lL2Nocm9tZS1yZWNoZWNrLzEiLCJpbnRlbnQiOiJhNzAwYWJjOWVjMTAxMDMwM2ZlODkwMGUzYzg2OTg1ZjRmOTZiZDFkNjE5NzNjM2E2Mzk3Yjk0ZWRkZGI3YmMzIn0 -->
+### 2026-11-02T19:11:37.255Z · historical · unspecified
+
+{"attempt":1,"content":"User repeats native title/dock strip visible. Rechecked current CLI help/API/new_layer/creators/client actions; only pane.float relates, no documented frameless/per-popup header/dock option found. Requirement still unimplemented, old blocker not resolved or deferred.","eventId":"rex-whichkey/first-frame/chrome-recheck/1","gateEligible":false,"kind":"historical","provenance":"Coordinator read-only installed API/client-action metadata recheck after user correction; artifacts .mtn-tmp/popup-initial-fit/{rex-help.txt,api-list.txt,new-layer-api.json,block-types.json,client-actions.json}.","recordRef":"tasks/rex-whichkey-11-03-popup-chrome.md","schemaVersion":1,"specHash":"sha256:00961722dcf9a5f2b742e8fcd91be861c00d825b1f0ed3de4a4f293486ca6250"}
 <!-- mtn:end-entry:v1 -->
