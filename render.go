@@ -53,7 +53,9 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 		items = append(items, menuEntryLine(entry, config, theme))
 	}
 	pending, confirming := menu.Confirmation()
-	if confirming {
+	if menu.entry != nil {
+		items = []menuLine{menu.textEntryLine(theme, width)}
+	} else if confirming {
 		// Keep confirmation keys on the content row as well as help: content
 		// is the only guaranteed row in an extremely short terminal.
 		items = []menuLine{{menuText(ThemeCritical, "y=yes / other=cancel: "+pending.Label)}}
@@ -103,7 +105,7 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	}
 	if layout.help {
 		role := ThemeMuted
-		if confirming {
+		if confirming || menu.entry != nil && menu.entry.problem != "" {
 			role = ThemeCritical
 		}
 		help := menuHelp(menu, confirming, layout.page, layout.pages, layout.width)
@@ -129,6 +131,12 @@ func menuHeader(menu *Menu, config Config, theme Theme) menuLine {
 			header = append(header, menuText(ThemeIcon, " "+separator+" "))
 		}
 		header = append(header, menuText(ThemeGroup, crumb.Label))
+	}
+	if menu.entry != nil {
+		if len(header) > 0 {
+			header = append(header, menuText(ThemeIcon, " "+separator+" "))
+		}
+		header = append(header, menuText(ThemeGroup, "Rename tab"))
 	}
 	return header
 }
@@ -162,7 +170,15 @@ func menuEntryLine(entry MenuEntry, config Config, theme Theme) menuLine {
 // a partial page counter; confirmation always keeps a cancellation hint.
 func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
 	var hints []string
-	if confirming {
+	if menu.entry != nil {
+		if menu.entry.problem != "" {
+			hints = []string{menu.entry.problem + "  Esc: back", menu.entry.problem, "Invalid name", "Esc: back"}
+		} else if menu.entry.selected {
+			hints = []string{"Type: replace  Enter: save  Esc: back", "Enter: save  Esc: back", "Enter Esc"}
+		} else {
+			hints = []string{"Enter: save  Esc: back  Ctrl-U: clear", "Enter: save  Esc: back", "Enter Esc"}
+		}
+	} else if confirming {
 		hints = []string{
 			"y: confirm  Any other key: cancel",
 			"y=yes other=cancel",

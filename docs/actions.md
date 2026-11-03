@@ -23,7 +23,8 @@ rechecked immediately before closing; explicit app selectors stay strict. This
 new route is compiled but **not runtime-tested**, per the user's instruction;
 the older native-dispatch resource evidence below predates this route.
 
-Native rename dialogs were not replaced. The proposed whichkey rename prompt
+At the earlier routing-only revision, native rename dialogs were not replaced.
+The proposed whichkey rename prompt
 (`REXWHICHKEY-20261102-193858`) was **rejected by the user**. Bare CLI launch
 context contains the session and pane IDs but not an invoking GUI app ID. The
 user directed use of the associated GUI app ID exposed by the CLI: native `tr`
@@ -54,6 +55,19 @@ native dialogs/pickers are unchanged. New Tab freezes its app before creation;
 its subsequent activation revalidates that connection and exact resources, not
 a potentially changed owner caused by its own creation. These routes are built
 but not runtime-tested, per the user's stop-testing instruction.
+
+## Built-in tab rename input screen
+
+The user subsequently approved **REXWHICHKEY-20261103-085109**: Tabs → Rename now
+uses a text-entry state inside the existing popup, not another popup or the
+Rex-native tab rename dialog. The current tab label is prefilled; Enter confirms
+and Escape returns to Tabs. After complete popup/transport cleanup, the parent
+renames the frozen tab ID directly through typed `Window.Rename`. No app lookup
+is needed unless an explicit app override must be validated. Other native UIs
+are unchanged. This is a built-in native-menu prototype; configured Lua tab
+rename retains its original native action and authenticated protocol.
+See [text-entry design](tab-rename-input.md) for validation, editing, private
+transport and evidence limits. No new interactive verification is claimed.
 
 ## Historical 25-action audit
 

@@ -24,28 +24,9 @@ func nativeResourceClose(parent context.Context, client *rex.Client, origin laun
 	if mapping.Action != "pane.close" && mapping.Action != "client.tab.close" && mapping.Action != "session.close" {
 		return errors.New("whichkey: unsupported retained resource close")
 	}
-	bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
-	if requested != "" {
-		// An explicit selector remains strict even though no GUI action is sent.
-		// A missing/reconnected app never becomes permission to ignore that intent.
-		id, generation, err := popupOriginConnection(ctx, client, origin.SessionID, requested)
-		if err != nil {
-			return errors.New("whichkey: native resource close refused: explicit app binding is unavailable")
-		}
-		bound.ClientID, bound.ConnectedAt = id, generation
-	}
-	window, err := placement.Window(ctx)
-	if err != nil || window.ID != placement.WindowID {
-		return errors.New("whichkey: native resource close refused: captured tab is unavailable or origin moved")
-	}
-	var current rex.Block
-	if requested != "" {
-		current, err = bound.originBlock(ctx, client)
-	} else {
-		current, err = bound.resourceOriginBlock(ctx, client)
-	}
-	if err != nil || current.ID != placement.ID || current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
-		return errors.New("whichkey: native resource close refused: origin placement or explicit app connection changed")
+	current, window, err := nativeResourceOrigin(ctx, client, origin, placement, requested)
+	if err != nil {
+		return err
 	}
 	// Each operation uses private full resource IDs on the captured server.
 	// Concurrent moves can still race these checks; there is no atomic Rex
@@ -60,6 +41,55 @@ func nativeResourceClose(parent context.Context, client *rex.Client, origin laun
 	}
 	if err != nil {
 		return errors.New("whichkey: native resource close failed or is uncertain; inspect the original resource; not retried")
+	}
+	return nil
+}
+
+// nativeResourceOrigin revalidates the parent-retained resource, not an app's
+// selected view. An explicit app override stays strict but is never required.
+func nativeResourceOrigin(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string) (rex.Block, rex.Window, error) {
+	bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
+	if requested != "" {
+		// An explicit selector remains strict even though no GUI action is sent.
+		// A missing/reconnected app never becomes permission to ignore that intent.
+		id, generation, err := popupOriginConnection(ctx, client, origin.SessionID, requested)
+		if err != nil {
+			return rex.Block{}, rex.Window{}, errors.New("whichkey: resource action refused: explicit app binding is unavailable")
+		}
+		bound.ClientID, bound.ConnectedAt = id, generation
+	}
+	window, err := placement.Window(ctx)
+	if err != nil || window.ID != placement.WindowID {
+		return rex.Block{}, rex.Window{}, errors.New("whichkey: resource action refused: captured tab is unavailable or origin moved")
+	}
+	var current rex.Block
+	if requested != "" {
+		current, err = bound.originBlock(ctx, client)
+	} else {
+		current, err = bound.resourceOriginBlock(ctx, client)
+	}
+	if err != nil || current.ID != placement.ID || current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
+		return rex.Block{}, rex.Window{}, errors.New("whichkey: resource action refused: origin placement or explicit app connection changed")
+	}
+	return current, window, nil
+}
+
+// nativeTabRename receives only validated name data after complete popup cleanup.
+// The child never supplies a window ID, app, command, replacement action or args.
+func nativeTabRename(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested, name string) error {
+	if err := validateRenameText(name); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+	defer cancel()
+	_, window, err := nativeResourceOrigin(ctx, client, origin, placement, requested)
+	if err != nil {
+		return err
+	}
+	// Rename passes label as one argv value, never shell code. There is no
+	// app action or retry, including when a failed reply may follow mutation.
+	if err := window.Rename(ctx, name); err != nil {
+		return errors.New("whichkey: tab rename failed or is uncertain; inspect the captured tab; not retried")
 	}
 	return nil
 }

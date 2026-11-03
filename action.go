@@ -10,6 +10,7 @@ import "slices"
 type Selection struct {
 	mapping   Mapping
 	confirmed bool
+	textInput *string // Native form value, not a replacement Mapping or target.
 }
 
 // Mapping returns a detached copy of the selected, canonical-keyed record.

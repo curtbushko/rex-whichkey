@@ -19,6 +19,13 @@ resize reports or connection-list order select an app. New Tab retains its bound
 app across its own creation/activation effects. Native dialogs and pickers remain
 unchanged. These routing changes are compiled, not newly runtime-certified.
 
+The user approved **REXWHICHKEY-20261103-085109**, a built-in Tabs → Rename
+text-entry state within the same fixed popup. On confirmation and full cleanup,
+Go renames the captured tab directly; no app picker or native tab rename dialog
+is used for this native-menu prototype. Configured Lua behavior remains unchanged.
+See [design and scope](tab-rename-input.md). Build/source checks are not a runtime
+certificate; no new UI trials were run.
+
 The user clarified that the popup's remaining top bar is Rex's **pane header**,
 not an OS window title bar. Rex documents **Settings > Interface > Panes > Show
 pane headers** ([setting reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)).

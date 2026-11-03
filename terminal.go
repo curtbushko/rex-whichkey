@@ -57,6 +57,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	if err != nil {
 		return MenuEvent{}, err
 	}
+	menu.textSpec = config.textEntry
 	resize := make(chan os.Signal, 1)
 	signal.Notify(resize, syscall.SIGWINCH, syscall.SIGCONT)
 	defer signal.Stop(resize)
@@ -152,11 +153,18 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			if err := ctx.Err(); err != nil {
 				return MenuEvent{}, err
 			}
+			input.textEntry = menu.entry != nil
 			key, cancel := input.feed(b)
 			if cancel {
 				return MenuEvent{}, context.Canceled
 			}
-			if key == "" && !input.focusIn {
+			if input.pasteReady && menu.entry != nil {
+				if input.pasteOverflow {
+					menu.entry.problem = "Name exceeds 4096 bytes"
+				} else {
+					menu.insertText(string(input.pasteText))
+				}
+			} else if key == "" && !input.focusIn {
 				continue
 			}
 			if key != "" {
@@ -315,21 +323,28 @@ func terminalRetry(err error) bool {
 
 // terminalKeys consumes non-OSC input after PaletteDecoder. Only complete literal
 // Unicode tokens and the menu's three navigation keys can reach HandleKey.
-// Terminal reports, function/mouse keys, Alt chords and bracketed paste are not
-// bindings. Complete focus-in reports separately request a repaint; focus-out
+// Terminal reports, function/mouse keys and Alt chords are not bindings. Text
+// entry additionally accepts explicit editing keys and bounded paste as data,
+// never replaying pasted control bytes as mappings or submission keys.
+// Complete focus-in reports separately request a repaint; focus-out
 // does nothing. State is bounded even for unterminated or oversized strings.
 type terminalKeys struct {
-	focusIn    bool // set only for the byte completing an unparameterized CSI I
-	state      uint8
-	sequence   [32]byte
-	sequenceN  int
-	runeBytes  [utf8.UTFMax]byte
-	runeN      int
-	altRune    bool
-	stringUTF8 int
-	pasteMatch int
-	mouseChars int
-	mouseUTF8  int
+	focusIn       bool // set only for the byte completing an unparameterized CSI I
+	state         uint8
+	sequence      [32]byte
+	sequenceN     int
+	runeBytes     [utf8.UTFMax]byte
+	runeN         int
+	altRune       bool
+	stringUTF8    int
+	pasteMatch    int
+	mouseChars    int
+	mouseUTF8     int
+	textEntry     bool
+	pasteForm     bool
+	pasteText     []byte
+	pasteReady    bool
+	pasteOverflow bool
 }
 
 const (
@@ -345,7 +360,7 @@ const (
 )
 
 func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
-	d.focusIn = false
+	d.focusIn, d.pasteReady = false, false
 	if d.state == terminalKeyMouse {
 		// Legacy CSI M has three trailing coordinates, unlike SGR mouse
 		// reports whose coordinates precede the final M/m. Consume UTF-8
@@ -377,10 +392,23 @@ func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
 	}
 	if d.state == terminalKeyPaste {
 		const end = "\x1b[201~"
+		if d.pasteForm {
+			if len(d.pasteText) < renameTextLimit+len(end) {
+				d.pasteText = append(d.pasteText, b)
+			} else {
+				d.pasteOverflow = true
+			}
+		}
 		if b == end[d.pasteMatch] {
 			d.pasteMatch++
 			if d.pasteMatch == len(end) {
 				d.state, d.pasteMatch = terminalKeyGround, 0
+				if d.pasteForm {
+					d.pasteReady = true
+					if !d.pasteOverflow {
+						d.pasteText = d.pasteText[:len(d.pasteText)-len(end)]
+					}
+				}
 			}
 		} else {
 			d.pasteMatch = 0
@@ -433,8 +461,25 @@ func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
 			d.state = terminalKeyGround
 			if paste {
 				d.state = terminalKeyPaste
+				d.pasteForm, d.pasteOverflow = d.textEntry, false
+				d.pasteText = d.pasteText[:0]
 			} else if mouse {
 				d.state, d.mouseChars, d.mouseUTF8 = terminalKeyMouse, 0, 0
+			} else if d.textEntry {
+				sequence := string(d.sequence[:d.sequenceN])
+				if sequence == "" && (b == 'C' || b == 'D' || b == 'H' || b == 'F') {
+					return "\x1b[" + string(b), false
+				}
+				if b == '~' {
+					switch sequence {
+					case "1", "7":
+						return "\x1b[H", false
+					case "4", "8":
+						return "\x1b[F", false
+					case "3":
+						return "\x1b[3~", false
+					}
+				}
 			}
 		default:
 			if d.sequenceN < len(d.sequence) {
@@ -503,6 +548,10 @@ func (d *terminalKeys) feed(b byte) (key string, cancel bool) {
 		d.state, d.stringUTF8 = terminalKeyString, 0
 	case '\t', '\b', 0x7f:
 		return string(b), false
+	case '\r', '\n', 0x15:
+		if d.textEntry {
+			return string(b), false
+		}
 	default:
 		if b >= 0x20 && b < 0x7f {
 			return string(b), false

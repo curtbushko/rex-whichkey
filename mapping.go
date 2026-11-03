@@ -33,6 +33,10 @@ type Config struct {
 	Icon     string    `json:"icon"`
 	Icons    Icons     `json:"icons"`
 	Spec     []Mapping `json:"spec"`
+
+	// Native-only presentation, sent through a separate private file. It is
+	// deliberately absent from the canonical Config/Lua wire schema.
+	textEntry *textEntrySpec
 }
 
 // ConfigOptions preserves absence separately from explicit empty/false values.
@@ -320,6 +324,9 @@ type Completion struct {
 	Capability string               `json:"capability"`
 	Kind       string               `json:"kind"`
 	Selection  *CompletionSelection `json:"selection,omitempty"`
+
+	// Private native form data; never serialized to the original Lua bridge.
+	textInput *string
 }
 
 // CompletionSelection identifies a retained mapping. Confirmed records y at that
@@ -435,6 +442,9 @@ func (c Completion) ValidateSelection(mappings []Mapping) error {
 // MarshalJSON emits a validated data-only message. Capability-bearing output is
 // secret transport data, never a log or a user-visible diagnostic.
 func (c Completion) MarshalJSON() ([]byte, error) {
+	if c.textInput != nil {
+		return nil, errors.New("whichkey: native form data cannot use the configured completion wire format")
+	}
 	if err := c.Validate(); err != nil {
 		return nil, err
 	}

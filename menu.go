@@ -34,6 +34,9 @@ type Menu struct {
 	pending *menuNode
 	page    int
 	done    bool
+
+	textSpec *textEntrySpec
+	entry    *menuTextEntry
 }
 
 type menuNode struct {
@@ -136,7 +139,7 @@ func (m *Menu) Confirmation() (MenuEntry, bool) {
 // A hidden action or implicit/explicit group on q suppresses this fallback too.
 // In a confirmation prompt q only cancels that prompt.
 func (m *Menu) QuitWithQ() bool {
-	return !m.Done() && m.pending == nil && m.current.lookup["q"] == nil
+	return !m.Done() && m.pending == nil && m.entry == nil && m.current.lookup["q"] == nil
 }
 
 // Done reports selection or dismissal, or an uninitialized menu.
@@ -151,9 +154,14 @@ func (m *Menu) Done() bool { return m.done || m.current == nil }
 // Tab advances modulo pages (at least one); entering/leaving a group or prompt
 // resets the page. While prompting, exactly y selects, and every other key
 // cancels without selection or fallthrough to navigation or another mapping.
+// Native text entry instead owns all keys: Esc returns to its submenu, Enter
+// validates/submits, and ordinary characters edit data rather than mappings.
 func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 	if m.Done() {
 		return MenuEvent{}
+	}
+	if m.entry != nil {
+		return m.handleTextKey(key)
 	}
 	if m.pending != nil {
 		target := m.pending
@@ -191,6 +199,10 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 	if target.mapping.Action == "" && target.mapping.CallbackRef == "" {
 		m.current = target
 		m.page = 0
+		return MenuEvent{}
+	}
+	if m.textSpec != nil && target.keys == "tr" && target.mapping.Action == "client.tab.rename" && target.mapping.CallbackRef == "" && !target.mapping.Confirm {
+		m.openTextEntry(target)
 		return MenuEvent{}
 	}
 	if target.mapping.Confirm {

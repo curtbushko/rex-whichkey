@@ -205,6 +205,9 @@ func (r popupRequest) resourceOriginBlock(ctx context.Context, client *rex.Clien
 // Failure is uncertain: callers must mark the attempt before calling, never
 // retry it or send a cancellation that could mask a possibly executed action.
 func (r popupRequest) complete(ctx context.Context, executable string, message Completion) error {
+	if message.textInput != nil {
+		return errors.New("whichkey: native text input cannot enter configured completion")
+	}
 	data, err := json.Marshal(message)
 	if err != nil || len(data) > popupMessageLimit {
 		return errors.New("whichkey: invalid popup completion")
@@ -403,6 +406,18 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err := writePopupFile(directory, "config.json", []byte(request.Configuration)); err != nil {
 		return err
 	}
+	if config.textEntry != nil {
+		if lifetime != popupNative {
+			return errors.New("whichkey: text entry requires native popup lifetime")
+		}
+		data, err := json.Marshal(config.textEntry)
+		if err != nil || len(data) > popupMessageLimit {
+			return errors.New("whichkey: cannot encode native text-entry presentation")
+		}
+		if err := writePopupFile(directory, nativeTextFile, data); err != nil {
+			return err
+		}
+	}
 	if err := writePopupFile(directory, "result.json", nil); err != nil {
 		return err
 	}
@@ -453,7 +468,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if !expires.IsZero() && !time.Now().Before(expires) {
 		return nil
 	}
-	message, err := readPopupResult(directory, request.Capability, config.Spec)
+	message, err := readPopupResult(directory, request.Capability, config)
 	if err != nil {
 		return err
 	}
@@ -580,7 +595,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime"} {
+	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -608,7 +623,7 @@ func openPopupDirectory(directory string) (*os.Root, error) {
 	return root, nil
 }
 
-func readPopupResult(directory, capability string, mappings []Mapping) (message Completion, outcome error) {
+func readPopupResult(directory, capability string, config Config) (message Completion, outcome error) {
 	root, err := openPopupDirectory(directory)
 	if err != nil {
 		return Completion{}, err
@@ -626,6 +641,10 @@ func readPopupResult(directory, capability string, mappings []Mapping) (message 
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 		return Completion{Version: CompletionVersion, Capability: capability, Kind: CompletionCancel}, nil
 	}
+	plain, textInput, err := nativeTextSelection(data, config.textEntry)
+	if err != nil {
+		return Completion{}, err
+	}
 	// Wrap the raw selection for the authoritative strict Completion decoder;
 	// decoding CompletionSelection alone would accept missing false flags.
 	wrapped, err := json.Marshal(struct {
@@ -633,10 +652,11 @@ func readPopupResult(directory, capability string, mappings []Mapping) (message 
 		Capability string          `json:"capability"`
 		Kind       string          `json:"kind"`
 		Selection  json.RawMessage `json:"selection"`
-	}{CompletionVersion, capability, CompletionComplete, data})
-	if err != nil || json.Unmarshal(wrapped, &message) != nil || message.ValidateSelection(mappings) != nil {
+	}{CompletionVersion, capability, CompletionComplete, plain})
+	if err != nil || json.Unmarshal(wrapped, &message) != nil || message.ValidateSelection(config.Spec) != nil {
 		return Completion{}, errors.New("whichkey: popup returned an invalid retained selection")
 	}
+	message.textInput = textInput
 	return message, nil
 }
 
@@ -716,6 +736,12 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if err := errors.Join(decodeErr, input.Close()); err != nil {
 		return err
 	}
+	if deadline.IsZero() {
+		config.textEntry, err = readNativeTextSpec(root)
+		if err != nil {
+			return err
+		}
+	}
 	ctx := parent
 	if !deadline.IsZero() {
 		var cancel context.CancelFunc
@@ -742,7 +768,7 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if err != nil {
 		return errors.New("whichkey: cannot open popup result output")
 	}
-	if err := errors.Join(WriteMenuResult(output, event), output.Close()); err != nil {
+	if err := errors.Join(writePopupMenuResult(output, event, config), output.Close()); err != nil {
 		return fmt.Errorf("whichkey: commit popup result: %w", err)
 	}
 	return nil

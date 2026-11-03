@@ -392,6 +392,18 @@ This is intentional Go-owned intent compilation, not a repair of Rex's numeric
 and Lua defaults remain direct native actions. Native previous/next, splits and
 all destructive actions retain their existing behavior.
 
+Built-in native `tr` uses the accepted [text-entry prototype](tab-rename-input.md).
+The parent captures the tab's ID and label before opening the menu. A private
+`native-input.json` presents the initial name; the child never receives another
+resource target or authority to change it. The same terminal/menu instance enters
+text editing and returns to Tabs on Escape without completing the invocation.
+Enter emits bounded name data for `tr` only. The parent validates and strips that
+private field before canonical Completion decoding, cleans the popup/files/lease,
+revalidates exact resource placement, and invokes typed `Window.Rename` once.
+Mapping/Config JSON, Completion v1 JSON and configured original-VM messages are
+unchanged; configured Lua rename still invokes Rex's native action. Native form
+data is rejected by configured completion rather than silently discarded.
+
 Native `x`, `tx` and `wx` bypass app selection and native action registration.
 After validated confirmation and full UI/file/lease cleanup, existing typed Rex
 resource operations close the exact captured pane, tab or session. The origin's
@@ -402,8 +414,9 @@ one, these resource operations need no app lookup. Errors/uncertain closes never
 retry. The route is compiled, not runtime-certified after the user's stop-testing
 instruction.
 
-All native app actions preserve their existing native UI and action semantics,
-including rename dialogs and the session picker. Explicit app selectors take
+All app-routed native actions preserve their existing native UI and action
+semantics, including session rename and the session picker. Built-in tab rename
+uses the resource/form route above. Explicit app selectors take
 precedence. Without one,
 [`native_app_owner.go`](../native_app_owner.go) reads the launching pane's documented
 `session.describe_block` owner and binds that exact live graphical app attached

@@ -114,6 +114,9 @@ func WriteMenuResult(output io.Writer, event MenuEvent) error {
 	if event.Dismissed || event.Selection == nil {
 		return errors.New("whichkey: menu returned no unambiguous outcome")
 	}
+	if event.Selection.textInput != nil {
+		return errors.New("whichkey: native text entry requires its private result writer")
+	}
 	mapping := event.Selection.Mapping()
 	if err := ValidateMappings([]Mapping{mapping}); err != nil {
 		return err

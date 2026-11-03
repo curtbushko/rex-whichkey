@@ -117,6 +117,16 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	if err != nil {
 		return err
 	}
+	nameContext, finishName := context.WithTimeout(ctx, 3*time.Second)
+	window, err := placement.Session().Window(nameContext, placement.WindowID)
+	finishName()
+	if err != nil {
+		return errors.New("whichkey: cannot inspect the captured tab name")
+	}
+	config.textEntry = &textEntrySpec{Initial: window.Label}
+	if len(config.textEntry.Initial) > renameTextLimit {
+		config.textEntry.Initial = "" // Require a new name, never silently truncate.
+	}
 	message, err := nativePopupSelection(ctx, origin, executable, config)
 	if err != nil {
 		return err
@@ -130,6 +140,12 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		if mapping.CallbackRef != "" || mapping.Action == "" || !mapping.Enabled() {
 			return errors.New("whichkey: native selection is not a retained native action")
+		}
+		if mapping.Keys == "tr" && mapping.Action == "client.tab.rename" {
+			if err := message.ValidateSelection(config.Spec); err != nil || message.textInput == nil || config.textEntry == nil {
+				return errors.New("whichkey: tab rename requires validated native text input")
+			}
+			return nativeTabRename(ctx, client, origin, placement, requested, *message.textInput)
 		}
 		// These operations already have an exact server resource target. They
 		// need confirmation, not a GUI app or its native action registration.

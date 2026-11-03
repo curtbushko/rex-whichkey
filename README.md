@@ -195,6 +195,22 @@ destination.
 Numbered “Go to tab” entries (`t1`–`t9`) are not included in the default menu.
 Tabs retain New, Previous, Next, Rename and Close.
 
+### Tab rename input screen
+
+In the **built-in native menu**, Tabs → Rename (`tr`) opens a text-entry screen
+inside the same popup and fixed bounds, prefilled with the current tab label.
+Typing replaces the selected name; arrows/Home/End edit it. Enter confirms,
+Escape returns to Tabs, and Ctrl-U clears the field. Backspace/Delete handle
+whole graphemes; bounded paste cannot submit or trigger mappings.
+
+After the popup and private files are cleaned up, Go renames the captured tab ID
+directly through Rex's CLI—no app selection or native rename dialog. Names must
+be nonblank text without control characters, at most 4096 bytes. **Configured Lua
+menus retain their existing native rename action and completion protocol.**
+See [prototype design and scope](docs/tab-rename-input.md).
+
+### Native app actions
+
 Native `tn` retains Go-owned `client.tab.new` intent with empty arguments, but Go
 creates exactly one default-terminal tab in the captured origin session through
 `Session.NewWindow`, then activates its exact returned ID with `session.select`.
@@ -210,8 +226,9 @@ for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-Every native app action keeps its existing Rex UI and action semantics, including
-native rename dialogs and the session picker. An explicit `--client` or
+Every app-routed action keeps its existing Rex UI and action semantics, including
+session rename and the session picker. Built-in tab rename uses the text-entry
+screen above and bypasses app routing. An explicit `--client` or
 `REX_CLIENT` binding takes precedence. Otherwise Go reads the
 launching pane's documented `owner` from `session.describe_block`, then validates
 that exact ID as a live graphical app attached to the captured session. It does
