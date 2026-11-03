@@ -34,14 +34,24 @@ unscoped `session.select` without opening Rex's picker. Configured Lua menus sta
 unchanged. See [session UI scope](session-owned-ui.md). No new runtime evidence is
 claimed under the user's stop-testing instruction.
 
-The user clarified that the popup's remaining top bar is Rex's **pane header**,
-not an OS window title bar. Rex documents **Settings > Interface > Panes > Show
-pane headers** ([setting reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)).
-That is an app-wide preference, not a documented per-popup override. Current
-server/layer/terminal schemas and the Work app's registered actions expose no
-pane-header override. No global preference was changed; popup-only pane-header
-suppression remains unresolved. This conclusion is from metadata/documentation,
-not a new UI trial.
+The user identified the remaining bar as Rex's **native floating-pane header**:
+it shows `rex-whichkey`, `~` and a resize button. The user reports **Show pane
+headers is already off**. This is not our rendered menu heading/breadcrumb, and
+no screenshot is required to repeat that distinction; image drops are not
+supported in their Rex environment. Do not remove our menu heading or suggest
+turning the already-disabled preference off as a fix.
+
+The documented [pane-header preference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)
+does not explain the floating-header behavior by itself. Our creation request
+uses `session.new_layer` and does not request headers. Fresh installed metadata
+exposes only bounds/focus/layout/session/window fields on creation and no
+header/presentation control in terminal creator schemas or either app's actions.
+The newer published `session.set_layer_state` only minimizes/restores layers;
+it is not exposed by this installed server and is not a header-suppression API.
+App metadata currently reports work build1758 and m4-pro build1670; no version
+cause or client rendering bug is certified. Separate floating-layer chrome is
+the likely explanation, pending Rex-side confirmation. Popup-only suppression
+remains unresolved; no settings change or UI trial was performed.
 
 ## Fixed navigation bounds: REQ-029
 
