@@ -10,7 +10,10 @@
     nixpkgs,
     golang-shared-configs,
   }: let
-    goVersion = 25; # Change this to update the whole stack
+    goVersion = "1.26.8";
+    # Official source checksum; keep the toolchain independent of Nixpkgs patch updates.
+    goSourceHash = "sha256-Tjm5jkL5RvoFrIvFtxh335fb23y7Gnd7VBZnrXEX/S4=";
+    goAttribute = "go_${builtins.replaceStrings ["."] ["_"] (nixpkgs.lib.versions.majorMinor goVersion)}";
 
     supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
     forEachSupportedSystem = f:
@@ -40,7 +43,13 @@
       };
   in {
     overlays.default = final: prev: {
-      go = final."go_1_${toString goVersion}";
+      go = final.${goAttribute}.overrideAttrs (_: {
+        version = goVersion;
+        src = final.fetchurl {
+          url = "https://go.dev/dl/go${goVersion}.src.tar.gz";
+          hash = goSourceHash;
+        };
+      });
     };
 
     packages = forEachSupportedSystem ({pkgs, ...}: let
