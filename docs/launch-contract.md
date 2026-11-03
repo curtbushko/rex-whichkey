@@ -280,9 +280,10 @@ three-second timeout. Each request preserves retained `client_id`, `action`, JSO
 `args`, `origin: "cli"` and `timeout_ms: 3000`; empty args become `{}`. All non-split
 requests also carry explicit captured origin `session_id` and `block_id`, preserving
 origin-bound context. Resource closes instead use exact server IDs without app
-dispatch. Only `pane.split`
-(`v`/`right`, `s`/`down`) omits both fields: the chosen app splits its currently
-selected tab/window's focused pane.
+dispatch. App-focused `pane.split`
+(`v`/`right`, `s`/`down`) omits both fields when splitting the app's focused pane.
+Exact session selection also omits them: its retained destination is in args,
+not the origin context.
 `api call` does not default to ambient `REX_SESSION`/`REX_BLOCK`/`REX_WINDOW`, and
 omitting `Options.Session` prevents the generic adapter injecting an origin session.
 The original scoped client still checks invocation placement, session attachment
@@ -397,11 +398,13 @@ The parent captures the tab's ID and label before opening the menu. A private
 `native-input.json` presents the initial name; the child never receives another
 resource target or authority to change it. The same terminal/menu instance enters
 text editing and returns to Tabs on Escape without completing the invocation.
-Enter emits bounded name data for `tr` only. The parent validates and strips that
+Enter emits bounded name data for retained `tr`/`wr` rename entries only. The parent validates and strips that
 private field before canonical Completion decoding, cleans the popup/files/lease,
-revalidates exact resource placement, and invokes typed `Window.Rename` once.
+revalidates exact resource placement, and invokes typed `Window.Rename` or
+`Session.Rename` once, according to the parent-retained intent.
 Mapping/Config JSON, Completion v1 JSON and configured original-VM messages are
-unchanged; configured Lua rename still invokes Rex's native action. Native form
+unchanged; configured Lua rename still invokes Rex's native action. The private
+presentation file now also supplies the origin session label for `wr`. Native form
 data is rejected by configured completion rather than silently discarded.
 
 Native `x`, `tx` and `wx` bypass app selection and native action registration.
@@ -414,9 +417,14 @@ one, these resource operations need no app lookup. Errors/uncertain closes never
 retry. The route is compiled, not runtime-certified after the user's stop-testing
 instruction.
 
-All app-routed native actions preserve their existing native UI and action
-semantics, including session rename and the session picker. Built-in tab rename
-uses the resource/form route above. Explicit app selectors take
+Built-in session rename uses the same resource/form route as tab rename. Built-in
+Switch Session expands a live-at-opening session-list snapshot into a canonical
+`ws` submenu, with retained `session.select` leaves and full ID args. The parent
+revalidates the selected destination after cleanup; it never trusts a label,
+position or child-supplied destination. No Rex session picker is opened.
+Unavailable inventory yields an informative empty submenu, not a guessed list.
+See [session UI details](session-owned-ui.md). Other app actions retain their
+semantics; Command Palette is the remaining Rex-owned dialog/picker in this menu. Explicit app selectors take
 precedence. Without one,
 [`native_app_owner.go`](../native_app_owner.go) reads the launching pane's documented
 `session.describe_block` owner and binds that exact live graphical app attached
@@ -430,7 +438,8 @@ selectors keep their existing strict validation and need not match the owner.
 New Tab validates the owner before creation. Creation can change focus/ownership;
 activation retains the already-bound app and rechecks its generation, origin
 placement and new-window membership without resolving another owner.
-No replacement rename prompt or session picker was introduced. The route is compiled, not
+The native screens above replace the old rename prompts/session picker; the app
+binding itself introduces no additional UI. The route is compiled, not
 runtime-tested under the user's stop-testing instruction.
 
 Apart from resource closes and the retained New Tab intent adapter, every

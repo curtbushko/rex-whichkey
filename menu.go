@@ -201,7 +201,7 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 		m.page = 0
 		return MenuEvent{}
 	}
-	if m.textSpec != nil && target.keys == "tr" && target.mapping.Action == "client.tab.rename" && target.mapping.CallbackRef == "" && !target.mapping.Confirm {
+	if m.textSpec != nil && nativeRenameMapping(target.mapping) {
 		m.openTextEntry(target)
 		return MenuEvent{}
 	}

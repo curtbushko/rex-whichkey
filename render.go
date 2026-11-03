@@ -136,7 +136,7 @@ func menuHeader(menu *Menu, config Config, theme Theme) menuLine {
 		if len(header) > 0 {
 			header = append(header, menuText(ThemeIcon, " "+separator+" "))
 		}
-		header = append(header, menuText(ThemeGroup, "Rename tab"))
+		header = append(header, menuText(ThemeGroup, menu.entry.title()))
 	}
 	return header
 }

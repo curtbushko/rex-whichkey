@@ -26,6 +26,14 @@ is used for this native-menu prototype. Configured Lua behavior remains unchange
 See [design and scope](tab-rename-input.md). Build/source checks are not a runtime
 certificate; no new UI trials were run.
 
+The user additionally requested our own session switch/rename UI. In the built-in
+menu, Switch expands a fresh session-list snapshot into canonical retained-ID
+choices within the same popup; Rename reuses the text-entry state and then typed
+`Session.Rename`. Session selection revalidates its exact destination and uses
+unscoped `session.select` without opening Rex's picker. Configured Lua menus stay
+unchanged. See [session UI scope](session-owned-ui.md). No new runtime evidence is
+claimed under the user's stop-testing instruction.
+
 The user clarified that the popup's remaining top bar is Rex's **pane header**,
 not an OS window title bar. Rex documents **Settings > Interface > Panes > Show
 pane headers** ([setting reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)).

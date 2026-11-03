@@ -209,6 +209,21 @@ be nonblank text without control characters, at most 4096 bytes. **Configured Lu
 menus retain their existing native rename action and completion protocol.**
 See [prototype design and scope](docs/tab-rename-input.md).
 
+### Session switch and rename screens
+
+In the **built-in native menu**, Sessions → Switch (`ws`) is our submenu,
+populated from Rex's session list each time the menu opens. Rows identify the
+session, show its name and mark the current session. Use numbered keys, More
+(`n`) groups and normal Tab paging; Escape/Backspace returns to Sessions. The
+parent retains exact destination IDs and revalidates the choice before sending
+`session.select` to the pane's GUI app. It does not open Rex's session picker.
+
+Sessions → Rename (`wr`) uses the same text-entry screen as tab rename, prefilled
+with the current session name. Enter confirms; Escape returns to Sessions. After
+cleanup, the parent renames the captured session directly—no native dialog or
+app chooser. Configured Lua menus retain their existing native actions.
+See [session UI details](docs/session-owned-ui.md).
+
 ### Native app actions
 
 Native `tn` retains Go-owned `client.tab.new` intent with empty arguments, but Go
@@ -226,9 +241,9 @@ for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-Every app-routed action keeps its existing Rex UI and action semantics, including
-session rename and the session picker. Built-in tab rename uses the text-entry
-screen above and bypasses app routing. An explicit `--client` or
+Built-in tab/session rename and session selection use our screens above. The
+command palette still uses Rex's native UI. Other app-routed actions retain their
+action semantics; selecting a session uses the API directly, not Rex's picker. An explicit `--client` or
 `REX_CLIENT` binding takes precedence. Otherwise Go reads the
 launching pane's documented `owner` from `session.describe_block`, then validates
 that exact ID as a live graphical app attached to the captured session. It does
@@ -242,7 +257,7 @@ permission to bypass Rex's Remote Control checks.
 Other app-routed native actions use one documented `client.perform`
 request with the original action/JSON arguments and explicit captured origin
 `session_id`/`block_id`. A separate unscoped client pins the exact server and
-three-second timeout; splits omit both context fields. Errors, invalid replies
+three-second timeout; splits and exact session selection omit both context fields. Errors, invalid replies
 and uncertain effects are not retried, and there is no `rex do` fallback.
 Configured menus retain their original-VM contract. Server-wide active-window
 state is not used to choose a split destination.
@@ -361,7 +376,7 @@ optional `rex_whichkey.defaults` Lua fragments supply the same keys/intent:
 
 | Keys | Actions |
 | --- | --- |
-| `wn`, `ws`, `wh`, `wl`, `wr`, `wx` | Session new, switch, previous, next, rename, close. Switch delegates Rex's picker; no enumerated session submenu is added. |
+| `wn`, `ws`, `wh`, `wl`, `wr`, `wx` | Session new, switch, previous, next, rename, close. Built-in Switch uses our dynamic session submenu; Rename uses our text-entry screen. |
 | `tn`, `th`, `tl`, `tr`, `tx` | Tab new, previous, next, rename, close. |
 | `v`, `s` | Split right / down. |
 | `x`, `e`, `c` | Close pane, toggle sidebar, toggle command palette. |

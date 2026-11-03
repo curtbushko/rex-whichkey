@@ -12,7 +12,14 @@ const renameTextLimit = 4096
 // textEntrySpec is private native-popup presentation data, not a Mapping option
 // or callback argument. The parent retains the only executable target identity.
 type textEntrySpec struct {
-	Initial string `json:"initial"`
+	Initial        string `json:"initial"`
+	SessionInitial string `json:"session_initial"`
+}
+
+func nativeRenameMapping(mapping Mapping) bool {
+	return mapping.CallbackRef == "" && !mapping.Confirm &&
+		(mapping.Keys == "tr" && mapping.Action == "client.tab.rename" ||
+			mapping.Keys == "wr" && mapping.Action == "session.rename")
 }
 
 type menuTextEntry struct {
@@ -38,12 +45,22 @@ func validateRenameText(value string) error {
 
 func (m *Menu) openTextEntry(node *menuNode) {
 	value := m.textSpec.Initial
+	if node.mapping.Keys == "wr" {
+		value = m.textSpec.SessionInitial
+	}
 	problem := ""
 	if len(value) > renameTextLimit || validateText(value) != nil {
 		// Never silently truncate or rewrite the existing name on submission.
 		value, problem = "", "Enter a new name"
 	}
 	m.entry = &menuTextEntry{node: node, value: value, cursor: len(value), selected: true, problem: problem}
+}
+
+func (e *menuTextEntry) title() string {
+	if e.node.mapping.Keys == "wr" {
+		return "Rename session"
+	}
+	return "Rename tab"
 }
 
 func (m *Menu) handleTextKey(key string) MenuEvent {

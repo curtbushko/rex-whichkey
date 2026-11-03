@@ -69,6 +69,23 @@ rename retains its original native action and authenticated protocol.
 See [text-entry design](tab-rename-input.md) for validation, editing, private
 transport and evidence limits. No new interactive verification is claimed.
 
+## Built-in session screens
+
+Sessions → Switch now compiles the logical `ws` entry into our dynamically
+populated submenu using a fresh Rex session-list snapshot at menu opening.
+Numbered/More/paging choices are canonical parent-retained mappings containing
+exact destination IDs; the child still returns only keys. The selected session
+is revalidated before one unscoped `session.select` app action, without invoking
+Rex's picker or substituting origin context for the destination.
+
+Sessions → Rename now shares our text-entry state, prefilled with the current
+session label. Enter commits and Escape returns to Sessions. The parent renames
+the captured session through typed `Session.Rename` after complete UI/transport
+cleanup; no app/native dialog is used. Configured Lua behavior and protocol stay
+unchanged. In the built-in menu, only Command Palette still uses a Rex-native
+picker/dialog UI. See [session UI](session-owned-ui.md) for snapshot/error limits.
+These changes are compiled, not newly runtime-certified.
+
 ## Historical 25-action audit
 
 The remainder records the earlier source and evidence, before that explicit menu

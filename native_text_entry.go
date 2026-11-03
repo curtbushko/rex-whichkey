@@ -28,7 +28,7 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 	if err != nil || len(data) > popupMessageLimit {
 		return nil, errors.New("whichkey: native text-entry presentation exceeds transport bound")
 	}
-	fields, err := completionObject(data, "initial")
+	fields, err := completionObject(data, "initial", "session_initial")
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,11 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 	if err != nil {
 		return nil, err
 	}
-	return &textEntrySpec{Initial: initial}, nil
+	sessionInitial, err := completionString(fields["session_initial"])
+	if err != nil {
+		return nil, err
+	}
+	return &textEntrySpec{Initial: initial, SessionInitial: sessionInitial}, nil
 }
 
 // The extra text field belongs only to native private transport. Ordinary
@@ -46,8 +50,7 @@ func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) erro
 		return WriteMenuResult(output, event)
 	}
 	mapping := event.Selection.Mapping()
-	if config.textEntry == nil || event.Dismissed || mapping.Keys != "tr" ||
-		mapping.Action != "client.tab.rename" || mapping.CallbackRef != "" || mapping.Confirm || event.Selection.Confirmed() {
+	if config.textEntry == nil || event.Dismissed || !nativeRenameMapping(mapping) || event.Selection.Confirmed() {
 		return errors.New("whichkey: unexpected native text-entry result")
 	}
 	if err := validateRenameText(*event.Selection.textInput); err != nil {
@@ -60,7 +63,7 @@ func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) erro
 	}{mapping.Keys, false, *event.Selection.textInput})
 }
 
-// Strip only the authorized native form's text before the canonical strict
+// Strip only an authorized native rename form's text before the canonical strict
 // Completion decoder. Parent-retained mappings still validate keys/confirmation;
 // this data never supplies an action, arguments, app or resource identity.
 func nativeTextSelection(data []byte, spec *textEntrySpec) ([]byte, *string, error) {
@@ -76,14 +79,14 @@ func nativeTextSelection(data []byte, spec *textEntrySpec) ([]byte, *string, err
 		return nil, nil, err
 	}
 	raw, supplied := fields["text"]
-	if keys != "tr" {
+	if keys != "tr" && keys != "wr" {
 		if supplied {
 			return nil, nil, errors.New("whichkey: text input does not match the retained form")
 		}
 		return data, nil, nil
 	}
 	if !supplied {
-		return nil, nil, errors.New("whichkey: tab rename requires confirmed text input")
+		return nil, nil, errors.New("whichkey: rename requires confirmed text input")
 	}
 	value, err := completionString(raw)
 	if err != nil {

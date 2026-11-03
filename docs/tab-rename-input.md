@@ -26,8 +26,9 @@ chooser, popup resize or GUI setting change is involved.
 ## Resource and completion ownership
 
 The parent freezes the originating server/session/pane/tab placement before
-showing the menu and reads that exact tab's label for presentation. The child
-receives only the initial name, not authority to choose another resource.
+showing the menu and reads that exact tab's label for presentation. The rename
+form receives the initial name, not authority to choose its resource. Session
+picker choices are separately retained as canonical parent-owned mappings.
 
 On Enter, terminal restoration must succeed before the child commits a result.
 The parent validates the retained `tr` selection and bounded name, then completes
@@ -37,9 +38,10 @@ Only afterward does it revalidate the frozen resource/placement and call typed
 replacement target, uncertain retry or label-based lookup is used. Explicit app
 overrides retain their strict checks but no app binding is required by default.
 
-`native-input.json` is private native-popup presentation data. Its only field is
-`initial`; it is removed with the other owned transport files. The native result
-may carry a `text` field only for `tr`. The parent strips that field before the
+`native-input.json` is private native-popup presentation data. It contains
+`initial` for tab rename and `session_initial` for session rename, and is removed
+with the other owned transport files. The native result may carry a `text` field
+only for the retained `tr` or `wr` rename selection. The parent strips that field before the
 canonical strict Completion decoder and retains the validated name privately.
 This does not extend Mapping/Config JSON, Completion v1 JSON or the Lua bridge.
 Configured completion rejects native form data rather than dropping it.
@@ -48,8 +50,9 @@ Configured completion rejects native form data rather than dropping it.
 
 This prototype is enabled only for the **built-in native menu**. Configured Lua
 menus and callbacks keep their existing authenticated completion protocol and
-Rex-native tab rename action. Session rename, Switch Session and the command
-palette keep their existing Rex UI.
+Rex-native tab rename action. Session rename now reuses this screen, and Switch
+Session uses our dynamic submenu; see [session UI](session-owned-ui.md). The
+command palette retains Rex's UI.
 
 Compilation and source/format/whitespace checks are separate from interactive
 verification. No unit/general/race suites, UI trials, extra worker windows,

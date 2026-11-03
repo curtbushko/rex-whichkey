@@ -123,9 +123,16 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	if err != nil {
 		return errors.New("whichkey: cannot inspect the captured tab name")
 	}
-	config.textEntry = &textEntrySpec{Initial: window.Label}
+	config, sessionName, err := nativeSessionMenu(ctx, client, origin, config)
+	if err != nil {
+		return err
+	}
+	config.textEntry = &textEntrySpec{Initial: window.Label, SessionInitial: sessionName}
 	if len(config.textEntry.Initial) > renameTextLimit {
 		config.textEntry.Initial = "" // Require a new name, never silently truncate.
+	}
+	if len(config.textEntry.SessionInitial) > renameTextLimit {
+		config.textEntry.SessionInitial = ""
 	}
 	message, err := nativePopupSelection(ctx, origin, executable, config)
 	if err != nil {
@@ -141,11 +148,11 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if mapping.CallbackRef != "" || mapping.Action == "" || !mapping.Enabled() {
 			return errors.New("whichkey: native selection is not a retained native action")
 		}
-		if mapping.Keys == "tr" && mapping.Action == "client.tab.rename" {
+		if nativeRenameMapping(mapping) {
 			if err := message.ValidateSelection(config.Spec); err != nil || message.textInput == nil || config.textEntry == nil {
-				return errors.New("whichkey: tab rename requires validated native text input")
+				return errors.New("whichkey: rename requires validated native text input")
 			}
-			return nativeTabRename(ctx, client, origin, placement, requested, *message.textInput)
+			return nativeResourceRename(ctx, client, origin, placement, requested, mapping, *message.textInput)
 		}
 		// These operations already have an exact server resource target. They
 		// need confirmation, not a GUI app or its native action registration.
@@ -202,14 +209,19 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if err != nil {
 			return errors.New("whichkey: native action targeting refused: cannot construct the captured endpoint client")
 		}
+		if mapping.Action == "session.select" {
+			if err := validateSessionChoice(dispatch, client, mapping); err != nil {
+				return err
+			}
+		}
 		request := map[string]any{
 			"client_id": target.ClientID, "action": mapping.Action, "args": args,
 			"origin": "cli", "timeout_ms": 3000,
 		}
-		if mapping.Action != "pane.split" {
-			// Preserve origin-bound context, especially for destructive actions.
-			// Splits instead use the chosen app's selected tab and focused pane;
-			// their origin authorizes invocation, not the destination.
+		if mapping.Action != "pane.split" && mapping.Action != "session.select" {
+			// Splits use app focus; session selection uses the exact retained
+			// destination in args. Origin authorizes those actions, not their
+			// destination. Other actions retain explicit origin context.
 			request["session_id"], request["block_id"] = origin.SessionID, origin.BlockID
 		}
 		// Recheck the exact captured generation and origin immediately before

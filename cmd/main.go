@@ -125,8 +125,8 @@ Options:
 Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
 execution/server-host helper and Rex CLI. App UI actions additionally require an
 attached graphical app and its Remote Control permission. Native pane/tab/session
-closes and built-in tab rename use captured resource IDs without an app chooser;
-tab rename edits text in the existing popup. Explicit client selectors remain strict. Lua customization additionally needs installed modules,
+closes and built-in tab/session rename use captured resource IDs without an app
+chooser. Built-in Switch lists sessions in our popup; rename uses text entry. Explicit client selectors remain strict. Lua customization additionally needs installed modules,
 setup and launch/completion registration. Nothing edits/reloads configuration.
 The native caller waits until selection/dismissal, cancellation or origin loss;
 there is no native idle timeout. Configured launch returns after activation and

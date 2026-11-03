@@ -74,22 +74,30 @@ func nativeResourceOrigin(ctx context.Context, client *rex.Client, origin launch
 	return current, window, nil
 }
 
-// nativeTabRename receives only validated name data after complete popup cleanup.
-// The child never supplies a window ID, app, command, replacement action or args.
-func nativeTabRename(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested, name string) error {
+// nativeResourceRename receives name data after complete popup cleanup. The
+// parent retains both tab/session identities and the action; none come from text.
+func nativeResourceRename(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping, name string) error {
+	if !nativeRenameMapping(mapping) {
+		return errors.New("whichkey: invalid retained rename intent")
+	}
 	if err := validateRenameText(name); err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 	defer cancel()
-	_, window, err := nativeResourceOrigin(ctx, client, origin, placement, requested)
+	current, window, err := nativeResourceOrigin(ctx, client, origin, placement, requested)
 	if err != nil {
 		return err
 	}
 	// Rename passes label as one argv value, never shell code. There is no
 	// app action or retry, including when a failed reply may follow mutation.
-	if err := window.Rename(ctx, name); err != nil {
-		return errors.New("whichkey: tab rename failed or is uncertain; inspect the captured tab; not retried")
+	if mapping.Action == "session.rename" {
+		err = current.Session().Rename(ctx, name)
+	} else {
+		err = window.Rename(ctx, name)
+	}
+	if err != nil {
+		return errors.New("whichkey: rename failed or is uncertain; inspect the captured resource; not retried")
 	}
 	return nil
 }
