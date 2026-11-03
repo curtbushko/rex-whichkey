@@ -157,8 +157,15 @@ terminal for a user to see it; resource creation alone is not graphical proof.
 
 App selector precedence is `--client`, then a present `REX_CLIENT`, otherwise
 eligible live apps in the captured session. Empty/malformed selectors, labels and
-suffixes fail early. Native mode resolves that intent **only after executable
-selection/confirmation and exact owned-popup/file cleanup**; Escape returns without
+suffixes fail early. Native resource closes (`x`, `tx`, `wx`) use their captured
+pane/tab/session IDs directly after confirmation and complete popup cleanup;
+they do not need an app chooser or native action registration. Placement is
+captured before the menu and rechecked before closing, so a moved origin refuses
+rather than closing a different tab. An explicit app selector is still checked
+strictly; it is not silently ignored.
+
+For actions that invoke app UI, native mode resolves app intent **only after
+executable selection and exact owned-popup/file cleanup**; Escape returns without
 app lookup. With no selector, one app binds directly; several apps open a separate
 **choose app** menu with numbered choices, safe display labels and full app IDs.
 Escape at its root (or unmapped `q`) cancels with no action. Its initial rectangle
@@ -200,7 +207,13 @@ for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-Other native actions (including close) use one documented `client.perform`
+The native rename dialogs are unchanged. A bare CLI invocation supplies session
+and pane IDs, not the invoking GUI app ID. When several apps share a session,
+those resource IDs cannot identify which app should display a native dialog.
+That app-context limitation remains; no app is inferred from terminal ownership,
+labels or remembered choices.
+
+Other app-routed native actions use one documented `client.perform`
 request with the original action/JSON arguments and explicit captured origin
 `session_id`/`block_id`. A separate unscoped client pins the exact server and
 three-second timeout; splits omit both context fields. Errors, invalid replies

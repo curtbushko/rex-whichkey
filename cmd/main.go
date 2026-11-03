@@ -123,8 +123,10 @@ Options:
   --help, -h         Show help without contacting Rex
 
 Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
-execution/server-host helper and Rex CLI, an attached live graphical app and its
-Remote Control permission. Lua customization additionally needs installed modules,
+execution/server-host helper and Rex CLI. App UI actions additionally require an
+attached graphical app and its Remote Control permission. Native pane/tab/session
+closes use captured resource IDs without an app chooser; explicit client selectors
+remain strict. Lua customization additionally needs installed modules,
 setup and launch/completion registration. Nothing edits/reloads configuration.
 The native caller waits until selection/dismissal, cancellation or origin loss;
 there is no native idle timeout. Configured launch returns after activation and

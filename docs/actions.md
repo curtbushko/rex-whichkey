@@ -15,6 +15,22 @@ evidence and two rename actions have user confirmation; `ws` and `c` remain
 unverified. The user stopped further testing; no new runtime checks were run for
 this menu change.
 
+A subsequent source correction makes `x`, `tx` and `wx` close the exact captured
+pane/tab/session directly through existing typed Rex resource operations, without
+an app chooser or native action registration. Confirmation and complete popup
+cleanup remain mandatory. Origin placement is captured before the menu and
+rechecked immediately before closing; explicit app selectors stay strict. This
+new route is compiled but **not runtime-tested**, per the user's instruction;
+the older native-dispatch resource evidence below predates this route.
+
+Native rename dialogs were not replaced. The proposed whichkey rename prompt
+(`REXWHICHKEY-20261102-193858`) was **rejected by the user**. Bare CLI launch
+context contains the session and pane IDs but not an invoking GUI app ID. Shared
+resource identity does not identify the app where the native dialog should open;
+multiple-app rename routing therefore remains unresolved without explicit
+invoking-app context. No terminal owner, label, stale selection or first app is
+used as a substitute.
+
 ## Historical 25-action audit
 
 The remainder records the earlier source and evidence, before that explicit menu

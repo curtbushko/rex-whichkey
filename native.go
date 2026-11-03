@@ -103,6 +103,20 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	if err != nil {
 		return errors.New("whichkey: invalid built-in menu configuration")
 	}
+	client, err := rex.New(rex.Options{Executable: executable, Server: origin.Server,
+		Session: origin.SessionID, Timeout: 3 * time.Second})
+	if err != nil {
+		return errors.New("whichkey: cannot construct the captured native endpoint/session client")
+	}
+	// Capture resource placement independently of GUI identity. Resource closes
+	// must never resolve a different tab after the user has confirmed the action.
+	inspect, finishInspect := context.WithTimeout(ctx, 3*time.Second)
+	request := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
+	placement, err := request.resourceOriginBlock(inspect, client)
+	finishInspect()
+	if err != nil {
+		return err
+	}
 	message, err := nativePopupSelection(ctx, origin, executable, config)
 	if err != nil {
 		return err
@@ -117,13 +131,16 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if mapping.CallbackRef != "" || mapping.Action == "" || !mapping.Enabled() {
 			return errors.New("whichkey: native selection is not a retained native action")
 		}
+		// These operations already have an exact server resource target. They
+		// need confirmation, not a GUI app or its native action registration.
+		if mapping.Action == "pane.close" || mapping.Action == "client.tab.close" || mapping.Action == "session.close" {
+			if err := message.ValidateSelection(config.Spec); err != nil {
+				return errors.New("whichkey: invalid native retained close selection")
+			}
+			return nativeResourceClose(ctx, client, origin, placement, requested, mapping)
+		}
 		// The original UI/files/lease are gone before any app lookup. Choice
 		// changes only the target; mapping and message remain the original intent.
-		client, err := rex.New(rex.Options{Executable: executable, Server: origin.Server,
-			Session: origin.SessionID, Timeout: 3 * time.Second})
-		if err != nil {
-			return errors.New("whichkey: native action targeting refused: cannot construct the captured endpoint/session client")
-		}
 		connection, err := nativeActionTarget(ctx, client, origin, executable, requested, mapping.Desc)
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)

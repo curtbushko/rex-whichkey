@@ -394,8 +394,24 @@ This is intentional Go-owned intent compilation, not a repair of Rex's numeric
 and Lua defaults remain direct native actions. Native previous/next, splits and
 all destructive actions retain their existing behavior.
 
-Apart from the retained New Tab intent adapter, every remaining native action sends
-trusted action/JSON args once through the
+Native `x`, `tx` and `wx` bypass app selection and native action registration.
+After validated confirmation and full UI/file/lease cleanup, existing typed Rex
+resource operations close the exact captured pane, tab or session. The origin's
+window/layer placement is captured before the menu and revalidated before the
+single close; a move refuses rather than selecting a new tab. Explicit app
+selectors remain strict, with their connection checked before closing; without
+one, these resource operations need no app lookup. Errors/uncertain closes never
+retry. The route is compiled, not runtime-certified after the user's stop-testing
+instruction.
+
+Native rename dialogs remain app-routed. Session/pane/tab identities from a bare
+CLI do not identify the invoking GUI app when multiple apps share a session.
+Replacing the native dialog was rejected, and no heuristic app selection is used.
+Removing that remaining chooser requires trusted invoking-app context; it is not
+claimed fixed by the resource-close routing change.
+
+Apart from resource closes and the retained New Tab intent adapter, every
+remaining native action sends trusted action/JSON args once through the
 explicit `client.perform` request above, with captured origin session/block
 context; no native `rex do` dispatch wrapper remains. Metadata still legitimately
 uses the read-only Rex `actions --json` command. Destructive close targets and
