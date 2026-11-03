@@ -141,10 +141,10 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		// The original UI/files/lease are gone before any app lookup. Choice
 		// changes only the target; mapping and message remain the original intent.
-		rename := mapping.Action == "client.tab.rename" || mapping.Action == "session.rename"
+		paneApp := mapping.Action == "client.tab.rename" || mapping.Action == "session.rename" || mapping.Action == "session.switch"
 		var connection popupAppConnection
-		if rename {
-			connection, err = nativeRenameTarget(ctx, client, origin, placement, requested)
+		if paneApp {
+			connection, err = nativePaneAppTarget(ctx, client, origin, placement, requested)
 		} else {
 			connection, err = nativeActionTarget(ctx, client, origin, executable, requested, mapping.Desc)
 		}
@@ -210,17 +210,17 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
-		if rename {
+		if paneApp {
 			if current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
-				return errors.New("whichkey: rename refused: launching pane moved after the menu opened")
+				return errors.New("whichkey: pane app routing refused: launching pane moved after the menu opened")
 			}
 			if requested == "" {
-				owner, err := nativeRenameOwner(dispatch, client, origin, placement.WindowID)
+				owner, err := nativePaneAppOwner(dispatch, client, origin, placement.WindowID)
 				if err != nil {
 					return err
 				}
 				if owner != connection.ID {
-					return errors.New("whichkey: rename refused: launching pane's GUI owner changed; not retargeted")
+					return errors.New("whichkey: pane app routing refused: launching pane's GUI owner changed; not retargeted")
 				}
 			}
 		}

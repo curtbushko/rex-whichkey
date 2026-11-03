@@ -121,14 +121,14 @@ or automation connections are also attached. Rex terminals normally need not
 export `REX_CLIENT`; its absence is not a prerequisite failure. No live attached
 app produces guidance to connect the graphical app to the origin session.
 Configured launch with several apps still requires an exact full app ID. Native
-resource closes do not require app selection. Native rename binds the launching
-pane's documented GUI owner, as described below; other native app actions use an
+resource closes do not require app selection. Native rename and Switch Session
+bind the launching pane's documented GUI owner, as described below; other native app actions use an
 explicit target chooser when several apps qualify.
 A supplied selector must match a live app in that exact session; stale, non-app or
 unattached selectors refuse even if another app exists, never falling back to the
 chooser. Native failures are **action-targeting refusals after popup cleanup**,
 not launch prerequisites. No global, focused, last-resize or arbitrary-first
-fallback is used. Rename's explicit block-owner routing policy is distinct from
+fallback is used. The rename/session-picker block-owner routing policy is distinct from
 using terminal-size reports as app identity.
 
 `popupRequest.originBlock` combines `popupOriginConnection` generation revalidation
@@ -408,9 +408,10 @@ one, these resource operations need no app lookup. Errors/uncertain closes never
 retry. The route is compiled, not runtime-certified after the user's stop-testing
 instruction.
 
-Native tab/session rename (`tr`/`wr`) preserves Rex's native dialogs and original
-session/block context. Explicit app selectors take precedence. Without one,
-[`native_rename.go`](../native_rename.go) reads the launching pane's documented
+Native tab/session rename (`tr`/`wr`) and Switch Session (`ws`) preserve Rex's
+native rename dialogs/session picker and original session/block context. Explicit
+app selectors take precedence. Without one,
+[`native_app_owner.go`](../native_app_owner.go) reads the launching pane's documented
 `session.describe_block` owner and binds that exact live graphical app attached
 to the captured session, including its connection generation. This is the
 user-requested pane-owner routing policy, not proof of input provenance or extra
@@ -419,7 +420,7 @@ one `client.perform`, Go revalidates the app generation, original tab/layer and
 unchanged owner. A missing/non-GUI owner, move or changed binding refuses; no
 label, resize reporter, first/last app or remembered choice substitutes. Explicit
 selectors keep their existing strict validation and need not match the owner.
-No replacement rename prompt was introduced. The new route is compiled, not
+No replacement rename prompt or session picker was introduced. The route is compiled, not
 runtime-tested under the user's stop-testing instruction.
 
 Apart from resource closes and the retained New Tab intent adapter, every

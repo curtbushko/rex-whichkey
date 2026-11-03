@@ -166,7 +166,8 @@ strictly; it is not silently ignored.
 
 For actions that invoke app UI, native mode resolves app intent **only after
 executable selection and exact owned-popup/file cleanup**; Escape returns without
-app lookup. Rename uses the pane-owner route below, without an app chooser.
+app lookup. Rename and Switch Session use the pane-owner route below, without
+an app chooser.
 For other app UI actions with no selector, one app binds directly; several apps open a separate
 **choose app** menu with numbered choices, safe display labels and full app IDs.
 Escape at its root (or unmapped `q`) cancels with no action. Its initial rectangle
@@ -176,7 +177,8 @@ launch and requires an exact selector when several apps are attached.
 
 Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds.
 Names, focus and last-resize reports never select a target. The documented block
-owner supplies rename routing as described below. `REX_CLIENT` is normally absent.
+owner supplies rename/session-picker routing as described below. `REX_CLIENT`
+is normally absent.
 No eligible app or a stale/non-app/unattached explicit selector refuses **native
 action targeting**, not popup display. An invalid explicit target never falls back
 to the chooser. The retained action, arguments and confirmation survive target
@@ -209,8 +211,9 @@ for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-Native tab/session rename (`tr`, `wr`) keeps Rex's native dialogs. An explicit
-`--client` or `REX_CLIENT` binding takes precedence. Otherwise Go reads the
+Native tab/session rename (`tr`, `wr`) and Switch Session (`ws`) keep Rex's native
+rename dialogs and session picker. An explicit `--client` or `REX_CLIENT` binding
+takes precedence. Otherwise Go reads the
 launching pane's documented `owner` from `session.describe_block`, then validates
 that exact ID as a live graphical app attached to the captured session. It does
 not open the session-wide app chooser. Immediately before dispatch it rechecks

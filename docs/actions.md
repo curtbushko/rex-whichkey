@@ -35,7 +35,10 @@ and native dialog. App generation, original tab/layer placement and unchanged
 owner are checked immediately before dispatch; absent/non-GUI owners, moves or
 changes refuse rather than guessing another app. Ownership is routing context,
 not input provenance or additional permission. This refines the earlier overly
-broad claim that no associated app ID was available. The route is built but not
+broad claim that no associated app ID was available. Switch Session (`ws`) now
+shares this pane-owner binding and revalidation path, so it opens Rex's session
+picker without first opening whichkey's app chooser. The shared helper is
+[`native_app_owner.go`](../native_app_owner.go). The route is built but not
 runtime-tested, per the user's stop-testing instruction.
 
 ## Historical 25-action audit
