@@ -37,9 +37,23 @@ changes refuse rather than guessing another app. Ownership is routing context,
 not input provenance or additional permission. This refines the earlier overly
 broad claim that no associated app ID was available. Switch Session (`ws`) now
 shares this pane-owner binding and revalidation path, so it opens Rex's session
-picker without first opening whichkey's app chooser. The shared helper is
-[`native_app_owner.go`](../native_app_owner.go). The route is built but not
-runtime-tested, per the user's stop-testing instruction.
+picker without first opening whichkey's app chooser.
+
+The subsequent full selector audit found the same old chooser in **ten more
+native bindings**: `wh`, `wl`, `th`, `tl`, `wn`, `tn`, `v`, `s`, `e` and `c`.
+All native app actions now use the same
+[`pane-owner binding and validation`](../native_app_owner.go), not an action
+allowlist. The app chooser, private selection tag, label formatter and
+singleton/list-order selection fallback were removed. Configured CLI launch was
+also corrected to derive its default exact binding from the pane owner before
+original-VM activation. Existing internal `--client` flags still transport and
+validate that known binding; they are not user-selection prompts.
+
+Resource closes remain app-independent, explicit overrides remain strict, and
+native dialogs/pickers are unchanged. New Tab freezes its app before creation;
+its subsequent activation revalidates that connection and exact resources, not
+a potentially changed owner caused by its own creation. These routes are built
+but not runtime-tested, per the user's stop-testing instruction.
 
 ## Historical 25-action audit
 

@@ -117,8 +117,8 @@ A registered default whichkey action instead uses your original-VM Lua menu.
 
 Options:
   --server ENDPOINT  Execution-host socket path, unix URI or host:port override
-  --client FULL_ID   Exact attached client ID (otherwise REX_CLIENT; rename and
-                     Switch Session use the pane's GUI owner; other UI resolves apps)
+  --client FULL_ID   Exact attached client override (otherwise REX_CLIENT or the
+                     launching pane's GUI owner for all app actions)
   --action NAME      Require this registered Lua launch action (no native fallback)
   --help, -h         Show help without contacting Rex
 

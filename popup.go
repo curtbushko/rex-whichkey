@@ -151,31 +151,23 @@ func popupBounds(position string) rex.Bounds {
 // popupOriginConnection uses Rex's native info.kind classification on the
 // captured session's attachments: only app is eligible, never CLI/automation or
 // an unknown kind. This keeps classification and membership in one response.
-// An absent selector requires exactly one live app; an explicit selector cannot
-// bypass that eligibility. Missing/unknown state is connected per Rex's contract;
-// only lost is disconnected. See docs/launch-contract.md for the schema source.
+// Callers must supply the exact pane-owner or explicit binding. This validator
+// never chooses a client from list order or prompts for one. Missing/unknown
+// state is connected per Rex's contract; only lost is disconnected.
 func popupOriginConnection(ctx context.Context, client *rex.Client, sessionID, requested string) (string, string, error) {
+	if !popupResourceID(requested, "client") {
+		return "", "", errors.New("whichkey: exact graphical app binding is missing or malformed")
+	}
 	connections, err := popupAppConnections(ctx, client, sessionID)
 	if err != nil {
 		return "", "", err
 	}
-	matches, id, generation := 0, "", ""
 	for _, connection := range connections {
-		if requested == "" || requested == connection.ID {
-			matches++
-			id, generation = connection.ID, connection.ConnectedAt
+		if requested == connection.ID {
+			return connection.ID, connection.ConnectedAt, nil
 		}
 	}
-	if requested != "" && matches == 0 {
-		return "", "", errors.New("whichkey: supplied client selector is not a live graphical app attached to the origin session; use --client with an exact full attached app ID or correct REX_CLIENT")
-	}
-	if matches == 0 {
-		return "", "", errors.New("whichkey: origin session has no attached live graphical Rex app; connect the app to this session and relaunch")
-	}
-	if matches > 1 {
-		return "", "", errors.New("whichkey: origin session has several attached live graphical Rex apps; supply --client with the exact full app client ID")
-	}
-	return id, generation, nil
+	return "", "", errors.New("whichkey: bound client is not a live graphical app attached to the origin session")
 }
 
 // originBlock validates the connection generation independently of the Lua

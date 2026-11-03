@@ -10,6 +10,15 @@ below are historical. See [current action status](actions.md#current-menu-and-us
 for coordinator evidence versus user confirmation. No new runtime verification or
 whole-project completion is claimed.
 
+The latest app-routing audit removed the shared app chooser entirely. Every
+native app action and configured CLI launch now uses the launching pane's exact
+GUI owner unless explicitly overridden; resource closes remain app-independent.
+This supersedes the historical chooser/unique-app policies below. App generation,
+attachment, placement and owner are validated before the first effect; no labels,
+resize reports or connection-list order select an app. New Tab retains its bound
+app across its own creation/activation effects. Native dialogs and pickers remain
+unchanged. These routing changes are compiled, not newly runtime-certified.
+
 The user clarified that the popup's remaining top bar is Rex's **pane header**,
 not an OS window title bar. Rex documents **Settings > Interface > Panes > Show
 pane headers** ([setting reference](https://www.superlogical.com/rex/docs/reference/mac-settings#setting-panes-show-pane-headers)).

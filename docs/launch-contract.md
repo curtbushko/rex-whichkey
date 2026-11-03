@@ -94,8 +94,10 @@ focus restoration, and owned-resource checks for cleanup. Zero/several apps,
 unknown attachment kinds and a valid-but-nonexistent explicit selector do not
 prevent display/navigation/dismissal; they do not prove a GUI presented the layer.
 
-Client precedence is present `--client`, then present `REX_CLIENT`, otherwise a
-relationship lookup of **only the captured session's attached graphical apps**.
+Client precedence is present `--client`, then present `REX_CLIENT`, otherwise the
+launching pane's documented GUI owner. The exact ID is validated against only
+the captured session's attached graphical apps; list cardinality never selects
+an app.
 For native mode this lookup is deferred until an executable retained selection
 has been confirmed and the owned popup/private transport cleaned. Cancellation
 returns without looking up an app. Configured mode still performs it before
@@ -116,20 +118,19 @@ Rex's documented missing/unknown connection state counts as connected; only `los
 is disconnected. The documented null/empty attachment list means no candidates;
 a missing/malformed list is an inspection error, not a successful empty lookup.
 
-Without a selector, exactly one live attached app binds directly, even when CLI
-or automation connections are also attached. Rex terminals normally need not
-export `REX_CLIENT`; its absence is not a prerequisite failure. No live attached
-app produces guidance to connect the graphical app to the origin session.
-Configured launch with several apps still requires an exact full app ID. Native
-resource closes do not require app selection. Native rename and Switch Session
-bind the launching pane's documented GUI owner, as described below; other native app actions use an
-explicit target chooser when several apps qualify.
+Without a selector, all native app actions and configured CLI launches bind the
+launching pane's exact GUI owner through the same helper. This includes session
+and tab previous/next, new session/tab, splits, sidebar, palette, rename and
+Switch Session. No app chooser, singleton/list-order fallback or per-action
+exception remains. An absent/non-GUI/disconnected owner refuses rather than
+choosing another app. Native resource closes need no app binding unless one was
+explicitly supplied. `REX_CLIENT` normally need not be exported.
 A supplied selector must match a live app in that exact session; stale, non-app or
-unattached selectors refuse even if another app exists, never falling back to the
-chooser. Native failures are **action-targeting refusals after popup cleanup**,
+unattached selectors refuse even if another app exists, never falling back to
+another client. Native failures are **action-targeting refusals after popup cleanup**,
 not launch prerequisites. No global, focused, last-resize or arbitrary-first
-fallback is used. The rename/session-picker block-owner routing policy is distinct from
-using terminal-size reports as app identity.
+fallback is used. The block-owner routing policy is distinct from using terminal
+size reports as app identity.
 
 `popupRequest.originBlock` combines `popupOriginConnection` generation revalidation
 with `resourceOriginBlock`'s exact session and uniquely placed block check.
@@ -252,41 +253,34 @@ never opens another UI inside its short operation context. After the whole first
 popup lifecycle returns successfully, cancellation returns without app lookup.
 Only the selected immutable Go-owned mapping is retained for execution.
 
-[`native_targets.go`](../native_targets.go) shares strict eligible-app enumeration
-with `popupOriginConnection` without changing configured selector/cardinality
-semantics. An exact requested selector remains strict. With no selector, zero
-apps refuse, one binds its full ID/`connected_at`, and several create a private
-Go-owned choice snapshot. A separate canonical `Config`/`Mapping` menu displays
-full app IDs followed by bounded printable-ASCII label hints. Duplicate, empty or
-unsafe labels cannot become identity; invalid label data gets a neutral fallback.
-Keys use 1–9 and explicit More groups, not conflicting decimal prefixes. The
-private selectable action tag is never dispatched to Rex. Child Completion is
-validated against this retained config and its keys resolve only a retained app
-ID/generation, never replacement original action/args/confirmation.
+[`native_app_owner.go`](../native_app_owner.go) binds every native app action and
+configured CLI launch through one pane-owner/explicit-selector path.
+[`native_targets.go`](../native_targets.go) only validates eligible attachments;
+it no longer constructs an app picker or reads labels. `popupOriginConnection`
+requires an exact binding and cannot choose a singleton app or prompt for one.
+The earlier app chooser and its private selectable action were retired.
 
-The chooser starts only after original popup teardown and uses the same native
-FIFO/foreground ownership, resource-only liveness, initial sizing/spacers and
-fixed-rectangle navigation. Its interaction has no idle deadline; Escape at the
-root or unmapped `q` cancels with success and no action. Returning from it requires
-successful owned UI/file/lease cleanup and exact origin focus restoration. Neither
-stage caches an app preference. An outer native signal context spans both stages,
-lookups, cleanup gaps and dispatch, while per-stage cleanup stays bounded and
-parent loss closes each child's FIFO writer. The configured original-VM route,
-capability/expiry and finite controller policy are unchanged.
+Native app binding starts only after original popup teardown. There is no second
+interactive stage and no cached app preference. The outer native signal context
+spans the menu, metadata lookups, cleanup and dispatch; interaction has no idle
+deadline, cleanup remains bounded, and parent loss closes the child's FIFO writer.
+Configured CLI binding happens before activation; original-VM capability, expiry
+and finite controller behavior remain unchanged.
 
-After choice and cleanup, a fresh three-second dispatch context remains a child
-of that outer signal context. Native dispatch revalidates the original selection,
-checks the actual dispatch action's metadata on the bound app, then rechecks its
-exact captured generation plus origin immediately before execution. Lost attachments,
-reconnects or stale choices fail; no re-enumeration silently replaces the target.
-The chooser cannot renew the captured generation.
+After selection and cleanup, a fresh three-second dispatch context remains a
+child of that outer signal context. Every app action revalidates the selection,
+actual dispatch action registration, captured app generation, original tab/layer
+placement and unchanged pane owner before its first effect. Explicit overrides
+skip only the owner-equality condition, never app/placement validation. Lost
+attachments, reconnects, ownership changes or moves refuse without retargeting.
 
-Native actions other than numbered-tab and New Tab intent use documented `client.perform`
+Native app actions other than New Tab intent use documented `client.perform`
 through a separate **unscoped** `rex.Client` pinned to the captured endpoint and a
 three-second timeout. Each request preserves retained `client_id`, `action`, JSON
 `args`, `origin: "cli"` and `timeout_ms: 3000`; empty args become `{}`. All non-split
 requests also carry explicit captured origin `session_id` and `block_id`, preserving
-origin-bound context including destructive close targets. Only `pane.split`
+origin-bound context. Resource closes instead use exact server IDs without app
+dispatch. Only `pane.split`
 (`v`/`right`, `s`/`down`) omits both fields: the chosen app splits its currently
 selected tab/window's focused pane.
 `api call` does not default to ambient `REX_SESSION`/`REX_BLOCK`/`REX_WINDOW`, and
@@ -408,9 +402,9 @@ one, these resource operations need no app lookup. Errors/uncertain closes never
 retry. The route is compiled, not runtime-certified after the user's stop-testing
 instruction.
 
-Native tab/session rename (`tr`/`wr`) and Switch Session (`ws`) preserve Rex's
-native rename dialogs/session picker and original session/block context. Explicit
-app selectors take precedence. Without one,
+All native app actions preserve their existing native UI and action semantics,
+including rename dialogs and the session picker. Explicit app selectors take
+precedence. Without one,
 [`native_app_owner.go`](../native_app_owner.go) reads the launching pane's documented
 `session.describe_block` owner and binds that exact live graphical app attached
 to the captured session, including its connection generation. This is the
@@ -420,6 +414,9 @@ one `client.perform`, Go revalidates the app generation, original tab/layer and
 unchanged owner. A missing/non-GUI owner, move or changed binding refuses; no
 label, resize reporter, first/last app or remembered choice substitutes. Explicit
 selectors keep their existing strict validation and need not match the owner.
+New Tab validates the owner before creation. Creation can change focus/ownership;
+activation retains the already-bound app and rechecks its generation, origin
+placement and new-window membership without resolving another owner.
 No replacement rename prompt or session picker was introduced. The route is compiled, not
 runtime-tested under the user's stop-testing instruction.
 

@@ -95,8 +95,8 @@ func (output *launchBuffer) Write(data []byte) (int, error) {
 // launchNativePopup retains requested as syntax-validated Go-owned intent, not
 // a connection generation or child authority. No app is consulted until selection.
 func launchNativePopup(parent context.Context, origin launchOrigin, executable, requested string) error {
-	// Keep signal ownership across both UI stages, their cleanup, and the gaps
-	// spent looking up targets/metadata. Per-popup contexts alone leave gaps.
+	// Keep signal ownership across interaction, cleanup and metadata/dispatch
+	// gaps. A context owned only by the popup would leave those gaps exposed.
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 	config, err := nativeDefaults()
@@ -139,22 +139,14 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 			}
 			return nativeResourceClose(ctx, client, origin, placement, requested, mapping)
 		}
-		// The original UI/files/lease are gone before any app lookup. Choice
-		// changes only the target; mapping and message remain the original intent.
-		paneApp := mapping.Action == "client.tab.rename" || mapping.Action == "session.rename" || mapping.Action == "session.switch"
-		var connection popupAppConnection
-		if paneApp {
-			connection, err = nativePaneAppTarget(ctx, client, origin, placement, requested)
-		} else {
-			connection, err = nativeActionTarget(ctx, client, origin, executable, requested, mapping.Desc)
-		}
+		// Every app action uses the same pane-owner binding. Do not reintroduce
+		// per-action exceptions that fall back to a session-wide app chooser.
+		// The original UI/files/lease are already gone before this lookup.
+		connection, err := nativePaneAppTarget(ctx, client, origin, placement, requested)
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
-		if connection.ID == "" {
-			return nil // Target chooser cancellation never dispatches the original action.
-		}
-		// User interaction is over and both popup lifecycles have returned
+		// User interaction is over and the popup lifecycle has returned
 		// successfully. Start a fresh short budget, still signal-cancellable.
 		dispatch, done := context.WithTimeout(ctx, 3*time.Second)
 		defer done()
@@ -181,7 +173,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
 		if mapping.Action == "client.tab.new" {
-			return nativeNewTab(dispatch, client, bound, executable, mapping)
+			return nativeNewTab(dispatch, client, bound, placement, requested, executable, mapping)
 		}
 		args := mapping.Args
 		if len(args) == 0 {
@@ -206,23 +198,8 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		// Recheck the exact captured generation and origin immediately before
 		// one dispatch. A reconnect never renews or silently selects another app.
-		current, err := bound.originBlock(dispatch, client)
-		if err != nil {
-			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
-		}
-		if paneApp {
-			if current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
-				return errors.New("whichkey: pane app routing refused: launching pane moved after the menu opened")
-			}
-			if requested == "" {
-				owner, err := nativePaneAppOwner(dispatch, client, origin, placement.WindowID)
-				if err != nil {
-					return err
-				}
-				if owner != connection.ID {
-					return errors.New("whichkey: pane app routing refused: launching pane's GUI owner changed; not retargeted")
-				}
-			}
+		if err := validatePaneAppOrigin(dispatch, client, bound, placement, requested); err != nil {
+			return err
 		}
 		// Discard only a validated JSON result. Errors can follow a successful
 		// mutation, so neither an uncertain reply nor a timeout permits retry.
@@ -234,10 +211,10 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	return errors.New("whichkey: native selection is missing from the retained snapshot")
 }
 
-// nativeNewTab compiles only Go-owned tn intent after both UIs and their
-// files/leases are gone and the caller checked session.select registration.
-// Creation and app activation are distinct effects, never a retryable transaction.
-func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, executable string, mapping Mapping) error {
+// nativeNewTab compiles only Go-owned tn intent after popup cleanup and the
+// caller's session.select registration check. Creation and app activation are
+// distinct effects, never a retryable transaction.
+func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested, executable string, mapping Mapping) error {
 	if mapping.Action != "client.tab.new" || mapping.Keys != "tn" {
 		return errors.New("whichkey: native new tab refused: invalid retained new-tab intent")
 	}
@@ -255,8 +232,8 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, e
 	if err != nil {
 		return errors.New("whichkey: native new tab refused: cannot inspect the captured origin session")
 	}
-	if _, err := bound.originBlock(ctx, client); err != nil {
-		return errors.New("whichkey: native new tab refused: origin or chosen app connection changed before creation")
+	if err := validatePaneAppOrigin(ctx, client, bound, placement, requested); err != nil {
+		return err
 	}
 	// Exactly one default-terminal creation in the captured source session.
 	// NewWindow can retain a validated ID even when later response checks fail.
@@ -278,7 +255,10 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, e
 	if _, err := window.Inspect(ctx); err != nil {
 		return fmt.Errorf("whichkey: native new tab %s created in session %s; membership could not be verified before activation; inspect that exact tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
-	if _, err := bound.originBlock(ctx, client); err != nil {
+	// Creation can legitimately change GUI ownership. Keep the already-bound
+	// app; revalidate its generation and origin placement, never pick a new owner.
+	current, err := bound.originBlock(ctx, client)
+	if err != nil || current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
 		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; origin or chosen app connection changed before activation; select that tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
 	// Only parent-derived destination args select the new tab. No outer

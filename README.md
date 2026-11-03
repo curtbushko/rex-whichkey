@@ -21,12 +21,12 @@ runtime certification is claimed. Phase11 adds compact status borders, condition
 paging hints and measured content-fitting layer height. Phase12 adds compact
 first-frame sizing and status spacers. The later Phase13 correction retains one
 initial rectangle through navigation, superseding live grow/shrink behavior;
-source changes alone do not verify stable runtime bounds. Phase14 adds an explicit
-app chooser after native action selection when several apps are attached,
-translates native numbered-tab intent to exact window IDs, creates native New Tab
-intent through the typed source-session resource API, and uses explicit
-`client.perform` requests for native app dispatch. These source repairs
-do not certify every default action or GUI-only behavior.
+source changes alone do not verify stable runtime bounds. Phase14 historically
+added an app chooser and numbered-tab adapter; both were subsequently removed at
+the user's direction. All app actions now use the launching pane's validated GUI
+owner unless explicitly overridden. New Tab uses the typed source-session
+resource API and exact-ID activation; app dispatch uses explicit `client.perform`.
+These source repairs do not certify every default action or native UI behavior.
 **Hiding native Rex pane/tab/window controls (REQ-026) remains blocked**,
 not waived or fulfilled;
 Phase11/project delivery is partial while that capability is unresolved.
@@ -166,29 +166,25 @@ strictly; it is not silently ignored.
 
 For actions that invoke app UI, native mode resolves app intent **only after
 executable selection and exact owned-popup/file cleanup**; Escape returns without
-app lookup. Rename and Switch Session use the pane-owner route below, without
-an app chooser.
-For other app UI actions with no selector, one app binds directly; several apps open a separate
-**choose app** menu with numbered choices, safe display labels and full app IDs.
-Escape at its root (or unmapped `q`) cancels with no action. Its initial rectangle
-also stays fixed through navigation. This is an action-target prompt, not live
-submenu resizing or a saved app preference. Configured mode still binds before
-launch and requires an exact selector when several apps are attached.
+app lookup. **All app actions** use the same pane-owner route below; there is no
+app-selection menu or per-action fallback. This includes session/tab previous
+and next, new session/tab, splits, sidebar, palette, rename and Switch Session.
+Configured CLI launch uses that same binding before activating the original Lua
+VM; Lua-invoked menus keep their actual initiating client context.
 
 Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds.
 Names, focus and last-resize reports never select a target. The documented block
-owner supplies rename/session-picker routing as described below. `REX_CLIENT`
-is normally absent.
+owner supplies app routing as described below. `REX_CLIENT` is normally absent.
 No eligible app or a stale/non-app/unattached explicit selector refuses **native
 action targeting**, not popup display. An invalid explicit target never falls back
-to the chooser. The retained action, arguments and confirmation survive target
-choice unchanged; native New Tab intent is compiled as described below. Both
-popups, files and lifetime pipes are cleaned before one dispatch. The actual
+to another app. The retained action, arguments and confirmation stay unchanged;
+native New Tab intent is compiled as described below. The popup, files and
+lifetime pipe are cleaned before dispatch. The actual
 dispatched action must be available; its exact client ID and captured
 `connected_at` generation plus origin placement are rechecked immediately
 before dispatch, with no reconnect retargeting. Interaction remains deadline-free
-and signal-cancellable across both stages; the short dispatch budget starts after
-choice and cleanup.
+and signal-cancellable; the short dispatch budget starts after selection and
+cleanup.
 
 Native `v` (Split right) and `s` (Split down) split the focused pane in the
 **chosen app's currently selected tab/window**, not necessarily the launch terminal's
@@ -206,14 +202,17 @@ The chosen app must register that actual action before creation and again before
 activation; origin/app generation is checked before each effect, and window
 membership before activation. All UI/files/leases are gone before creation.
 If creation is uncertain, inspect the origin session before any manual action.
+The pane owner is checked before creation. Creation may legitimately change
+focus/ownership, so activation retains the same bound app and rechecks its
+connection and origin placement instead of choosing a new owner.
 If activation fails, the tab is preserved and the error includes its exact ID
 for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-Native tab/session rename (`tr`, `wr`) and Switch Session (`ws`) keep Rex's native
-rename dialogs and session picker. An explicit `--client` or `REX_CLIENT` binding
-takes precedence. Otherwise Go reads the
+Every native app action keeps its existing Rex UI and action semantics, including
+native rename dialogs and the session picker. An explicit `--client` or
+`REX_CLIENT` binding takes precedence. Otherwise Go reads the
 launching pane's documented `owner` from `session.describe_block`, then validates
 that exact ID as a live graphical app attached to the captured session. It does
 not open the session-wide app chooser. Immediately before dispatch it rechecks
@@ -427,11 +426,10 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   leaking capability data.
 - **Missing/stale origin:** launch inside the original Rex terminal with its real
   full `REX_SESSION`/`REX_BLOCK` and execution endpoint. No focus fallback exists.
-- **Native action-targeting refusal / configured client-selection failure:** no
-  eligible app means connecting one to that session before trying a new action;
-  several eligible apps offer a native action-time chooser when no selector was
-  supplied. Configured launch still requires an exact full app ID in that case.
-  CLI/automation/unknown kinds do not count. Fix malformed `--client`/empty
+- **Native action-targeting refusal / configured client-selection failure:**
+  app actions require the launching pane's owner to be a live graphical app in
+  that session, or a valid explicit override. Several attached apps do not cause
+  an app-selection prompt. CLI/automation/unknown owners do not count. Fix malformed `--client`/empty
   `REX_CLIENT` before launch; stale but valid IDs are checked only after native
   selection, or before configured
   activation. Native display/Escape need neither a singleton app nor live selector.

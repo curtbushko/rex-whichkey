@@ -107,7 +107,8 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	// Validate server resources before choosing a route, without inspecting GUI
 	// attachments. A requested native selector is intent, not a live binding.
 	request := popupRequest{Server: server, SessionID: origin.SessionID, BlockID: origin.BlockID}
-	if _, err := request.resourceOriginBlock(ctx, client); err != nil {
+	placement, err := request.resourceOriginBlock(ctx, client)
+	if err != nil {
 		return err
 	}
 	actions, err := origin.actions(ctx, executable, false)
@@ -126,12 +127,13 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 	}
 	// Configured launch still requires an exact live app and generation before
 	// activation in the original Lua VM; no decoded handoff can defer binding.
-	origin.ClientID, origin.ConnectedAt, err = popupOriginConnection(ctx, client, origin.SessionID, requested)
+	connection, err := nativePaneAppTarget(ctx, client, origin, placement, requested)
 	if err != nil {
 		return err
 	}
+	origin.ClientID, origin.ConnectedAt = connection.ID, connection.ConnectedAt
 	request.ClientID, request.ConnectedAt = origin.ClientID, origin.ConnectedAt
-	if _, err := request.originBlock(ctx, client); err != nil {
+	if err := validatePaneAppOrigin(ctx, client, request, placement, requested); err != nil {
 		return err
 	}
 	data, err := origin.marshal()

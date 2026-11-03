@@ -8,10 +8,10 @@ import (
 	"temp/rex"
 )
 
-// nativePaneAppTarget preserves Rex's rename dialogs and session picker, routing
-// them to an explicit app or the launching pane's documented GUI owner rather
-// than a session-wide app chooser. Ownership supplies routing context only;
-// normal attachment/kind/generation and Rex Remote Control checks still apply.
+// nativePaneAppTarget binds all app actions and configured CLI launches to an
+// explicit app or the launching pane's documented GUI owner. It never prompts
+// for an app. Ownership is routing context, not extra permission; attachment,
+// kind, generation and Rex Remote Control checks still apply.
 func nativePaneAppTarget(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string) (popupAppConnection, error) {
 	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 	defer cancel()
@@ -55,4 +55,28 @@ func nativePaneAppOwner(ctx context.Context, client *rex.Client, origin launchOr
 		return "", errors.New("whichkey: pane app routing refused: launching pane has no GUI owner; an exact app binding is required")
 	}
 	return *block.Owner, nil
+}
+
+// validatePaneAppOrigin checks the frozen binding before the first effect.
+// Own mutations may then change focus/ownership; later effects must retain this
+// exact app and generation rather than resolving whichever owner appears next.
+func validatePaneAppOrigin(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested string) error {
+	current, err := bound.originBlock(ctx, client)
+	if err != nil {
+		return errors.New("whichkey: pane app routing refused: origin or app connection changed")
+	}
+	if current.ID != placement.ID || current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
+		return errors.New("whichkey: pane app routing refused: launching pane moved after binding")
+	}
+	if requested == "" {
+		origin := launchOrigin{SessionID: bound.SessionID, BlockID: bound.BlockID}
+		owner, err := nativePaneAppOwner(ctx, client, origin, placement.WindowID)
+		if err != nil {
+			return err
+		}
+		if owner != bound.ClientID {
+			return errors.New("whichkey: pane app routing refused: launching pane's GUI owner changed; not retargeted")
+		}
+	}
+	return nil
 }
