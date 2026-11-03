@@ -121,18 +121,22 @@ or automation connections are also attached. Rex terminals normally need not
 export `REX_CLIENT`; its absence is not a prerequisite failure. No live attached
 app produces guidance to connect the graphical app to the origin session.
 Configured launch with several apps still requires an exact full app ID. Native
-selected-action binding instead opens an explicit target chooser, described below.
+resource closes do not require app selection. Native rename binds the launching
+pane's documented GUI owner, as described below; other native app actions use an
+explicit target chooser when several apps qualify.
 A supplied selector must match a live app in that exact session; stale, non-app or
 unattached selectors refuse even if another app exists, never falling back to the
 chooser. Native failures are **action-targeting refusals after popup cleanup**,
-not launch prerequisites. No global, focused, terminal-owner or arbitrary-first
-fallback is used.
+not launch prerequisites. No global, focused, last-resize or arbitrary-first
+fallback is used. Rename's explicit block-owner routing policy is distinct from
+using terminal-size reports as app identity.
 
 `popupRequest.originBlock` combines `popupOriginConnection` generation revalidation
 with `resourceOriginBlock`'s exact session and uniquely placed block check.
 Configured launch/controllers use the combined check throughout. Native display
-uses only resource checks; native dispatch binds after selection and then uses
-the combined check immediately before execution. The Rex resource client rejects
+uses only resource checks; native app dispatch binds after selection and then uses
+the combined check immediately before execution. Resource closes use resource
+checks alone unless an explicit app selector was supplied. The Rex resource client rejects
 malformed/duplicate window/layer/block placement. A wrong endpoint or stale origin
 fails read-only before resource creation or activation. Preflight is not enduring
 authority; each route independently validates at its mutation boundary.
@@ -404,11 +408,19 @@ one, these resource operations need no app lookup. Errors/uncertain closes never
 retry. The route is compiled, not runtime-certified after the user's stop-testing
 instruction.
 
-Native rename dialogs remain app-routed. Session/pane/tab identities from a bare
-CLI do not identify the invoking GUI app when multiple apps share a session.
-Replacing the native dialog was rejected, and no heuristic app selection is used.
-Removing that remaining chooser requires trusted invoking-app context; it is not
-claimed fixed by the resource-close routing change.
+Native tab/session rename (`tr`/`wr`) preserves Rex's native dialogs and original
+session/block context. Explicit app selectors take precedence. Without one,
+[`native_rename.go`](../native_rename.go) reads the launching pane's documented
+`session.describe_block` owner and binds that exact live graphical app attached
+to the captured session, including its connection generation. This is the
+user-requested pane-owner routing policy, not proof of input provenance or extra
+permissions. It bypasses the session-wide app chooser. Immediately before the
+one `client.perform`, Go revalidates the app generation, original tab/layer and
+unchanged owner. A missing/non-GUI owner, move or changed binding refuses; no
+label, resize reporter, first/last app or remembered choice substitutes. Explicit
+selectors keep their existing strict validation and need not match the owner.
+No replacement rename prompt was introduced. The new route is compiled, not
+runtime-tested under the user's stop-testing instruction.
 
 Apart from resource closes and the retained New Tab intent adapter, every
 remaining native action sends trusted action/JSON args once through the

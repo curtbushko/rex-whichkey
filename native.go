@@ -141,7 +141,13 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		// The original UI/files/lease are gone before any app lookup. Choice
 		// changes only the target; mapping and message remain the original intent.
-		connection, err := nativeActionTarget(ctx, client, origin, executable, requested, mapping.Desc)
+		rename := mapping.Action == "client.tab.rename" || mapping.Action == "session.rename"
+		var connection popupAppConnection
+		if rename {
+			connection, err = nativeRenameTarget(ctx, client, origin, placement, requested)
+		} else {
+			connection, err = nativeActionTarget(ctx, client, origin, executable, requested, mapping.Desc)
+		}
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
@@ -200,8 +206,23 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		// Recheck the exact captured generation and origin immediately before
 		// one dispatch. A reconnect never renews or silently selects another app.
-		if _, err := bound.originBlock(dispatch, client); err != nil {
+		current, err := bound.originBlock(dispatch, client)
+		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
+		}
+		if rename {
+			if current.WindowID != placement.WindowID || current.LayerID != placement.LayerID {
+				return errors.New("whichkey: rename refused: launching pane moved after the menu opened")
+			}
+			if requested == "" {
+				owner, err := nativeRenameOwner(dispatch, client, origin, placement.WindowID)
+				if err != nil {
+					return err
+				}
+				if owner != connection.ID {
+					return errors.New("whichkey: rename refused: launching pane's GUI owner changed; not retargeted")
+				}
+			}
 		}
 		// Discard only a validated JSON result. Errors can follow a successful
 		// mutation, so neither an uncertain reply nor a timeout permits retry.

@@ -25,11 +25,18 @@ the older native-dispatch resource evidence below predates this route.
 
 Native rename dialogs were not replaced. The proposed whichkey rename prompt
 (`REXWHICHKEY-20261102-193858`) was **rejected by the user**. Bare CLI launch
-context contains the session and pane IDs but not an invoking GUI app ID. Shared
-resource identity does not identify the app where the native dialog should open;
-multiple-app rename routing therefore remains unresolved without explicit
-invoking-app context. No terminal owner, label, stale selection or first app is
-used as a substitute.
+context contains the session and pane IDs but not an invoking GUI app ID. The
+user directed use of the associated GUI app ID exposed by the CLI: native `tr`
+and `wr` now use the launching pane's documented `session.describe_block` owner
+unless an explicit app selector was supplied. The exact owner must be a live
+attached graphical app with a valid connection generation. Rename bypasses the
+session-wide app chooser, retaining the original session/block action context
+and native dialog. App generation, original tab/layer placement and unchanged
+owner are checked immediately before dispatch; absent/non-GUI owners, moves or
+changes refuse rather than guessing another app. Ownership is routing context,
+not input provenance or additional permission. This refines the earlier overly
+broad claim that no associated app ID was available. The route is built but not
+runtime-tested, per the user's stop-testing instruction.
 
 ## Historical 25-action audit
 

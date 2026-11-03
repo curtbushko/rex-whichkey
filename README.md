@@ -166,15 +166,17 @@ strictly; it is not silently ignored.
 
 For actions that invoke app UI, native mode resolves app intent **only after
 executable selection and exact owned-popup/file cleanup**; Escape returns without
-app lookup. With no selector, one app binds directly; several apps open a separate
+app lookup. Rename uses the pane-owner route below, without an app chooser.
+For other app UI actions with no selector, one app binds directly; several apps open a separate
 **choose app** menu with numbered choices, safe display labels and full app IDs.
 Escape at its root (or unmapped `q`) cancels with no action. Its initial rectangle
 also stays fixed through navigation. This is an action-target prompt, not live
 submenu resizing or a saved app preference. Configured mode still binds before
 launch and requires an exact selector when several apps are attached.
 
-Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds; names,
-focus and terminal ownership never select a target. `REX_CLIENT` is normally absent.
+Rex's native `info.kind == "app"` excludes CLI/automation and unknown kinds.
+Names, focus and last-resize reports never select a target. The documented block
+owner supplies rename routing as described below. `REX_CLIENT` is normally absent.
 No eligible app or a stale/non-app/unattached explicit selector refuses **native
 action targeting**, not popup display. An invalid explicit target never falls back
 to the chooser. The retained action, arguments and confirmation survive target
@@ -207,11 +209,16 @@ for manual selection. There is no retry, duplicate creation, automatic close or
 fallback to `client.tab.new`. This translates intent rather than claiming Rex's
 native New Tab action executed; configured Lua routing is unchanged.
 
-The native rename dialogs are unchanged. A bare CLI invocation supplies session
-and pane IDs, not the invoking GUI app ID. When several apps share a session,
-those resource IDs cannot identify which app should display a native dialog.
-That app-context limitation remains; no app is inferred from terminal ownership,
-labels or remembered choices.
+Native tab/session rename (`tr`, `wr`) keeps Rex's native dialogs. An explicit
+`--client` or `REX_CLIENT` binding takes precedence. Otherwise Go reads the
+launching pane's documented `owner` from `session.describe_block`, then validates
+that exact ID as a live graphical app attached to the captured session. It does
+not open the session-wide app chooser. Immediately before dispatch it rechecks
+app generation, original tab/layer placement and unchanged owner; changes refuse
+rather than retarget. An absent/non-GUI owner requires an exact app binding,
+never a first-app, label, last-resize or remembered-choice fallback. Ownership is
+an explicit routing policy, not proof of which device sent a keystroke and not
+permission to bypass Rex's Remote Control checks.
 
 Other app-routed native actions use one documented `client.perform`
 request with the original action/JSON arguments and explicit captured origin
