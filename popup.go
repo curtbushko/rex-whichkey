@@ -5,10 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -34,35 +32,9 @@ func PreparePopup(input io.Reader, output io.Writer) error {
 // captured preparation. A nil override uses the execution-host endpoint policy;
 // a present empty override is invalid. Secret output must remain on a pipe.
 func PreparePopupWithServer(ctx context.Context, input io.Reader, output io.Writer, server *string) error {
-	if file, ok := output.(*os.File); ok {
-		info, err := file.Stat()
-		if err != nil || info.Mode()&os.ModeCharDevice != 0 {
-			return errors.New("whichkey: preparation requires captured output, not a terminal")
-		}
-	}
-	if _, err := DecodeConfig(input); err != nil {
-		return errors.New("whichkey: invalid prepared popup configuration")
-	}
-	if _, err := popupRexExecutable(); err != nil {
-		return err
-	}
-	endpoint, err := rex.ResolveEndpoint(ctx, server)
-	if err != nil {
-		return err
-	}
-	capability, err := NewInvocationCapability()
-	if err != nil {
-		return err
-	}
-	executable, err := os.Executable()
-	if err != nil {
-		return errors.New("whichkey: cannot resolve server-side executable")
-	}
-	return json.NewEncoder(output).Encode(struct {
-		Capability string `json:"capability"`
-		Executable string `json:"executable"`
-		Server     string `json:"server"`
-	}{capability, executable, endpoint})
+	stage, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return prepareRuntimeInput(stage, input, output, server)
 }
 
 // popupRequest is private launcher plumbing, not a second mapping schema. The
@@ -78,11 +50,16 @@ type popupRequest struct {
 	ConnectedAt   string `json:"connected_at"`
 	Completion    string `json:"completion_action"`
 	Expires       int64  `json:"expires"`
+	Receipt       string `json:"receipt"`
+	ReceiptHash   string `json:"receipt_hash"`
+	Workspace     string `json:"workspace"`
+	image         *runtimeImage
+	retained      *runtimeReceipt
 }
 
 func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 	data, err := io.ReadAll(io.LimitReader(input, (8<<20)+1))
-	if err != nil || len(data) > 8<<20 || !utf8.Valid(data) || !json.Valid(data) {
+	if err != nil || !validPopupHandoff(data) {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup handoff")
 	}
 	if err := checkConfigJSON(json.NewDecoder(bytes.NewReader(data)), false); err != nil {
@@ -107,13 +84,19 @@ func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 	now := time.Now()
 	deadline := time.Unix(request.Expires, 0)
 	if !deadline.After(now) || deadline.After(now.Add(InvocationLifetimeSeconds*time.Second)) {
-		return popupRequest{}, Config{}, errors.New("whichkey: invalid or expired popup lifetime")
+		// Retain only this structurally decoded request so the selected controller
+		// can authenticate and remove its own expired workspace, never run it.
+		return request, Config{}, errors.New("whichkey: invalid or expired popup lifetime")
 	}
 	config, err := DecodeConfig(strings.NewReader(request.Configuration))
 	if err != nil {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup configuration")
 	}
 	return request, config, nil
+}
+
+func validPopupHandoff(data []byte) bool {
+	return len(data) <= runtimeLimit && utf8.Valid(data) && json.Valid(data) && runtimeUnicode(data)
 }
 
 func popupResourceID(id, kind string) bool {
@@ -181,7 +164,16 @@ func (r popupRequest) originBlock(ctx context.Context, client *rex.Client) (rex.
 	if generation != r.ConnectedAt {
 		return rex.Block{}, errors.New("whichkey: origin client connection changed; relaunch from the original terminal")
 	}
-	return r.resourceOriginBlock(ctx, client)
+	block, err := r.resourceOriginBlock(ctx, client)
+	if err != nil {
+		return rex.Block{}, err
+	}
+	if r.retained != nil {
+		if placementErr := r.retained.checkPlacement(block); placementErr != nil {
+			return rex.Block{}, placementErr
+		}
+	}
+	return block, nil
 }
 
 // resourceOriginBlock checks only the captured endpoint/session/block. Native
@@ -204,7 +196,14 @@ func (r popupRequest) resourceOriginBlock(ctx context.Context, client *rex.Clien
 // sends capability-bearing data only on stdin and suppresses child diagnostics.
 // Failure is uncertain: callers must mark the attempt before calling, never
 // retry it or send a cancellation that could mask a possibly executed action.
-func (r popupRequest) complete(ctx context.Context, executable string, message Completion) error {
+func (r popupRequest) complete(ctx context.Context, selection *rex.CLISelection, message Completion) error {
+	if r.retained == nil || r.ReceiptHash == "" {
+		return errRuntimeCompatibility
+	}
+	if err := r.retained.check(ctx, true); err != nil {
+		return err
+	}
+	message.Version, message.ReceiptHash = CompletionReceiptVersion, r.ReceiptHash
 	if message.textInput != nil {
 		if message.Selection == nil || message.Selection.Text == nil || *message.Selection.Text != *message.textInput {
 			return errors.New("whichkey: rename result is missing validated name data")
@@ -223,61 +222,66 @@ func (r popupRequest) complete(ctx context.Context, executable string, message C
 	}
 	// --client selects the GUI for any nested configuration-action queues; Rex
 	// still gives this fresh CLI activation its own actual caller identity.
-	command := exec.CommandContext(ctx, executable,
-		"--server", r.Server, "--client", r.ClientID, "--autostart=false", "--timeout", "3s",
-		"do", r.Completion, "--session", r.SessionID, "--block", r.BlockID, "--args", "-")
-	command.Stdin = bytes.NewReader(arguments)
-	command.Stdout, command.Stderr = io.Discard, io.Discard
-	command.WaitDelay = time.Second
-	if err := command.Run(); err != nil {
+	origin := launchOrigin{Server: r.Server, SessionID: r.SessionID, BlockID: r.BlockID, ClientID: r.ClientID}
+	if err := runtimeAction(ctx, selection, origin, r.Completion, arguments, &launchOutput{remaining: popupMessageLimit}); err != nil {
 		return errors.New("whichkey: completion failed or uncertain; not retried")
 	}
 	return nil
-}
-
-func popupRexExecutable() (string, error) {
-	name := "rex"
-	if directory := os.Getenv("REX_BIN_DIR"); directory != "" {
-		if !filepath.IsAbs(directory) {
-			return "", errors.New("whichkey: REX_BIN_DIR must be server-local and absolute")
-		}
-		name = filepath.Join(directory, name)
-	}
-	path, err := exec.LookPath(name)
-	if err != nil {
-		return "", errors.New("whichkey: cannot resolve Rex on the execution host")
-	}
-	return path, nil
 }
 
 // RunPopupController runs once in a detached server-host process, not in the
 // popup's PTY. Its lifetime, state and files belong to exactly one invocation.
 // Closing the UI (or a selected action closing the origin) cannot kill this
 // process through terminal teardown. The caller never logs its secret stdin.
-func RunPopupController(parent context.Context, input io.Reader) error {
-	request, config, err := decodePopupRequest(input)
+func RunPopupController(parent context.Context, input io.Reader) (outcome error) {
+	ctx, cancel := context.WithTimeout(parent, 35*time.Second)
+	defer cancel()
+	request, config, decodeErr := decodePopupRequest(input)
+	if decodeErr != nil && request.Workspace == "" {
+		return decodeErr
+	}
+	validationErr := errors.Join(decodeErr, request.validateRuntime(ctx))
+	enteredLifecycle := false
+	released := false
+	release := func() error {
+		if released || request.image == nil {
+			return nil
+		}
+		released = true // Never repeat uncertain private cleanup.
+		return errors.Join(request.image.file.Close(), removeRuntimeWorkspace(request.Workspace))
+	}
+	defer func() {
+		cleanupErr := release()
+		outcome = errors.Join(outcome, cleanupErr)
+		if request.image != nil && cleanupErr == nil && validationErr == nil && !enteredLifecycle {
+			outcome = errors.Join(outcome, cancelPreparedRuntime(ctx, request))
+		}
+	}()
+	if validationErr != nil {
+		return validationErr
+	}
+	selection := request.retained.CLI
+	config, err := prepareConfiguredRename(ctx, request, config, selection)
 	if err != nil {
 		return err
 	}
-	executable, err := popupRexExecutable()
-	if err != nil {
-		return err
-	}
-	config, err = prepareConfiguredRename(parent, request, config, executable)
-	if err != nil {
-		return err
-	}
-	return runPopupLifecycle(parent, request, config, executable, func(ctx context.Context, message Completion) error {
-		return request.complete(ctx, executable, message)
+	enteredLifecycle = true
+	return runPopupLifecycle(ctx, request, config, selection, func(ctx context.Context, message Completion) error {
+		// The runtime workspace also carries private preparation data. Remove
+		// it, not just the terminal transport, before any retained callback.
+		if cleanupErr := release(); cleanupErr != nil {
+			return cleanupErr
+		}
+		return request.complete(ctx, selection, message)
 	})
 }
 
 // runPopupLifecycle always enforces the configured handoff's original expiry.
 // Missing/zero expiry cannot select the native foreground policy.
-func runPopupLifecycle(parent context.Context, request popupRequest, config Config, executable string,
+func runPopupLifecycle(parent context.Context, request popupRequest, config Config, selection *rex.CLISelection,
 	finish func(context.Context, Completion) error,
 ) error {
-	return runPopupWithLifetime(parent, request, config, executable, popupConfigured, finish)
+	return runPopupWithLifetime(parent, request, config, selection, popupConfigured, finish)
 }
 
 type popupLifetime uint8
@@ -290,7 +294,7 @@ const (
 // runPopupWithLifetime shares owned transport/teardown, not lifetime authority.
 // Only the Go-native caller supplies popupNative; decoded handoffs cannot do so.
 // finish receives only a retained selection, after cleanup, never child actions.
-func runPopupWithLifetime(parent context.Context, request popupRequest, config Config, executable string,
+func runPopupWithLifetime(parent context.Context, request popupRequest, config Config, selection *rex.CLISelection,
 	lifetime popupLifetime, finish func(context.Context, Completion) error,
 ) (outcome error) {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
@@ -315,10 +319,10 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	default:
 		return errors.New("whichkey: invalid popup lifetime policy")
 	}
-	client, err := rex.New(rex.Options{Executable: executable, Server: request.Server,
+	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: request.Server,
 		Session: request.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
-		return errors.New("whichkey: cannot construct the origin client")
+		return errors.New("whichkey: origin CLI/endpoint compatibility failed; check the execution-host integration and relaunch from the original terminal; not retried")
 	}
 	// Only the trusted Go caller selects native resource-only liveness. Empty
 	// decoded client fields or expiry values cannot select this policy.
@@ -408,7 +412,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 			}
 		}
 	}()
-	directory, err = os.MkdirTemp("", "rex-whichkey-") // Go creates this with mode 0700.
+	directory, err = newRuntimeDirectory("rex-whichkey-") // Go creates mode 0700, then canonicalizes its own directory.
 	if err != nil {
 		return errors.New("whichkey: cannot create private popup transport")
 	}
@@ -427,11 +431,10 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err := writePopupFile(directory, "result.json", nil); err != nil {
 		return err
 	}
-	self, err := os.Executable()
-	if err != nil {
-		return errors.New("whichkey: cannot resolve popup child executable")
+	if imageErr := request.preparePopupImage(ctx, directory); imageErr != nil {
+		return imageErr
 	}
-	command := []string{self, "popup", "--directory", directory}
+	command := []string{filepath.Join(directory, runtimeImageName), "popup", "--directory", directory}
 	if lifetime == popupNative {
 		// The child watches this pipe, not a renewable timestamp or PID. EOF
 		// cancels it even if the foreground parent is killed without defers.
@@ -463,7 +466,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	}
 	// Keep the initial rectangle for this invocation. Navigation and redraws
 	// adapt content to the terminal cells, never change owned layer bounds.
-	err = waitPopup(ctx, request, executable, layer.BlockID, originBlock)
+	err = waitPopup(ctx, request, selection, layer.BlockID, originBlock)
 	if err != nil {
 		if lifetime == popupConfigured && errors.Is(err, context.DeadlineExceeded) &&
 			ctx.Err() == context.DeadlineExceeded && parent.Err() == nil && !time.Now().Before(expires) {
@@ -504,7 +507,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 // Watch captured resource liveness too, plus app generation only in configured
 // mode. Native display survives GUI ambiguity/disconnection. Neither policy
 // checks active-tab visibility: switching tabs must not cancel or refocus it.
-func waitPopup(ctx context.Context, request popupRequest, executable, blockID string,
+func waitPopup(ctx context.Context, request popupRequest, selection *rex.CLISelection, blockID string,
 	originBlock func(context.Context) (rex.Block, error),
 ) error {
 	waitCtx, cancel := context.WithCancelCause(ctx)
@@ -534,13 +537,9 @@ func waitPopup(ctx context.Context, request popupRequest, executable, blockID st
 			}
 		}
 	}()
-	command := exec.CommandContext(waitCtx, executable,
-		"--server", request.Server, "--autostart=false", "--timeout", "3s",
-		"wait", "--session", request.SessionID, "--", blockID)
-	output := &launchOutput{remaining: popupMessageLimit}
-	command.Stdout, command.Stderr = output, output
-	command.WaitDelay = 250 * time.Millisecond
-	err := command.Run()
+	arguments := []string{"--server", request.Server, runtimeNoAutostart, runtimeTimeoutFlag, runtimeStageTimeout,
+		"wait", "--session", request.SessionID, "--", blockID}
+	err := runtimeCommand(waitCtx, selection, launchOrigin{Server: request.Server, SessionID: request.SessionID, BlockID: request.BlockID}, arguments, nil, &launchOutput{remaining: popupMessageLimit})
 	cause := context.Cause(waitCtx)
 	cancel(nil)
 	<-stopped // No watcher/RPC goroutine outlives teardown.
@@ -601,7 +600,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile} {
+	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile, runtimeImageName, "runtime.json"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -635,11 +634,14 @@ func readPopupResult(directory, capability string, config Config) (message Compl
 		return Completion{}, err
 	}
 	defer func() { outcome = errors.Join(outcome, root.Close()) }()
-	file, err := root.OpenFile("result.json", os.O_RDONLY|unix.O_NOFOLLOW, 0)
+	file, err := root.OpenFile("result.json", os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return Completion{}, errors.New("whichkey: cannot open popup result")
 	}
 	defer func() { outcome = errors.Join(outcome, file.Close()) }()
+	if _, statErr := runtimeSlotStat(file, "result.json", false); statErr != nil {
+		return Completion{}, errRuntimeStartup
+	}
 	data, err := io.ReadAll(io.LimitReader(file, popupMessageLimit+1))
 	if err != nil || len(data) > popupMessageLimit {
 		return Completion{}, errors.New("whichkey: popup result exceeds transport bound")
@@ -696,8 +698,7 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 		return errors.New("whichkey: native popup requires its foreground lifetime pipe")
 	}
 	defer func() { outcome = errors.Join(outcome, lease.Close()) }()
-	info, err := lease.Stat()
-	if err != nil || info.Mode()&os.ModeNamedPipe == 0 || info.Mode().Perm() != 0600 {
+	if _, statErr := runtimeSlotStat(lease, "lifetime", true); statErr != nil {
 		return errors.New("whichkey: invalid native popup lifetime pipe")
 	}
 	ctx, cancel := context.WithCancelCause(parent)
@@ -735,14 +736,17 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 }
 
 func runPopupTerminal(parent context.Context, directory string, deadline time.Time, noColor, ascii bool) (outcome error) {
-	root, err := openPopupDirectory(directory)
+	root, err := openVerifiedPopupDirectory(parent, directory)
 	if err != nil {
 		return err
 	}
 	defer func() { outcome = errors.Join(outcome, root.Close()) }()
-	input, err := root.OpenFile("config.json", os.O_RDONLY|unix.O_NOFOLLOW, 0)
+	input, err := root.OpenFile("config.json", os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return errors.New("whichkey: cannot open popup configuration")
+	}
+	if _, statErr := runtimeSlotStat(input, "config.json", false); statErr != nil {
+		return errors.Join(errRuntimeStartup, input.Close())
 	}
 	config, decodeErr := DecodeConfig(input)
 	if err := errors.Join(decodeErr, input.Close()); err != nil {
@@ -774,12 +778,8 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if !deadline.IsZero() && !time.Now().Before(deadline) {
 		event = MenuEvent{Dismissed: true}
 	}
-	output, err := root.OpenFile("result.json", os.O_WRONLY|os.O_TRUNC|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return errors.New("whichkey: cannot open popup result output")
-	}
-	if err := errors.Join(writePopupMenuResult(output, event, config), output.Close()); err != nil {
-		return fmt.Errorf("whichkey: commit popup result: %w", err)
+	if err := commitPopupResult(ctx, root, event, config); err != nil {
+		return err
 	}
 	return nil
 }

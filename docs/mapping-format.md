@@ -252,7 +252,10 @@ This is an opt-in fragment, not an installed/reloaded user `init.lua`. Callbacks
 remain in the original VM. Imported and inline `spec` overrides still replace the
 whole default spec. No defaults are silently reinserted after setup; retaining
 the listing in a custom spec requires retaining an explicit provider marker.
-Startup/routing changes do not change any mapping or completion semantics below.
+Mapping and retained-callback semantics remain unchanged. Code-owned startup now
+requires the explicitly negotiated runtime receipt and completion version 2 below;
+unsupported loaded Lua fails before its launch action is invoked. The Go-side
+producer alone does not deliver the dependent Lua consumer or installed assets.
 
 ## Callback ownership, lifetime and dispatch
 
@@ -298,7 +301,7 @@ actual caller client is distinct from the retained GUI target; app effects must
 explicitly select that target. Never route through the popup, a current-client
 default or a local-server fallback.
 
-The exact JSON field sets are:
+The strict legacy **version 1** JSON field sets are:
 
 - Complete: required `version`, `capability`, `kind`, `selection`.
   `version` is the integer `1`; `kind` is the string `"complete"`.
@@ -314,11 +317,14 @@ The exact JSON field sets are:
   canonical `tr` + retained `client.tab.rename`, or `wr` + retained
   `session.rename`, without callback, confirmation or nonempty retained args.
   Those mappings require text; all other mappings reject it. Names must be
-  nonblank UTF-8 without controls, at most 4096 bytes. Text provides only a label,
+  nonblank UTF-8 without controls, at most 4096 transport bytes and 128 Unicode
+  characters (the documented Rex session/window label limit). Text provides only a label,
   never a resource ID, action or replacement args. The original Lua registry
   retains and checks the tab/session identities and invokes the resource API
   after popup cleanup. Custom rename-key callbacks are not intercepted.
-  Older decoders reject this optional field, so install matching Go/Lua versions.
+  Older decoders reject this optional field. Runtime negotiation must establish
+  `selection-text-resource-rename` before showing an inline rename; build IDs need
+  not match, and missing support never becomes a dialog or discarded text.
 
 Complete example (the all-zero capability is illustrative, never generate it):
 
@@ -366,6 +372,157 @@ or args into a completion. The Lua dispatcher performs these checks independentl
 against its own snapshot and rechecks original condition guards before execution.
 A boolean is an authenticated popup assertion of y, not cryptographic evidence of
 a physical keypress or a way to change the retained confirmation requirement.
+
+### Negotiated runtime receipt and completion version 2
+
+`runtime_bootstrap.go` owns the private runtime formats; `mapping.go` owns
+Completion. These are internal integration messages, not mapping options or
+executable constructor parameters. The protocol is 1, normal asset layout is 1,
+and the configured completion wire is **2**. Version 1 remains strict: supplying
+`receipt_hash` with version 1 is invalid. Version 2 requires exactly `version`,
+`capability`, `receipt_hash`, `kind`, plus `selection` only for `complete`.
+Selection's strict keys/ref/confirmation/text semantics above are unchanged.
+`receipt_hash` is 64 lowercase hexadecimal SHA256 characters over the **exact
+receipt string bytes** returned by Go. Lua retains those bytes/hash; it must not
+serialize its own competing receipt or renew the receipt's original expiry.
+
+The loaded `whichkey_runtime` action is read-only. Its request is
+`{protocol_min:1, protocol_max:1, action:NAME}` on `rex do ... --args - --json`.
+The response requires all of `protocol_min`, `protocol_max`, `consumer_build`,
+`features`, `launch_action`, `completion_action`, `menu_generation`,
+`server_instance`, `config_generation`, `config_hash`, and `layout_revision`.
+Names use lowercase letters/digits/underscores. Strings are nonblank,
+control-free and at most 1024 bytes (action names at most 256). Ranges must
+contain protocol 1; features must be unique and understood. Required features:
+`original-vm`, `separate-caller-target`, `single-use`, `generation-bound`,
+`retained-menu`, `public-file-relay`, `completion-receipt-v2`.
+`selection-text-resource-rename` is additionally mandatory if the retained
+resolved menu has a built-in inline rename. The consumer must advertise its
+actual retained-template support before reservation. Build IDs are audit data,
+not equality locks. Missing/old advertisement fails before calling an old launch
+action; registration alone never authorizes an installed popup helper.
+
+All commands below take **only captured stdin** and emit captured stdout (never
+terminal output). Internal records are strict JSON objects: unknown/duplicate/
+case-alias fields, nulls, coercions, bad Unicode and trailing data fail. Optional
+fields are omitted, not null. CLI/API descriptors and version JSON inside the
+Go-owned receipt remain JSON **strings**, preserving their exact bytes.
+
+**Key/palette consumer handoff**:
+
+1. Run the fixed anchor sibling `runtime-describe` with `{anchor,
+   layout_revision:1, consumer, origin}` and optional present `server` override.
+   `anchor` is the validated logical file-loader path without `@`, relative only
+   under the unchanged standard-loader/server-cwd contract. `origin` has required
+   `session_id`, `block_id`, `window_id`, `layer_id` (empty only if absent),
+   `caller_id` (actual action caller), `client_id` (distinct retained GUI target),
+   and `connected_at`. IDs are full typed UUIDs; never substitute the GUI target
+   for the actual caller. Compare original-VM metadata before/after every yield.
+2. Describe returns `{protocol_min, protocol_max, producer_build, features,
+   layout_revision, receipt, receipt_hash}`. It issues no capability. Go freezes
+   the current helper image, normal layout, shared `rex.CLISelection`, required
+   method evidence, canonical endpoint, server/config/menu generations, exact
+   placement/GUI generation, platform, embedded format digest and original expiry.
+3. After original-VM issue/evaluation, run the same fixed helper's `prepare` with
+   `{version:1, configuration:CONFIG_JSON_STRING, receipt, receipt_hash}`.
+   Its optional `--server` must agree with the receipt, never rediscover transport.
+   Go rechecks the selected receipt, validates Config/rename support, copies its
+   captured open source image into a new private workspace and generates a
+   capability. Output is `{version:1, capability, executable, server, receipt,
+   receipt_hash, workspace, expires}`. This final immutable receipt additionally
+   binds the workspace and exact configuration bytes; retain the **returned**
+   final bytes/hash. It does not change the selected source, origin or expiry.
+4. Bind the original ticket to capability plus final receipt/hash and retained
+   exact resources. Start the returned selected copy as `controller`, detached,
+   with finite private stdin `{configuration, capability, server, session_id,
+   block_id, client_id, connected_at, completion_action, expires, receipt,
+   receipt_hash, workspace}`. Use returned `expires` unchanged and a 35-second
+   command bound. No callback, ticket, closure or opaque `ctx.server` is serialized.
+5. Before any attempted controller start, a bind/preparation failure releases the
+   ticket and calls the fixed helper's `runtime-release` with the entire prepared
+   output. After a possibly successful start, never retry, release its workspace
+   or claim failure proves no controller exists. The controller owns its workspace
+   after a valid handoff; original-VM expiry still revokes unclaimed authority.
+
+**Public consumer handoff** (no caller executable is ever executed by Lua):
+
+- Public Go selects itself and the CLI before endpoint discovery, queries the
+  loaded advertisement, and activates the chosen original action **once**, with
+  `{runtime:LOCATOR_JSON_STRING}` on stdin. The locator has `version:1`,
+  `workspace`, `request_sha256`, `receipt_hash`; no capability. A public native
+  launch is allowed only for a truly absent implicit default and the originating
+  execution-host terminal endpoint. An explicit/custom/registered menu never
+  falls back to native.
+- Before issue/evaluation, the original action runs only its fixed anchored
+  helper's `runtime-describe`, adding `descriptor:LOCATOR_JSON_STRING` to its
+  describe input and omitting `server`. This path reuses the public frozen CLI;
+  it does not choose another CLI/helper. Output is `{version:1, protocol_min,
+  protocol_max, producer_build, features, layout_revision, receipt_hash, relay}`.
+  Validate producer features/protocol and retain the exact `relay` installation
+  identity before issuing a ticket. The read-only `runtime-relay` operation
+  `preflight` is the same finite preflight; it is not a popup or authority probe.
+- After one original-VM evaluation, invoke fixed `runtime-relay` with
+  `{operation:"menu", descriptor, anchor, layout_revision:1, consumer, origin,
+  relay, configuration:CONFIG_JSON_STRING}`. It writes `menu.json`, waits for
+  Go-owned public preparation, and returns the same preparation shape as the key
+  path. Bind the ticket to those final receipt bytes/hash. Do **not** start the
+  returned executable from Lua for this entry path.
+- Then invoke fixed `runtime-relay` with `{operation:"bound", descriptor, anchor,
+  layout_revision:1, consumer, origin, relay, receipt_hash:FINAL_HASH}` (omit
+  configuration). It publishes binding and returns `{version:1}`. The action
+  returns no secret/handle/result. Only after matching bound state **and certain
+  activation success** does public Go start its selected controller. On failure,
+  revoke what is still unclaimed; never repeat activation or a relay transition.
+- Public Go precreates 0700 workspace / 0600 one-link no-follow regular
+  `request.json`, `menu.json`, `prepared.json`, `bound.json`, plus mode-0600 FIFO
+  `lease`. Only the public owner retains a write-capable lease endpoint. Relay
+  EOF means owner loss, never success. Every fixed slot has
+  `{stage, receipt_hash, payload}`; stage matches the basename without `.json`.
+  Slot hashes bind the initial request receipt, while prepared/bound payloads
+  carry the distinct final receipt hash including actual activation caller,
+  relay identity, workspace and Config digest. Request SHA binds the fresh local
+  marker and inode manifest. Writers lock exclusively and publish once without
+  create/truncate; readers use shared locks. Reopened files recheck ownership,
+  private modes, one-link identity and stage. No valid shared local state means
+  unsupported cross-host launch **before** reservation, not a remote path guess.
+
+Small advertisements, locators, preflight and completion are bounded to 64 KiB;
+full Config/receipt/preparation/handoff and slot envelopes to 8 MiB total at each
+boundary (including string escaping). Stages/relay commands are three seconds
+within the original 30-second configured lifetime, with five seconds reserved
+for teardown; no step renews expiry. Native interaction retains its lifetime
+pipe and no idle deadline. Controller/PTY use verified private executable copies;
+Rex's proprietary dependency is never copied. Sources are captured as open files
+and hashed, copied from those handles and rechecked before execution. This assumes
+trusted, stable installer/user-owned components: neither `os.Executable()` nor
+path/content rechecks promise hostile-same-account isolation or atomic
+execute-by-descriptor on every platform.
+
+Controller compatibility/placement/rename checks precede popup creation. Cleanup
+precedes fresh completion, and its **actual fresh CLI caller** is not the retained
+GUI or the original activation caller. Lua strictly decodes/authenticates before
+lookup/claim, checks capability, final exact receipt/hash, expiry and retained
+state, then consumes **before** any yielding guard/API/callback. A failed/uncertain
+claim/effect/acknowledgment is not retryable. Default `tr`/`wr` text targets only
+the retained window/session APIs, with the documented 128-character label bound;
+custom callbacks/args/confirmation retain ordinary registry semantics.
+
+Diagnostics are fixed by layout, CLI/endpoint, compatibility, origin, rendezvous,
+preparation, startup, cleanup and dispatch stage. Private output is suppressed.
+Obsolete `execution.helper` / `execution.rex_bin_dir` wiring is not a fallback.
+The inspected pre-Phase-15 `cmd/main.go` rejects unknown positional modes at
+`flag.NArg()` before `LaunchPopup`; that source establishes a safe unknown-mode
+failure for that baseline, **not** for arbitrary historical helper versions.
+Unsupported installed/loaded consumers must be updated through the normal user
+lifecycle, never auto-reloaded or asked to pair equal build IDs.
+
+This is a Go/source handoff, not phase/runtime verification. Direct versus
+packaged startup, compatible unequal builds, missing text features, malformed
+receipts, replay/expiry, cancellation at each transition, wrong/moved origins,
+source upgrades, FIFO owner death, uncertain activation/start/dispatch, custom
+callbacks and exact-resource rename remain **UNEXECUTED** scenarios. No tests,
+Lua harnesses, product/API/menu/rename probes, remote trials or consumer reloads
+were performed by this Go task.
 
 ### Capability and trusted retained state
 

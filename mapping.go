@@ -303,6 +303,9 @@ func (m Mapping) validate() error {
 // CompletionVersion identifies the data-only post-return bridge format.
 const CompletionVersion = 1
 
+// CompletionReceiptVersion is negotiated separately from the strict legacy wire.
+const CompletionReceiptVersion = 2
+
 // Completion kinds select one retained action or release the invocation.
 const (
 	CompletionComplete = "complete"
@@ -320,10 +323,11 @@ const (
 // Origin, actions, arguments, callbacks and configuration identity stay retained
 // in Rex Lua. Validation is not authentication or proof of a live origin.
 type Completion struct {
-	Version    int                  `json:"version"`
-	Capability string               `json:"capability"`
-	Kind       string               `json:"kind"`
-	Selection  *CompletionSelection `json:"selection,omitempty"`
+	Version     int                  `json:"version"`
+	Capability  string               `json:"capability"`
+	ReceiptHash string               `json:"receipt_hash,omitempty"`
+	Kind        string               `json:"kind"`
+	Selection   *CompletionSelection `json:"selection,omitempty"`
 
 	// Private child-result bookkeeping. Only Selection.Text crosses the Lua bridge.
 	textInput *string
@@ -374,8 +378,8 @@ func InvocationCapabilityMatches(presented, expected string) bool {
 // Validate checks message structure. It does not check the Lua registry, expiry,
 // origin, replay state, connection or configuration generation.
 func (c Completion) Validate() error {
-	if c.Version != CompletionVersion {
-		return errors.New("whichkey: unsupported completion version")
+	if err := c.validateVersion(); err != nil {
+		return err
 	}
 	if err := ValidateInvocationCapability(c.Capability); err != nil {
 		return err
@@ -408,12 +412,31 @@ func (c Completion) Validate() error {
 	return nil
 }
 
+func (c Completion) validateVersion() error {
+	switch c.Version {
+	case CompletionVersion:
+		if c.ReceiptHash != "" {
+			return errors.New("whichkey: version 1 completion cannot carry a receipt")
+		}
+	case CompletionReceiptVersion:
+		if ValidateInvocationCapability(c.ReceiptHash) != nil {
+			return errors.New("whichkey: version 2 completion requires its exact receipt hash")
+		}
+	default:
+		return errors.New("whichkey: unsupported completion version")
+	}
+	return nil
+}
+
 func validateCompletionText(selection *CompletionSelection) error {
 	if selection.Text == nil {
 		return nil
 	}
 	if (selection.Keys != "tr" && selection.Keys != "wr") || selection.CallbackRef != "" || selection.Confirmed {
 		return errors.New("whichkey: text requires an inline rename selection")
+	}
+	if utf8.RuneCountInString(*selection.Text) > 128 {
+		return errors.New("whichkey: resource rename label exceeds Rex's documented 128-character limit")
 	}
 	return validateRenameText(*selection.Text)
 }
@@ -477,13 +500,21 @@ func (c *Completion) UnmarshalJSON(data []byte) error {
 	if c == nil {
 		return errors.New("whichkey: completion receiver is nil")
 	}
-	fields, err := completionObject(data, "version", "capability", "kind", "selection")
+	fields, err := completionObject(data, "version", "capability", "receipt_hash", "kind", "selection")
 	if err != nil {
 		return err
 	}
 	var candidate Completion
 	if decodeErr := json.Unmarshal(fields["version"], &candidate.Version); decodeErr != nil {
 		return errors.New("whichkey: completion version must be an integer")
+	}
+	if raw, present := fields["receipt_hash"]; present {
+		if candidate.Version != CompletionReceiptVersion {
+			return errors.New("whichkey: receipt extension requires negotiated completion version 2")
+		}
+		if candidate.ReceiptHash, err = completionString(raw); err != nil {
+			return err
+		}
 	}
 	if candidate.Capability, err = completionString(fields["capability"]); err != nil {
 		return err

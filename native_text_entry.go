@@ -17,7 +17,7 @@ import (
 // now use the same input presentation without changing Config JSON.
 const nativeTextFile = "native-input.json"
 
-func prepareConfiguredRename(ctx context.Context, request popupRequest, config Config, executable string) (Config, error) {
+func prepareConfiguredRename(ctx context.Context, request popupRequest, config Config, selection *rex.CLISelection) (Config, error) {
 	needed := false
 	for _, mapping := range config.Spec {
 		needed = needed || mapping.Enabled() && nativeRenameMapping(mapping)
@@ -27,7 +27,7 @@ func prepareConfiguredRename(ctx context.Context, request popupRequest, config C
 	}
 	ctx, cancel := context.WithDeadline(ctx, time.Unix(request.Expires, 0))
 	defer cancel()
-	client, err := rex.New(rex.Options{Executable: executable, Server: request.Server,
+	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: request.Server,
 		Session: request.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
 		return Config{}, errors.New("whichkey: cannot construct rename presentation client")
@@ -37,8 +37,11 @@ func prepareConfiguredRename(ctx context.Context, request popupRequest, config C
 		return Config{}, errors.New("whichkey: cannot inspect rename session label")
 	}
 	block, err := session.Block(ctx, request.BlockID)
-	if err != nil {
-		return Config{}, errors.New("whichkey: cannot inspect rename origin")
+	if err != nil || request.retained == nil {
+		return Config{}, errors.New("whichkey: cannot inspect the retained rename origin")
+	}
+	if placementErr := request.retained.checkPlacement(block); placementErr != nil {
+		return Config{}, errors.New("whichkey: cannot inspect the retained rename origin")
 	}
 	window, err := session.Window(ctx, block.WindowID)
 	if err != nil {
@@ -63,8 +66,7 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 		return nil, errors.New("whichkey: cannot read native text-entry presentation")
 	}
 	defer func() { outcome = errors.Join(outcome, file.Close()) }()
-	info, err := file.Stat()
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0600 {
+	if _, statErr := runtimeSlotStat(file, nativeTextFile, false); statErr != nil {
 		return nil, errors.New("whichkey: invalid native text-entry file")
 	}
 	data, err := io.ReadAll(io.LimitReader(file, popupMessageLimit+1))

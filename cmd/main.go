@@ -21,6 +21,20 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		return runLaunch(ctx, args, output)
 	}
 	switch args[0] {
+	case "runtime-describe", "runtime-relay", "runtime-release":
+		if len(args) != 1 {
+			return errors.New("whichkey: runtime commands accept only their bounded private stdin message")
+		}
+		stage, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		switch args[0] {
+		case "runtime-describe":
+			return whichkey.RuntimeDescribe(stage, input, output)
+		case "runtime-relay":
+			return whichkey.RuntimeRelay(stage, input, output)
+		default:
+			return whichkey.RuntimeRelease(stage, input)
+		}
 	case "prepare":
 		flags := flag.NewFlagSet("rex-whichkey prepare", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
@@ -122,12 +136,13 @@ Options:
   --action NAME      Require this registered Lua launch action (no native fallback)
   --help, -h         Show help without contacting Rex
 
-Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal, matching
-execution/server-host helper and Rex CLI. App UI actions additionally require an
+Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal and a
+compatible execution-host Rex CLI. App UI actions additionally require an
 attached graphical app and its Remote Control permission. Native pane/tab/session
 closes and built-in tab/session rename use captured resource IDs without an app
 chooser. Built-in Switch lists sessions in our popup; rename uses text entry. Explicit client selectors remain strict. Lua customization additionally needs installed modules,
-setup and launch/completion registration. Nothing edits/reloads configuration.
+setup, launch/completion registration and the loaded runtime feature bridge.
+Compatible build IDs need not match. Nothing edits/reloads configuration.
 The native caller waits until selection/dismissal, cancellation or origin loss;
 there is no native idle timeout. Configured launch returns after activation and
 retains its authenticated 30-second expiry. Failed/uncertain activation is never

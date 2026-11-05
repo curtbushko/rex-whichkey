@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -21,34 +20,19 @@ import (
 // actions reads metadata only. Server registration must be queried without an
 // inherited client selector: `rex actions` and `rex --client ID actions` expose
 // different registries. See docs/launch-contract.md for the captured contracts.
-func (origin launchOrigin) actions(parent context.Context, executable string, client bool) (map[string]string, error) {
+func (origin launchOrigin) actions(parent context.Context, selection *rex.CLISelection, client bool) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 	defer cancel()
-	argv := []string{"--server", origin.Server, "--autostart=false", "--timeout", "3s"}
+	argv := []string{runtimeServerFlag, origin.Server, runtimeNoAutostart, runtimeTimeoutFlag, runtimeStageTimeout}
 	stage := "server configuration"
 	if client {
 		argv = append(argv, "--client", origin.ClientID)
 		stage = "selected app native"
 	}
-	argv = append(argv, "actions", "--json")
-	command := exec.CommandContext(ctx, executable, argv...)
-	for _, entry := range os.Environ() {
-		name, _, _ := strings.Cut(entry, "=")
-		switch name {
-		case "REX_SERVER", "REX_CLIENT", "REX_SESSION", "REX_WINDOW", "REX_BLOCK":
-			continue
-		}
-		command.Env = append(command.Env, entry)
-	}
-	// These are captured identities, not ambient focus defaults. Actions metadata
-	// itself has no session/block flags and performs no mutation.
-	command.Env = append(command.Env, "REX_SESSION="+origin.SessionID, "REX_BLOCK="+origin.BlockID)
+	argv = append(argv, "actions", runtimeJSONFlag)
 	output := &launchBuffer{remaining: 1 << 20}
-	command.Stdout = output
-	command.Stderr = &launchOutput{remaining: popupMessageLimit}
-	command.WaitDelay = 250 * time.Millisecond
-	if err := command.Run(); err != nil {
-		return nil, fmt.Errorf("whichkey: cannot read %s action metadata; check the captured endpoint and matching Rex CLI (no activation attempted)", stage)
+	if err := runtimeCommand(ctx, selection, origin, argv, nil, output); err != nil {
+		return nil, fmt.Errorf("whichkey: cannot read %s action metadata; check the captured endpoint and compatible execution-host Rex CLI (no activation attempted)", stage)
 	}
 	data := output.buffer.Bytes()
 	fields, err := completionObject(data, "actions")
@@ -94,7 +78,7 @@ func (output *launchBuffer) Write(data []byte) (int, error) {
 
 // launchNativePopup retains requested as syntax-validated Go-owned intent, not
 // a connection generation or child authority. No app is consulted until selection.
-func launchNativePopup(parent context.Context, origin launchOrigin, executable, requested string) error {
+func launchNativePopup(parent context.Context, origin launchOrigin, selection *rex.CLISelection, requested string) error {
 	// Keep signal ownership across interaction, cleanup and metadata/dispatch
 	// gaps. A context owned only by the popup would leave those gaps exposed.
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
@@ -103,7 +87,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	if err != nil {
 		return errors.New("whichkey: invalid built-in menu configuration")
 	}
-	client, err := rex.New(rex.Options{Executable: executable, Server: origin.Server,
+	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: origin.Server,
 		Session: origin.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
 		return errors.New("whichkey: cannot construct the captured native endpoint/session client")
@@ -134,7 +118,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 	if len(config.textEntry.SessionInitial) > renameTextLimit {
 		config.textEntry.SessionInitial = ""
 	}
-	message, err := nativePopupSelection(ctx, origin, executable, config)
+	message, err := nativePopupSelection(ctx, origin, selection, config)
 	if err != nil {
 		return err
 	}
@@ -178,7 +162,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		target := origin
 		target.ClientID, target.ConnectedAt = connection.ID, connection.ConnectedAt
-		actions, err := target.actions(dispatch, executable, true)
+		actions, err := target.actions(dispatch, selection, true)
 		if err != nil {
 			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
 		}
@@ -196,7 +180,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
 		if mapping.Action == "client.tab.new" {
-			return nativeNewTab(dispatch, client, bound, placement, requested, executable, mapping)
+			return nativeNewTab(dispatch, client, bound, placement, requested, selection, mapping)
 		}
 		args := mapping.Args
 		if len(args) == 0 {
@@ -204,7 +188,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 		}
 		// Keep the transport unscoped so context is explicit in the request,
 		// never injected by the adapter or taken from ambient CLI context.
-		performClient, err := rex.New(rex.Options{Executable: executable, Server: target.Server,
+		performClient, err := rex.NewContext(dispatch, rex.Options{Selection: selection, Server: target.Server,
 			Timeout: 3 * time.Second})
 		if err != nil {
 			return errors.New("whichkey: native action targeting refused: cannot construct the captured endpoint client")
@@ -242,7 +226,7 @@ func launchNativePopup(parent context.Context, origin launchOrigin, executable, 
 // nativeNewTab compiles only Go-owned tn intent after popup cleanup and the
 // caller's session.select registration check. Creation and app activation are
 // distinct effects, never a retryable transaction.
-func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested, executable string, mapping Mapping) error {
+func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested string, selection *rex.CLISelection, mapping Mapping) error {
 	if mapping.Action != "client.tab.new" || mapping.Keys != "tn" {
 		return errors.New("whichkey: native new tab refused: invalid retained new-tab intent")
 	}
@@ -251,7 +235,7 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 			return errors.New("whichkey: native new tab refused: retained new-tab arguments must be empty")
 		}
 	}
-	unscoped, err := rex.New(rex.Options{Executable: executable, Server: bound.Server,
+	unscoped, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: bound.Server,
 		Timeout: 3 * time.Second})
 	if err != nil {
 		return errors.New("whichkey: native new tab refused: cannot construct the captured endpoint client")
@@ -276,7 +260,7 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 	// resolve a position, or fall back to the original client.tab.new action.
 	target := launchOrigin{Server: bound.Server, SessionID: bound.SessionID,
 		BlockID: bound.BlockID, ClientID: bound.ClientID}
-	actions, err := target.actions(ctx, executable, true)
+	actions, err := target.actions(ctx, selection, true)
 	if err != nil || actions["session.select"] != "client" {
 		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation refused because session.select registration could not be verified; select that tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
@@ -304,7 +288,7 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 // nativePopupSelection only captures finish's validated result. No app lookup,
 // action, or second interactive UI can run inside finish's short operation context.
 // Returning success also requires the lifecycle's deferred cleanup to succeed.
-func nativePopupSelection(ctx context.Context, origin launchOrigin, executable string, config Config) (Completion, error) {
+func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config) (Completion, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return Completion{}, errors.New("whichkey: cannot encode native menu configuration")
@@ -314,9 +298,9 @@ func nativePopupSelection(ctx context.Context, origin launchOrigin, executable s
 		return Completion{}, err
 	}
 	request := popupRequest{Configuration: string(data), Capability: capability,
-		Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
+		Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID, image: origin.image}
 	var retained Completion
-	err = runPopupWithLifetime(ctx, request, config, executable, popupNative, func(_ context.Context, message Completion) error {
+	err = runPopupWithLifetime(ctx, request, config, selection, popupNative, func(_ context.Context, message Completion) error {
 		if err := message.ValidateSelection(config.Spec); err != nil {
 			return errors.New("whichkey: invalid native retained selection")
 		}
