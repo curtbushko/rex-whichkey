@@ -43,7 +43,8 @@ func popupConnectionGeneration(value string) bool {
 
 // LaunchPopup opens the basic native popup when the implicit default action is
 // unregistered, or activates a registered original-VM action once. Configured
-// success acknowledges activation only; native success follows UI exit/cleanup.
+// success acknowledges activation and finite startup checks, not popup display;
+// native success follows UI exit/cleanup.
 // Read-only server metadata selects the route before GUI binding or activation.
 // Native display needs no app; configured activation binds its app at launch.
 // An uncertain activation never switches routes or retries.

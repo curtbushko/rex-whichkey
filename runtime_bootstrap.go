@@ -42,8 +42,9 @@ const (
 	runtimeTimeoutFlag  = "--timeout"
 	runtimeStageTimeout = "3s"
 	runtimeJSONFlag     = "--json"
+	runtimeAccepted     = "accepted"
 	// This embedded identity describes Go-owned formats, not the installed Lua.
-	runtimeAssets = "rex-whichkey/runtime/1;config/1;completion/2;selection-text-resource-rename/1;relay/1"
+	runtimeAssets = "rex-whichkey/runtime/1;config/1;completion/2;selection-text-resource-rename/1;relay-string/1;startup-ack/1;pty-cli/1"
 )
 
 var (
@@ -1188,15 +1189,15 @@ func createRuntimeSlot(root *os.Root, name string) (identity runtimeSlotIdentity
 // preflight before reservation, menu after one evaluation, and bound only after
 // binding the exact prepared receipt/capability in the original registry.
 type runtimeRelayRequest struct {
-	Operation      string               `json:"operation"`
-	Descriptor     string               `json:"descriptor"`
-	Anchor         string               `json:"anchor"`
-	LayoutRevision int                  `json:"layout_revision"`
-	Consumer       runtimeConsumer      `json:"consumer"`
-	Origin         runtimeOrigin        `json:"origin"`
-	Relay          *runtimeInstallation `json:"relay,omitempty"`
-	Configuration  string               `json:"configuration,omitempty"`
-	ReceiptHash    string               `json:"receipt_hash,omitempty"`
+	Operation      string          `json:"operation"`
+	Descriptor     string          `json:"descriptor"`
+	Anchor         string          `json:"anchor"`
+	LayoutRevision int             `json:"layout_revision"`
+	Consumer       runtimeConsumer `json:"consumer"`
+	Origin         runtimeOrigin   `json:"origin"`
+	Relay          string          `json:"relay,omitempty"`
+	Configuration  string          `json:"configuration,omitempty"`
+	ReceiptHash    string          `json:"receipt_hash,omitempty"`
 }
 
 func readRuntimeDescriptor(ctx context.Context, root *os.Root, locator runtimeLocator) (runtimeDescriptor, runtimeReceipt, error) {
@@ -1338,8 +1339,8 @@ func RuntimeRelay(parent context.Context, input io.Reader, output io.Writer) (ou
 	if err != nil {
 		return err
 	}
-	if request.Operation != runtimePreflight && (request.Relay == nil || !reflect.DeepEqual(request.Relay, installation)) {
-		return errRuntimeCompatibility
+	if checkErr := checkRuntimeRelayInstallation(request, installation); checkErr != nil {
+		return checkErr
 	}
 	receipt.Origin = request.Origin
 	if checkErr := receipt.checkOrigin(stage); checkErr != nil {
@@ -1349,6 +1350,19 @@ func RuntimeRelay(parent context.Context, input io.Reader, output io.Writer) (ou
 		return checkErr
 	}
 	return performRuntimeRelay(stage, root, lease, descriptor, receipt, request, *installation, output)
+}
+
+func checkRuntimeRelayInstallation(request runtimeRelayRequest, installation *runtimeInstallation) error {
+	if request.Operation == runtimePreflight {
+		return nil
+	}
+	var retained runtimeInstallation
+	encoded, err := json.Marshal(installation)
+	if err != nil || decodeRuntime([]byte(request.Relay), &retained, popupMessageLimit) != nil ||
+		request.Relay != string(encoded) || !reflect.DeepEqual(retained, *installation) {
+		return errRuntimeCompatibility
+	}
+	return nil
 }
 
 func decodeRuntimeRelay(input io.Reader) (runtimeRelayRequest, runtimeLocator, error) {
@@ -1369,19 +1383,23 @@ func decodeRuntimeRelay(input io.Reader) (runtimeRelayRequest, runtimeLocator, e
 func performRuntimeRelay(stage context.Context, root *os.Root, lease *os.File, descriptor runtimeDescriptor, receipt runtimeReceipt, request runtimeRelayRequest, installation runtimeInstallation, output io.Writer) error {
 	switch request.Operation {
 	case runtimePreflight:
-		if request.Configuration != "" || request.ReceiptHash != "" || request.Relay != nil || runtimeSlotsEmpty(stage, root, descriptor.Slots, runtimeMenuFile, runtimePreparedFile, runtimeBoundFile) != nil {
+		if request.Configuration != "" || request.ReceiptHash != "" || request.Relay != "" || runtimeSlotsEmpty(stage, root, descriptor.Slots, runtimeMenuFile, runtimePreparedFile, runtimeBoundFile) != nil {
 			return errRuntimeRelay
 		}
+		relay, err := json.Marshal(installation)
+		if err != nil || len(relay) > popupMessageLimit {
+			return errRuntimeCompatibility
+		}
 		return writeRuntime(output, struct {
-			Version        int                  `json:"version"`
-			ProtocolMin    int                  `json:"protocol_min"`
-			ProtocolMax    int                  `json:"protocol_max"`
-			Build          string               `json:"producer_build"`
-			Features       []string             `json:"features"`
-			LayoutRevision int                  `json:"layout_revision"`
-			ReceiptHash    string               `json:"receipt_hash"`
-			Relay          *runtimeInstallation `json:"relay"`
-		}{runtimeProtocol, runtimeProtocol, runtimeProtocol, installation.Helper.SHA256, runtimeFeatures(), runtimeLayout, descriptor.ReceiptHash, &installation}, popupMessageLimit)
+			Version        int      `json:"version"`
+			ProtocolMin    int      `json:"protocol_min"`
+			ProtocolMax    int      `json:"protocol_max"`
+			Build          string   `json:"producer_build"`
+			Features       []string `json:"features"`
+			LayoutRevision int      `json:"layout_revision"`
+			ReceiptHash    string   `json:"receipt_hash"`
+			Relay          string   `json:"relay"`
+		}{runtimeProtocol, runtimeProtocol, runtimeProtocol, installation.Helper.SHA256, runtimeFeatures(), runtimeLayout, descriptor.ReceiptHash, string(relay)}, popupMessageLimit)
 	case "menu":
 		return relayRuntimeMenu(stage, root, lease, descriptor, receipt, request, installation, output)
 	case "bound":
@@ -1660,8 +1678,18 @@ func startRuntimeController(ctx context.Context, prepared popupPreparation) (boo
 	if err != nil {
 		return false, err
 	}
-	receipt, err := decodeReceipt(prepared.Receipt, prepared.ReceiptHash)
-	if err != nil || receipt.check(ctx, true) != nil || verifyRuntimeCopy(ctx, prepared.Workspace, receipt.Component) != nil {
+	return startRuntimeRequest(ctx, request, nil)
+}
+
+// Start success transfers ownership even if the subsequent finite handshake
+// fails. Neither caller cancellation nor a lost acknowledgment authorizes retry,
+// killing an uncertain child, or removing its workspace.
+func startRuntimeRequest(parent context.Context, request popupRequest, beforeProceed func() error) (bool, error) {
+	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+	defer cancel()
+	receipt, err := decodeReceipt(request.Receipt, request.ReceiptHash)
+	if err != nil || !request.matchesReceipt(receipt) || receipt.check(ctx, true) != nil ||
+		verifyRuntimeCopy(ctx, request.Workspace, receipt.Component) != nil || ctx.Err() != nil {
 		return false, errRuntimeStartup
 	}
 	data, err := json.Marshal(request)
@@ -1672,31 +1700,213 @@ func startRuntimeController(ctx context.Context, prepared popupPreparation) (boo
 	if err != nil {
 		return false, errRuntimeStartup
 	}
-	command := exec.CommandContext(context.WithoutCancel(ctx), prepared.Executable, "controller")
-	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	command.Stdin = reader // no parent-owned exec copy goroutine after return
-	if checkErr := command.Start(); checkErr != nil {
+	ackReader, ackWriter, err := os.Pipe()
+	if err != nil {
 		return false, errors.Join(errRuntimeStartup, reader.Close(), writer.Close())
 	}
-	// From Start onward the child may be running. Never remove its workspace,
-	// start again, or claim a failed handoff proves that no popup was created.
-	return true, sendRuntimeHandoff(ctx, reader, writer, command.Process, data)
+	proceedReader, proceedWriter, err := os.Pipe()
+	if err != nil {
+		return false, errors.Join(errRuntimeStartup, reader.Close(), writer.Close(), ackReader.Close(), ackWriter.Close())
+	}
+	// The child owns its original expiry, not the finite caller's context.
+	command := exec.CommandContext(context.WithoutCancel(ctx), filepath.Join(request.Workspace, runtimeImageName), "controller-child")
+	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	command.Stdin = reader                                    // no parent-owned exec copy goroutine after return
+	command.ExtraFiles = []*os.File{ackWriter, proceedReader} // fd 3/4; no capability in argv/env
+	startErr := ctx.Err()
+	if startErr == nil {
+		startErr = command.Start()
+	}
+	if startErr != nil {
+		return false, errors.Join(errRuntimeStartup, reader.Close(), writer.Close(), ackReader.Close(), ackWriter.Close(), proceedReader.Close(), proceedWriter.Close())
+	}
+	return true, sendRuntimeHandoff(ctx, reader, writer, ackReader, ackWriter, proceedReader, proceedWriter, command.Process, data, beforeProceed)
 }
 
-func sendRuntimeHandoff(ctx context.Context, reader, writer *os.File, process *os.Process, data []byte) error {
-	closeErr := reader.Close()
-	deadline := time.Now().Add(3 * time.Second)
-	if parentDeadline, ok := ctx.Deadline(); ok && parentDeadline.Before(deadline) {
-		deadline = parentDeadline
+// exec inherits blocking descriptors. Reopen a duplicated, nonblocking pipe as
+// a pollable os.File so deadlines work on both Darwin and Linux. The original
+// wrapper is closed/invalidated before the duplicate can be returned.
+func runtimePollablePipe(file *os.File) (*os.File, error) {
+	if file == nil {
+		return nil, errRuntimeStartup
 	}
-	deadlineErr := writer.SetWriteDeadline(deadline)
+	info, err := file.Stat()
+	if err != nil || info.Mode()&os.ModeNamedPipe == 0 {
+		return nil, errors.Join(errRuntimeStartup, file.Close())
+	}
+	fd, dupErr := unix.FcntlInt(file.Fd(), unix.F_DUPFD_CLOEXEC, 0)
+	closeErr := file.Close()
+	if dupErr != nil {
+		return nil, errRuntimeStartup
+	}
+	if nonblockErr := unix.SetNonblock(fd, true); closeErr != nil || nonblockErr != nil {
+		return nil, errors.Join(errRuntimeStartup, unix.Close(fd))
+	}
+	return os.NewFile(uintptr(fd), "runtime-pipe"), nil
+}
+
+type runtimeStartupAck struct {
+	Version int    `json:"version"`
+	Status  string `json:"status"`
+}
+
+func sendRuntimeHandoff(ctx context.Context, reader, writer, ackReader, ackWriter, proceedReader, proceedWriter *os.File, process *os.Process, data []byte, beforeProceed func() error) (outcome error) {
+	defer func() {
+		if err := errors.Join(proceedWriter.Close(), retireRuntimeStartup(&ackReader, &process), ctx.Err()); err != nil {
+			outcome = errRuntimeStartup
+		}
+	}()
+	// Closing our duplicate writer is necessary to observe the child's EOF.
+	closeErr := errors.Join(reader.Close(), ackWriter.Close(), proceedReader.Close())
+	deadline, _ := ctx.Deadline() // startRuntimeRequest always supplies a bound.
+	deadlineErr := errors.Join(writer.SetWriteDeadline(deadline), ackReader.SetReadDeadline(deadline), proceedWriter.SetWriteDeadline(deadline))
+	pipes := []*os.File{writer, ackReader, proceedWriter}
+	stop := context.AfterFunc(ctx, func() {
+		// Wake blocked pipe I/O on cancellation, without killing/retrying a child.
+		for _, pipe := range pipes {
+			if err := pipe.SetDeadline(time.Now()); err != nil {
+				continue // A retired endpoint already wakes its blocked I/O.
+			}
+		}
+	})
+	defer stop()
 	var writeErr error
-	if deadlineErr == nil {
+	if errors.Join(closeErr, deadlineErr, ctx.Err()) == nil {
 		_, writeErr = writer.Write(data)
 	}
-	writerErr := writer.Close()
-	releaseErr := process.Release()
-	if closeErr != nil || deadlineErr != nil || writeErr != nil || writerErr != nil || releaseErr != nil {
+	writerErr := writer.Close() // EOF is part of the finite handoff.
+	if errors.Join(closeErr, deadlineErr, writeErr, writerErr, ctx.Err()) != nil {
+		return errRuntimeStartup
+	}
+	var ack runtimeStartupAck
+	if readRuntime(ackReader, &ack, popupMessageLimit) != nil || ack.Version != runtimeProtocol || ack.Status != runtimeAccepted || ctx.Err() != nil {
+		return errRuntimeStartup
+	}
+	if checkErr := finishRuntimeStartup(ctx, &ackReader, &process, beforeProceed); checkErr != nil {
+		return checkErr
+	}
+	// Without this positive marker plus EOF the child must not enter its
+	// lifecycle, even if it already sent an accepted acknowledgment.
+	return writeRuntime(proceedWriter, runtimeStartupAck{runtimeProtocol, "proceed"}, popupMessageLimit)
+}
+
+func retireRuntimeStartup(reader **os.File, process **os.Process) error {
+	var closeErr error
+	if *reader != nil {
+		file := *reader
+		*reader = nil
+		closeErr = file.Close()
+	}
+	if *process != nil {
+		child := *process
+		*process = nil
+		closeErr = errors.Join(closeErr, child.Release())
+	}
+	return closeErr
+}
+
+func finishRuntimeStartup(ctx context.Context, reader **os.File, process **os.Process, beforeProceed func() error) error {
+	if err := errors.Join(retireRuntimeStartup(reader, process), ctx.Err()); err != nil {
+		return errRuntimeStartup
+	}
+	if beforeProceed != nil {
+		if err := beforeProceed(); err != nil {
+			return errRuntimeStartup
+		}
+	}
+	return ctx.Err()
+}
+
+func popupControllerPipes(input, startup, proceed *os.File) (*os.File, *os.File, *os.File, error) {
+	reader, err := runtimePollablePipe(input)
+	if err != nil {
+		return nil, nil, nil, errors.Join(err, closeRuntimePipe(&startup), closeRuntimePipe(&proceed))
+	}
+	writer, err := runtimePollablePipe(startup)
+	if err != nil {
+		return nil, nil, nil, errors.Join(err, reader.Close(), closeRuntimePipe(&proceed))
+	}
+	gate, err := runtimePollablePipe(proceed)
+	if err != nil {
+		return nil, nil, nil, errors.Join(err, reader.Close(), writer.Close())
+	}
+	return reader, writer, gate, nil
+}
+
+func closeRuntimePipe(pipe **os.File) error {
+	if *pipe == nil {
+		return nil
+	}
+	file := *pipe
+	*pipe = nil
+	return file.Close()
+}
+
+func reportRuntimeLauncher(output io.Writer) error {
+	writeErr := writeRuntime(output, runtimeStartupAck{runtimeProtocol, runtimeAccepted}, popupMessageLimit)
+	if closer, ok := output.(io.Closer); ok {
+		return errors.Join(writeErr, closer.Close())
+	}
+	return writeErr
+}
+
+func rejectRuntimeStartup(ctx context.Context, output **os.File) error {
+	if *output == nil {
+		return nil
+	}
+	file := *output
+	*output = nil
+	return reportRuntimeStartup(ctx, file, false)
+}
+
+func waitRuntimeProceed(ctx context.Context, pipe *os.File) error {
+	deadline, _ := ctx.Deadline()
+	if err := pipe.SetReadDeadline(deadline); err != nil {
+		return errors.Join(errRuntimeStartup, pipe.Close())
+	}
+	var message runtimeStartupAck
+	readErr := readRuntime(pipe, &message, popupMessageLimit)
+	closeErr := pipe.Close()
+	if errors.Join(readErr, closeErr, ctx.Err()) != nil || message.Version != runtimeProtocol || message.Status != "proceed" {
+		return errRuntimeStartup
+	}
+	return nil
+}
+
+func acknowledgePopupStartup(ctx context.Context, request popupRequest, output *os.File) (outcome error) {
+	accepted := false
+	defer func() { outcome = errors.Join(outcome, reportRuntimeStartup(ctx, output, accepted)) }()
+	if checkErr := request.retained.checkOrigin(ctx); checkErr != nil {
+		return checkErr
+	}
+	if checkErr := request.retained.checkLoadedConsumer(ctx); checkErr != nil {
+		return checkErr
+	}
+	if ctx.Err() != nil || !time.Unix(request.Expires, 0).Add(-5*time.Second).After(time.Now()) {
+		return errRuntimeStartup
+	}
+	accepted = true
+	return nil
+}
+
+// reportRuntimeStartup closes the child's acknowledgment endpoint before any
+// popup effect. Success means finite input and immediate startup checks passed,
+// not that a UI was displayed or a later retained action ran.
+func reportRuntimeStartup(ctx context.Context, output *os.File, accepted bool) error {
+	status := "rejected"
+	if accepted {
+		status = runtimeAccepted
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	if bound, ok := ctx.Deadline(); ok && bound.Before(deadline) {
+		deadline = bound
+	}
+	deadlineErr := output.SetWriteDeadline(deadline)
+	var writeErr error
+	if deadlineErr == nil {
+		writeErr = writeRuntime(output, runtimeStartupAck{runtimeProtocol, status}, popupMessageLimit)
+	}
+	if err := errors.Join(deadlineErr, writeErr, output.Close()); err != nil {
 		return errRuntimeStartup
 	}
 	return nil
@@ -1748,22 +1958,26 @@ func (r popupRequest) preparePopupImage(ctx context.Context, directory string) e
 	if checkErr := verifyRuntimeCopy(ctx, directory, request.image.identity); checkErr != nil {
 		return checkErr
 	}
-	imageReceipt, err := json.Marshal(popupImageReceipt{request.image.identity, runtimeHash([]byte(runtimeAssets))})
-	if err != nil || len(imageReceipt) > popupMessageLimit {
+	if request.selection == nil || request.selection.Capabilities == nil || request.selection.Capabilities.Endpoint != request.Server {
+		return errRuntimeCompatibility
+	}
+	imageReceipt, err := json.Marshal(popupImageReceipt{request.image.identity, runtimeHash([]byte(runtimeAssets)), request.selection, request.Server})
+	if err != nil || len(imageReceipt) > runtimeLimit {
 		return errRuntimeStartup
 	}
 	return writePopupFile(directory, "runtime.json", imageReceipt)
 }
 
-func openVerifiedPopupDirectory(ctx context.Context, directory string) (*os.Root, error) {
+func openVerifiedPopupDirectory(ctx context.Context, directory string) (*os.Root, *rex.CLISelection, error) {
 	root, err := openRuntimeDirectory(directory)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if checkErr := verifyPopupImage(ctx, root, directory); checkErr != nil {
-		return nil, errors.Join(checkErr, root.Close())
+	selection, checkErr := verifyPopupImage(ctx, root, directory)
+	if checkErr != nil {
+		return nil, nil, errors.Join(checkErr, root.Close())
 	}
-	return root, nil
+	return root, selection, nil
 }
 
 func (receipt runtimeReceipt) checkPlacement(block rex.Block) error {
@@ -1857,35 +2071,42 @@ func RuntimeRelease(ctx context.Context, input io.Reader) (outcome error) {
 }
 
 type popupImageReceipt struct {
-	Component   runtimeFile `json:"component"`
-	AssetSHA256 string      `json:"asset_sha256"`
+	Component   runtimeFile       `json:"component"`
+	AssetSHA256 string            `json:"asset_sha256"`
+	CLI         *rex.CLISelection `json:"cli"`
+	Endpoint    string            `json:"endpoint"`
 }
 
-func verifyPopupImage(ctx context.Context, root *os.Root, directory string) (outcome error) {
+func verifyPopupImage(ctx context.Context, root *os.Root, directory string) (_ *rex.CLISelection, outcome error) {
 	file, err := root.OpenFile("runtime.json", os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
-		return errRuntimeStartup
+		return nil, errRuntimeStartup
 	}
 	defer func() { outcome = errors.Join(outcome, file.Close()) }()
 	if _, statErr := runtimeSlotStat(file, "runtime.json", false); statErr != nil {
-		return errRuntimeStartup
+		return nil, errRuntimeStartup
 	}
 	var expected popupImageReceipt
-	if checkErr := readRuntime(file, &expected, popupMessageLimit); checkErr != nil || expected.AssetSHA256 != runtimeHash([]byte(runtimeAssets)) {
-		return errRuntimeStartup
+	if checkErr := readRuntime(file, &expected, runtimeLimit); checkErr != nil || expected.AssetSHA256 != runtimeHash([]byte(runtimeAssets)) ||
+		expected.CLI == nil || expected.CLI.Capabilities == nil || expected.Endpoint != expected.CLI.Capabilities.Endpoint {
+		return nil, errRuntimeStartup
+	}
+	selection, err := rex.ResolveCLI(ctx, rex.CLIOptions{Selection: expected.CLI})
+	if err != nil {
+		return nil, errRuntimeCompatibility
 	}
 	if checkErr := checkRuntimeFile(ctx, expected.Component, true); checkErr != nil {
-		return checkErr
+		return nil, checkErr
 	}
 	image, err := captureSelf(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { outcome = errors.Join(outcome, image.file.Close()) }()
 	if image.identity.Path != filepath.Join(directory, runtimeImageName) || image.identity.SHA256 != expected.Component.SHA256 || image.identity.Size != expected.Component.Size {
-		return errRuntimeStartup
+		return nil, errRuntimeStartup
 	}
-	return verifyRuntimeCopy(ctx, directory, expected.Component)
+	return selection, verifyRuntimeCopy(ctx, directory, expected.Component)
 }
 
 // validateRuntime authenticates structure and frozen identities before any popup.

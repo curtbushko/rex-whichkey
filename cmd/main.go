@@ -56,7 +56,16 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 		if len(args) != 1 {
 			return errors.New("whichkey: controller accepts only its private stdin handoff")
 		}
-		return whichkey.RunPopupController(ctx, input)
+		return whichkey.RunPopupController(ctx, input, output)
+	case "controller-child":
+		if len(args) != 1 {
+			return errors.New("whichkey: controller child requires its private inherited transport")
+		}
+		stdin, ok := input.(*os.File)
+		if !ok {
+			return errors.New("whichkey: controller child requires its private inherited transport")
+		}
+		return whichkey.RunPopupControllerChild(ctx, stdin, os.NewFile(3, "startup"), os.NewFile(4, "proceed"))
 	case "popup":
 		flags := flag.NewFlagSet("rex-whichkey popup", flag.ContinueOnError)
 		flags.SetOutput(io.Discard)
@@ -145,7 +154,8 @@ setup, launch/completion registration and the loaded runtime feature bridge.
 Compatible build IDs need not match. Nothing edits/reloads configuration.
 The native caller waits until selection/dismissal, cancellation or origin loss;
 there is no native idle timeout. Configured launch returns after activation and
-retains its authenticated 30-second expiry. Failed/uncertain activation is never
+finite controller startup acknowledgment, not verified popup display. It retains
+its authenticated 30-second expiry. Failed/uncertain activation or startup is never
 retried or switched to native.
 
 Endpoint: --server > nonempty REX_SERVER > Rex native Linux/macOS default.

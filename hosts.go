@@ -18,7 +18,7 @@ import (
 // share one bounded execution-host snapshot; neither --server nor popup/origin
 // identities select that inventory. No marker means no executable resolution or
 // inventory I/O, including for an explicitly empty/replaced user spec.
-func resolveHostMenu(ctx context.Context, config Config) (Config, error) {
+func resolveHostMenu(ctx context.Context, config Config, selection *rex.CLISelection) (Config, error) {
 	if err := config.Validate(); err != nil {
 		return Config{}, err
 	}
@@ -32,7 +32,9 @@ func resolveHostMenu(ctx context.Context, config Config) (Config, error) {
 	if !requested {
 		return config, nil
 	}
-	inventory, readErr := rex.Hosts(ctx, rex.InventoryOptions{Timeout: 3 * time.Second})
+	// The endpoint remains bound inside Selection's API receipt; it does not
+	// retarget rex hosts, whose execution-host/home inventory semantics remain.
+	inventory, readErr := rex.Hosts(ctx, rex.InventoryOptions{Selection: selection, Timeout: 3 * time.Second})
 	if err := ctx.Err(); err != nil {
 		return Config{}, err // Invocation cancellation/expiry is not a listing warning.
 	}

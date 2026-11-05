@@ -119,6 +119,9 @@ func launchNativePopup(parent context.Context, origin launchOrigin, selection *r
 		config.textEntry.SessionInitial = ""
 	}
 	message, err := nativePopupSelection(ctx, origin, selection, config)
+	// Copying and all popup cleanup are finished. Retire the last finite
+	// source handle before any selected effect; uncertain closes are not retried.
+	err = errors.Join(err, origin.image.retire())
 	if err != nil {
 		return err
 	}

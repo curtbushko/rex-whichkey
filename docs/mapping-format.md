@@ -198,6 +198,13 @@ path and the popup child path. Only an explicit marker triggers one bounded
 `rex.Hosts` call, with a three-second process timeout and the existing invocation
 context/deadline; redraws do not refresh it. No marker means no inventory request
 or inserted records, including an explicit empty or replaced user spec. The
+popup child receives the original frozen `rex.CLISelection` and canonical endpoint
+inside private `runtime.json`, verified before `RunTerminal` and passed through
+its host-provider boundary into `rex.Hosts`. The endpoint remains part of the
+selection's API receipt; it does not retarget the execution-host inventory.
+Missing/malformed expected popup data fails closed, never selecting again from
+the temporary child's environment/PATH. A standalone `menu` may make its own
+initial selection only when an explicit provider marker needs inventory. The
 provider replaces only each marker in source order, preserving its group label,
 description, icon and visibility. Hidden is display-only: a hidden marker still
 acquires inventory and opens its details when its key is typed; its generated
@@ -387,7 +394,11 @@ receipt string bytes** returned by Go. Lua retains those bytes/hash; it must not
 serialize its own competing receipt or renew the receipt's original expiry.
 File identity timestamps such as `ModifiedNS` exceed Lua 5.1's exact integer
 range (2^53): retain/pass the opaque Go receipt string, never decode/re-encode
-it through Lua numbers. Parsed copies are inspection data, not receipt bytes.
+it through Lua numbers. The preflight `relay` identity is likewise an opaque,
+bounded Go JSON **string**, including all timestamps/device/inode integers. Retain
+and return that exact string in both relay operations; never decode/re-encode it.
+Go strictly decodes it and compares both exact bytes and the fresh full identity.
+Parsed copies are inspection data, not receipt/relay bytes.
 
 The loaded `whichkey_runtime` action is read-only. Its request is
 `{protocol_min:1, protocol_max:1, action:NAME}` on `rex do ... --args - --json`.
@@ -436,11 +447,18 @@ Go-owned receipt remain JSON **strings**, preserving their exact bytes.
    binds the workspace and exact configuration bytes; retain the **returned**
    final bytes/hash. It does not change the selected source, origin or expiry.
 4. Bind the original ticket to capability plus final receipt/hash and retained
-   exact resources. Start the returned selected copy as `controller`, detached,
-   with finite private stdin `{configuration, capability, server, session_id,
+   exact resources. Start the returned selected copy as `controller` with
+   `rex.exec.start`, `detach=true`, captured stdout, suppressed stderr and
+   finite private stdin `{configuration, capability, server, session_id,
    block_id, client_id, connected_at, completion_action, expires, receipt,
-   receipt_hash, workspace}`. Use returned `expires` unchanged and a 35-second
-   command bound. No callback, ticket, closure or opaque `ctx.server` is serialized.
+   receipt_hash, workspace}`. `controller` is a finite Go launcher, not the
+   interactive child: use supported `h:wait(35)` and require a successful exit
+   plus exactly `{version:1,status:"accepted"}` on captured stdout. A timeout,
+   nonzero exit, malformed/missing acknowledgment or lost result is failed or
+   uncertain startup, never permission to retry/remove its workspace. Do not
+   return the handle/PID or stdout from the configuration action. Use returned
+   `expires` unchanged and a 35-second command bound. No callback, ticket,
+   closure or opaque `ctx.server` is serialized.
 5. Before any attempted controller start, a bind/preparation failure releases the
    ticket and calls the fixed helper's `runtime-release` with the entire prepared
    output. After a possibly successful start, never retry, release its workspace
@@ -461,9 +479,11 @@ Go-owned receipt remain JSON **strings**, preserving their exact bytes.
   describe input and omitting `server`. This path reuses the public frozen CLI;
   it does not choose another CLI/helper. Output is `{version:1, protocol_min,
   protocol_max, producer_build, features, layout_revision, receipt_hash, relay}`.
-  Validate producer features/protocol and retain the exact `relay` installation
-  identity before issuing a ticket. The read-only `runtime-relay` operation
-  `preflight` is the same finite preflight; it is not a popup or authority probe.
+  Validate producer features/protocol and retain the exact opaque `relay`
+  installation-identity string before issuing a ticket. Its Go-owned numeric
+  fields must never pass through Lua number reserialization. The read-only
+  `runtime-relay` operation `preflight` is the same finite preflight; it is not
+  a popup or authority probe.
 - After one original-VM evaluation, invoke fixed `runtime-relay` with
   `{operation:"menu", descriptor, anchor, layout_revision:1, consumer, origin,
   relay, configuration:CONFIG_JSON_STRING}`. It writes `menu.json`, waits for
@@ -480,7 +500,9 @@ Go-owned receipt remain JSON **strings**, preserving their exact bytes.
   uncertain closes are never repeated. The controller uses its verified private
   image and finite stdin, not the public relay lease, so normal caller return
   does not revoke it. After any possibly successful start, workspace ownership
-  stays with the controller, even if the finite handoff reports failure. On
+  stays with the controller, even if the finite handoff/acknowledgment fails. The
+  public caller requires the private child startup acknowledgment before success;
+  pipe acceptance or `Process.Release` alone is not acknowledgment. On
   failure before start, revoke what is still unclaimed; never repeat activation
   or a relay transition.
 - Public Go precreates 0700 workspace / 0600 one-link no-follow regular
@@ -508,9 +530,46 @@ trusted, stable installer/user-owned components: neither `os.Executable()` nor
 path/content rechecks promise hostile-same-account isolation or atomic
 execute-by-descriptor on every platform.
 
-Controller compatibility/placement/rename checks precede popup creation. Cleanup
-precedes fresh completion, and its **actual fresh CLI caller** is not the retained
-GUI or the original activation caller. Lua strictly decodes/authenticates before
+Both direct public spawn and the key's finite Go launcher use one Go-owned
+handshake: bounded finite stdin, a sole inherited startup writer (fd 3), and strict
+`{version:1,status:"accepted"|"rejected"}` followed by EOF. The child consumes
+all input through EOF, closes stdin, authenticates receipt/image/CLI/endpoint,
+checks the loaded consumer and exact origin, prepares rename presentation, then
+rechecks origin/menu/expiry before accepting. The child closes/checks the startup
+writer **before** popup effects; failed acknowledgment prevents its lifecycle.
+The parent closes its duplicate writer, waits for the complete bounded reply and
+EOF, closes its reader and releases the process. The key launcher also writes and
+closes its captured accepted stdout at this barrier. Only then does Go send
+`{version:1,status:"proceed"}` plus EOF over a separate finite fd-4 pipe. The
+child requires that exact positive marker/EOF and successfully closes its reader
+before entering the lifecycle. EOF without the marker is cancellation, not
+permission to proceed; a failed parent acknowledgment/output close suppresses
+that marker. No startup endpoint remains live during popup effects.
+Three-second startup I/O/check bounds and caller cancellation never renew the original expiry. Inherited pipes
+are converted to owned nonblocking/pollable descriptors so Darwin/Linux deadlines
+work; all duplicates are retired. `Start` transfers ownership irrevocably: failure,
+cancellation, rejected/lost acknowledgment, deadline or release/close error after
+that point must not retry, kill an uncertain child or delete its workspace.
+Before `Start`, only authenticated owned cleanup/cancellation is permitted. The
+key launcher returns success only after this handshake (an accepted stdout
+object alone without successful launcher exit is insufficient). Neither
+that object nor public success proves visible popup display or later dispatch.
+
+Controller compatibility/placement/rename checks precede popup creation. After
+rename and geometry yields, read-only `whichkey_runtime` revalidates the exact
+retained loaded menu/features/generation immediately before layer creation,
+during the joined lifecycle watcher and before completion/cancellation. Changed
+or unavailable state suppresses startup/selected effects with owned cleanup, no
+fallback/reload/retry. Each advertisement/completion activation freezes its own
+actual caller; the old activation caller need not remain connected or equal a
+fresh caller, and neither is the retained GUI target. These read-only checks are
+not atomic locks against external setup/resource races.
+
+Cleanup precedes fresh completion. The native route also retires its captured
+source image after popup return and before any selected effect; close failure
+suppresses dispatch, and fallback cleanup never repeats an uncertain close.
+The **actual fresh CLI caller** is not the retained GUI or original activation
+caller. Lua strictly decodes/authenticates before
 lookup/claim, checks capability, final exact receipt/hash, expiry and retained
 state, then consumes **before** any yielding guard/API/callback. A failed/uncertain
 claim/effect/acknowledgment is not retryable. Default `tr`/`wr` text targets only

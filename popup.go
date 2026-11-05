@@ -55,6 +55,7 @@ type popupRequest struct {
 	Workspace     string `json:"workspace"`
 	image         *runtimeImage
 	retained      *runtimeReceipt
+	selection     *rex.CLISelection
 }
 
 func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
@@ -203,6 +204,9 @@ func (r popupRequest) complete(ctx context.Context, selection *rex.CLISelection,
 	if err := r.retained.check(ctx, true); err != nil {
 		return err
 	}
+	if err := r.retained.checkLoadedConsumer(ctx); err != nil {
+		return err
+	}
 	message.Version, message.ReceiptHash = CompletionReceiptVersion, r.ReceiptHash
 	if message.textInput != nil {
 		if message.Selection == nil || message.Selection.Text == nil || *message.Selection.Text != *message.textInput {
@@ -229,18 +233,76 @@ func (r popupRequest) complete(ctx context.Context, selection *rex.CLISelection,
 	return nil
 }
 
-// RunPopupController runs once in a detached server-host process, not in the
-// popup's PTY. Its lifetime, state and files belong to exactly one invocation.
-// Closing the UI (or a selected action closing the origin) cannot kill this
-// process through terminal teardown. The caller never logs its secret stdin.
-func RunPopupController(parent context.Context, input io.Reader) (outcome error) {
+// RunPopupController is the finite key-launch adapter. rex.exec.start can wait
+// for this command's bounded exit with h:wait; the actual controller is detached
+// by Go and acknowledges its own input/checks on a private inherited pipe.
+func RunPopupController(parent context.Context, input io.Reader, output io.Writer) (outcome error) {
+	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+	defer cancel()
+	if inherited, ok := input.(*os.File); ok {
+		pipe, err := runtimePollablePipe(inherited)
+		if err != nil {
+			return err
+		}
+		deadline, _ := ctx.Deadline()
+		if err := pipe.SetReadDeadline(deadline); err != nil {
+			return errors.Join(errRuntimeStartup, pipe.Close())
+		}
+		input = pipe
+	}
+	request, _, err := decodePopupRequest(input)
+	if err != nil {
+		if closer, ok := input.(io.Closer); ok {
+			return errors.Join(errRuntimeStartup, closer.Close())
+		}
+		return errRuntimeStartup
+	}
+	var inputErr error
+	if closer, ok := input.(io.Closer); ok {
+		inputErr = closer.Close()
+	}
+	validationErr := errors.Join(inputErr, request.validateRuntime(ctx))
+	transferred := false
+	defer func() {
+		if request.image != nil {
+			outcome = errors.Join(outcome, request.image.retire())
+			outcome = errors.Join(outcome, cleanupPublicRuntime(ctx, request.Workspace, transferred, &request))
+		}
+	}()
+	if validationErr != nil {
+		return errRuntimeStartup
+	}
+	// This finite launcher's source and stdin must be retired before the child
+	// can acknowledge startup. Never leave deferred close errors after effects.
+	if retireErr := request.image.retire(); retireErr != nil {
+		return retireErr
+	}
+	transferred, err = startRuntimeRequest(ctx, request, func() error { return reportRuntimeLauncher(output) })
+	return err
+}
+
+// RunPopupControllerChild runs once outside the PTY. The selected Go launcher
+// supplies finite stdin, the sole fd-3 startup writer and fd-4 proceed reader,
+// never Rex API handles.
+func RunPopupControllerChild(parent context.Context, input, startup, proceed *os.File) (outcome error) {
+	input, startup, proceed, err := popupControllerPipes(input, startup, proceed)
+	if err != nil {
+		return err
+	}
 	ctx, cancel := context.WithTimeout(parent, 35*time.Second)
 	defer cancel()
-	request, config, decodeErr := decodePopupRequest(input)
-	if decodeErr != nil && request.Workspace == "" {
-		return decodeErr
+	stage, stopStage := context.WithTimeout(ctx, 3*time.Second)
+	defer stopStage()
+	defer func() {
+		outcome = errors.Join(outcome, rejectRuntimeStartup(stage, &startup), closeRuntimePipe(&proceed))
+	}()
+	deadline, _ := stage.Deadline()
+	if deadlineErr := input.SetReadDeadline(deadline); deadlineErr != nil {
+		return errors.Join(errRuntimeStartup, input.Close())
 	}
-	validationErr := errors.Join(decodeErr, request.validateRuntime(ctx))
+	request, config, decodeErr := decodePopupRequest(input)
+	decodeErr = errors.Join(decodeErr, input.Close())
+	validationErr := errors.Join(decodeErr, request.validateRuntime(stage))
 	enteredLifecycle := false
 	released := false
 	release := func() error {
@@ -251,6 +313,8 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 		return errors.Join(request.image.file.Close(), removeRuntimeWorkspace(request.Workspace))
 	}
 	defer func() {
+		// Report a known pre-popup failure before potentially yielding cleanup.
+		outcome = errors.Join(outcome, rejectRuntimeStartup(stage, &startup))
 		cleanupErr := release()
 		outcome = errors.Join(outcome, cleanupErr)
 		if request.image != nil && cleanupErr == nil && validationErr == nil && !enteredLifecycle {
@@ -261,10 +325,21 @@ func RunPopupController(parent context.Context, input io.Reader) (outcome error)
 		return validationErr
 	}
 	selection := request.retained.CLI
-	config, err := prepareConfiguredRename(ctx, request, config, selection)
+	config, err = prepareConfiguredRename(stage, request, config, selection)
 	if err != nil {
 		return err
 	}
+	ack := startup
+	startup = nil // The finite startup guard owns this endpoint, even on failure.
+	if startupErr := acknowledgePopupStartup(stage, request, ack); startupErr != nil {
+		return startupErr
+	}
+	gate := proceed
+	proceed = nil // waitRuntimeProceed owns the last startup transport close.
+	if proceedErr := waitRuntimeProceed(stage, gate); proceedErr != nil {
+		return proceedErr
+	}
+	stopStage()
 	enteredLifecycle = true
 	return runPopupLifecycle(ctx, request, config, selection, func(ctx context.Context, message Completion) error {
 		// The runtime workspace also carries private preparation data. Remove
@@ -299,6 +374,7 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 ) (outcome error) {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
+	request.selection = selection
 	var expires, uiDeadline time.Time
 	switch lifetime {
 	case popupConfigured:
@@ -457,8 +533,9 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	if err != nil {
 		return err
 	}
-	if lifetime == popupConfigured && !uiDeadline.After(time.Now()) {
-		return nil // Read-only geometry sampling must not spend the teardown reserve.
+	ready, err := request.popupCreationReady(ctx, lifetime, uiDeadline)
+	if err != nil || !ready {
+		return err
 	}
 	layer, err = origin.NewLayerWithSize(ctx, initialBounds, command, initialSize)
 	if err != nil {
@@ -501,6 +578,23 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 	return finish(dispatch, message)
 }
 
+// Geometry and rename preparation yield. Recheck the exact loaded registry at
+// the last read-only boundary; sampling must not spend the teardown reserve.
+func (r popupRequest) popupCreationReady(ctx context.Context, lifetime popupLifetime, deadline time.Time) (bool, error) {
+	if lifetime == popupConfigured && !deadline.After(time.Now()) {
+		return false, nil
+	}
+	if r.retained != nil {
+		if err := r.retained.checkOrigin(ctx); err != nil {
+			return false, err
+		}
+		if err := r.retained.checkLoadedConsumer(ctx); err != nil {
+			return false, err
+		}
+	}
+	return lifetime != popupConfigured || deadline.After(time.Now()), nil
+}
+
 // waitPopup deliberately does not use Layer.Wait: that wrapper caps the whole
 // CLI process at its RPC timeout. `rex wait --help` documents unbounded event
 // delivery, with --timeout still bounding connections/nonstreaming requests.
@@ -528,6 +622,9 @@ func waitPopup(ctx context.Context, request popupRequest, selection *rex.CLISele
 				// check. Parent cancellation still interrupts it through ctx.
 				check, done := context.WithTimeout(ctx, 3*time.Second)
 				_, err := originBlock(check)
+				if err == nil && request.retained != nil {
+					err = request.retained.checkLoadedConsumer(check)
+				}
 				done()
 				if err != nil {
 					watcherErr = err
@@ -736,7 +833,7 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 }
 
 func runPopupTerminal(parent context.Context, directory string, deadline time.Time, noColor, ascii bool) (outcome error) {
-	root, err := openVerifiedPopupDirectory(parent, directory)
+	root, selection, err := openVerifiedPopupDirectory(parent, directory)
 	if err != nil {
 		return err
 	}
@@ -756,10 +853,12 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if err != nil {
 		return err
 	}
-	ctx := parent
+	// Presence is explicit: an absent/bad popup selection cannot become a
+	// standalone menu's initial environment/PATH capture.
+	ctx := context.WithValue(parent, terminalRuntimeKey{}, terminalRuntime{selection, selection.Capabilities.Endpoint})
 	if !deadline.IsZero() {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(parent, deadline)
+		ctx, cancel = context.WithDeadline(ctx, deadline)
 		defer cancel()
 	}
 	// The layer already carries the requested position. Anchor popup content

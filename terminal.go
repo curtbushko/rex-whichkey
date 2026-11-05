@@ -17,6 +17,8 @@ import (
 
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
+
+	"temp/rex"
 )
 
 const (
@@ -24,6 +26,28 @@ const (
 	terminalEscapeDelay  = 50 * time.Millisecond
 	terminalSetup        = "\x1b[?7l\x1b[?25l\x1b[?1004h\x1b[?2004h"
 )
+
+// A popup always supplies this context value, including its captured endpoint
+// receipt. Absence is reserved for the standalone menu's initial CLI capture.
+type terminalRuntimeKey struct{}
+
+type terminalRuntime struct {
+	selection *rex.CLISelection
+	endpoint  string
+}
+
+func resolveTerminalHostMenu(ctx context.Context, config Config) (Config, error) {
+	var selection *rex.CLISelection
+	if frozen, present := ctx.Value(terminalRuntimeKey{}).(terminalRuntime); present {
+		endpoint, err := rex.CanonicalEndpoint(frozen.endpoint)
+		if err != nil || endpoint != frozen.endpoint || frozen.selection == nil ||
+			frozen.selection.Capabilities == nil || frozen.selection.Capabilities.Endpoint != endpoint {
+			return Config{}, errRuntimeCompatibility
+		}
+		selection = frozen.selection
+	}
+	return resolveHostMenu(ctx, config, selection)
+}
 
 // RunTerminal owns one short-lived menu on the controlling popup terminal. The
 // caller must give it exclusive terminal ownership, then dispatch its Selection
@@ -49,7 +73,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	// Both the direct menu and popup child enter here on the execution/server
 	// host. Resolve inventory once before menu construction or terminal mutation;
 	// generated groups cannot add or replace a retained executable selection.
-	config, err := resolveHostMenu(ctx, config)
+	config, err := resolveTerminalHostMenu(ctx, config)
 	if err != nil {
 		return MenuEvent{}, err
 	}
