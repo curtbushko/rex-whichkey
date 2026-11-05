@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"syscall"
@@ -208,44 +209,190 @@ func compatibleSchema(data json.RawMessage, fields map[string]string) bool {
 // Request paths below describe only the application's fixed producers. Dots
 // separate child lookups; they never count as literal properties in required.
 // At each object, only fields guaranteed by that producer may be mandatory.
-func compatibleRequest(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string) bool {
-	if !schemaType(schema, kind) {
+func compatibleRequest(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) bool {
+	// An absent type imposes no restriction (notably client.perform.args).
+	// Explicit types still have to admit the producer's concrete kind.
+	if !supportedRequest(schema, kind) || (len(schema["type"]) != 0 && !schemaType(schema, kind)) ||
+		!compatibleValues(schema, requestValues(path, kind)) {
 		return false
 	}
 	switch kind {
 	case schemaObject:
-		return compatibleRequestObject(schema, fields, supplied)
+		return compatibleRequestObject(schema, fields, supplied, path)
 	case schemaArray:
 		itemKind, known := fields["[]"]
 		if !known {
 			return false
 		}
 		item, err := metadataObject(schema["items"])
-		return err == nil && compatibleRequest(item, itemKind, childFields(fields, "[]"), childFields(supplied, "[]"))
+		return err == nil && compatibleRequest(item, itemKind, childFields(fields, "[]"), childFields(supplied, "[]"), path+".[]")
 	default:
 		return true
 	}
 }
 
-func compatibleRequestObject(schema map[string]json.RawMessage, fields, supplied map[string]string) bool {
+// supportedRequest is an allowlist, not a claim of general JSON Schema support.
+// Only these structural keywords and finite scalar values are proved below.
+// Ranges, patterns, formats, compositions, dependencies, conditionals and unknown
+// keywords fail closed, even when a particular request might satisfy them.
+func supportedRequest(schema map[string]json.RawMessage, kind string) bool {
+	for keyword := range schema {
+		if requestAnnotation(keyword) || keyword == "type" {
+			continue
+		}
+		switch keyword {
+		case "properties", "required", "additionalProperties":
+			if kind != schemaObject {
+				return false
+			}
+		case "items":
+			if kind != schemaArray {
+				return false
+			}
+		case "enum", "const":
+			if kind == schemaObject || kind == schemaArray {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func requestAnnotation(keyword string) bool {
+	switch keyword {
+	case "title", "description", "default", "examples", "$comment", "deprecated", "readOnly", "writeOnly":
+		return true
+	default:
+		return false
+	}
+}
+
+// Only string/boolean values fixed by non-test producers are enumerated.
+// Numeric restrictions and finite restrictions on invocation-dependent strings
+// are unsupported. Variable booleans use both values, not a guessed default.
+func requestValues(path, kind string) []any {
+	switch path {
+	case "session.new_layer.layout.block.flavor":
+		return []any{"com.superlogical.terminal.shell"}
+	case "session.new_layer.layout.block.options.shell":
+		return []any{"none"}
+	case "session.new_layer.layout.block.options.exit.on_completion":
+		return []any{false}
+	case "session.new_layer.focus":
+		return []any{true}
+	case "client.perform.origin":
+		return []any{"cli"}
+	case "block.method.method":
+		return []any{"size"}
+	default:
+		if kind == schemaBoolean {
+			return []any{false, true}
+		}
+		return nil
+	}
+}
+
+func compatibleValues(schema map[string]json.RawMessage, values []any) bool {
+	if data, present := schema["const"]; present {
+		var constant any
+		if len(values) == 0 || json.Unmarshal(data, &constant) != nil {
+			return false
+		}
+		for _, value := range values {
+			if !reflect.DeepEqual(value, constant) {
+				return false
+			}
+		}
+	}
+	if data, present := schema["enum"]; present {
+		var allowed []any
+		if len(values) == 0 || json.Unmarshal(data, &allowed) != nil || len(allowed) == 0 {
+			return false
+		}
+		for _, value := range values {
+			if !containsValue(allowed, value) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func containsValue(allowed []any, value any) bool {
+	for _, candidate := range allowed {
+		if reflect.DeepEqual(candidate, value) {
+			return true
+		}
+	}
+	return false
+}
+
+func compatibleRequestObject(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) bool {
 	if !knownRequired(schema["required"], supplied) {
 		return false
 	}
-	// Opaque objects (for example user action args) prove no mandatory children.
-	// Optional server properties remain server-owned; none is invented here.
-	if len(fields) == 0 {
-		return true
-	}
-	properties, err := metadataObject(schema["properties"])
-	if err != nil {
+	if !compatibleAdditional(schema["additionalProperties"], !opaqueRequest(path)) {
 		return false
+	}
+	properties := make(map[string]json.RawMessage)
+	if data, present := schema["properties"]; present {
+		var err error
+		properties, err = metadataObject(data)
+		if err != nil {
+			return false
+		}
+	}
+	if opaqueRequest(path) {
+		// These children are user/CLI-owned, not absent. Even an optional
+		// property constraint could reject a supplied child we cannot prove.
+		for _, property := range properties {
+			if !unconstrainedRequest(property) {
+				return false
+			}
+		}
+		return true
 	}
 	for name, kind := range fields {
 		if strings.Contains(name, ".") {
 			continue
 		}
 		field, fieldErr := metadataObject(properties[name])
-		if fieldErr != nil || !compatibleRequest(field, kind, childFields(fields, name), childFields(supplied, name)) {
+		if fieldErr != nil || !compatibleRequest(field, kind, childFields(fields, name), childFields(supplied, name), path+"."+name) {
+			return false
+		}
+	}
+	return true
+}
+
+func compatibleAdditional(data json.RawMessage, closed bool) bool {
+	if len(data) == 0 {
+		return true
+	}
+	var allowed bool
+	return strings.TrimSpace(string(data)) != schemaNull && json.Unmarshal(data, &allowed) == nil && (allowed || closed)
+}
+
+func opaqueRequest(path string) bool {
+	switch path {
+	case "client.perform.args", "block.method.args", "session.new_window.layout", "session.create.initial_windows.[]":
+		return true
+	default:
+		return false
+	}
+}
+
+func unconstrainedRequest(data json.RawMessage) bool {
+	if strings.TrimSpace(string(data)) == "true" {
+		return true
+	}
+	schema, err := metadataObject(data)
+	if err != nil {
+		return false
+	}
+	for keyword := range schema {
+		if !requestAnnotation(keyword) {
 			return false
 		}
 	}
@@ -518,7 +665,7 @@ func compatibleInput(data json.RawMessage, method methodContract) bool {
 		return true
 	}
 	schema, err := metadataObject(data)
-	return err == nil && compatibleRequest(schema, schemaObject, method.input, suppliedFields(method))
+	return err == nil && compatibleRequest(schema, schemaObject, method.input, suppliedFields(method), method.name)
 }
 
 func suppliedFields(method methodContract) map[string]string {
