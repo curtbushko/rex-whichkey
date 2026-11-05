@@ -74,7 +74,7 @@ func LaunchPopup(parent context.Context, options LaunchOptions) (outcome error) 
 	if err != nil {
 		return err
 	}
-	defer func() { outcome = errors.Join(outcome, image.file.Close()) }()
+	defer func() { outcome = errors.Join(outcome, image.retire()) }()
 	origin.image = image
 	selection, err := rex.ResolveCLI(ctx, rex.CLIOptions{})
 	if err != nil {

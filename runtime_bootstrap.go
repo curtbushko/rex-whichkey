@@ -1452,6 +1452,55 @@ func relayRuntimeBound(ctx context.Context, root *os.Root, lease *os.File, descr
 	}{runtimeProtocol}, popupMessageLimit)
 }
 
+// runtimePublicOwner holds only preparation/relay handles. The detached
+// controller owns its verified copy and finite stdin, not this FIFO lease.
+// Clearing before close makes even a failed close a non-retryable transition.
+type runtimePublicOwner struct {
+	root  *os.Root
+	lease *os.File
+}
+
+func (owner *runtimePublicOwner) close() error {
+	var closeErr error
+	if owner.root != nil {
+		root := owner.root
+		owner.root = nil
+		closeErr = errors.Join(closeErr, root.Close())
+	}
+	if owner.lease != nil {
+		lease := owner.lease
+		owner.lease = nil
+		closeErr = errors.Join(closeErr, lease.Close())
+	}
+	if closeErr != nil {
+		return errRuntimeRelay
+	}
+	return nil
+}
+
+// retire closes the public caller's captured source once its verified private
+// copy is ready. LaunchPopup's fallback defer must not close it again afterward.
+func (image *runtimeImage) retire() error {
+	file := image.file
+	image.file = nil
+	if file == nil {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return errRuntimeStartup
+	}
+	return nil
+}
+
+func (owner *runtimePublicOwner) startController(ctx context.Context, image *runtimeImage, prepared popupPreparation) (bool, error) {
+	// Binding and activation must be certain before retiring these handles.
+	// A failed close suppresses startup; no uncertain close is repeated.
+	if closeErr := errors.Join(owner.close(), image.retire()); closeErr != nil {
+		return false, closeErr
+	}
+	return startRuntimeController(ctx, prepared)
+}
+
 func launchPublicRuntime(parent context.Context, origin launchOrigin, placement rex.Block, consumer runtimeConsumer) (outcome error) {
 	started := time.Now()
 	expires := started.Unix() + InvocationLifetimeSeconds
@@ -1470,15 +1519,18 @@ func launchPublicRuntime(parent context.Context, origin launchOrigin, placement 
 	var pending *popupRequest
 	defer func() { outcome = errors.Join(outcome, cleanupPublicRuntime(ctx, workspace, transferred, pending)) }()
 	slots, writer, err := createRuntimeSlots(workspace)
+	// Slot creation can return a live writer with a directory-close error.
+	// Adopt it before inspecting that error so every acquired lease is retired.
+	owner := runtimePublicOwner{lease: writer}
+	defer func() { outcome = errors.Join(outcome, owner.close()) }()
 	if err != nil {
 		return err
 	}
-	defer func() { outcome = errors.Join(outcome, writer.Close()) }()
 	root, err := openRuntimeDirectory(workspace)
 	if err != nil {
 		return err
 	}
-	defer func() { outcome = errors.Join(outcome, root.Close()) }()
+	owner.root = root
 	descriptor, arguments, err := publishRuntimeRequest(ctx, root, base, workspace, slots)
 	if err != nil {
 		return err
@@ -1521,7 +1573,9 @@ func launchPublicRuntime(parent context.Context, origin launchOrigin, placement 
 	if err != nil || final.checkOrigin(ctx) != nil || !time.Unix(expires, 0).Add(-5*time.Second).After(time.Now()) {
 		return errRuntimeOrigin
 	}
-	transferred, err = startRuntimeController(ctx, prepared)
+	// Both relay stages and activation are finished. The controller never
+	// reads the public lease; caller return cannot revoke its finite handoff.
+	transferred, err = owner.startController(ctx, origin.image, prepared)
 	return err
 }
 

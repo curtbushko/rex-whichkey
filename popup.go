@@ -778,8 +778,5 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if !deadline.IsZero() && !time.Now().Before(deadline) {
 		event = MenuEvent{Dismissed: true}
 	}
-	if err := commitPopupResult(ctx, root, event, config); err != nil {
-		return err
-	}
-	return nil
+	return commitPopupResult(ctx, root, event, config)
 }

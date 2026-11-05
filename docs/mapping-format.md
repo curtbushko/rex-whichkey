@@ -385,6 +385,9 @@ Selection's strict keys/ref/confirmation/text semantics above are unchanged.
 `receipt_hash` is 64 lowercase hexadecimal SHA256 characters over the **exact
 receipt string bytes** returned by Go. Lua retains those bytes/hash; it must not
 serialize its own competing receipt or renew the receipt's original expiry.
+File identity timestamps such as `ModifiedNS` exceed Lua 5.1's exact integer
+range (2^53): retain/pass the opaque Go receipt string, never decode/re-encode
+it through Lua numbers. Parsed copies are inspection data, not receipt bytes.
 
 The loaded `whichkey_runtime` action is read-only. Its request is
 `{protocol_min:1, protocol_max:1, action:NAME}` on `rex do ... --args - --json`.
@@ -471,8 +474,15 @@ Go-owned receipt remain JSON **strings**, preserving their exact bytes.
   layout_revision:1, consumer, origin, relay, receipt_hash:FINAL_HASH}` (omit
   configuration). It publishes binding and returns `{version:1}`. The action
   returns no secret/handle/result. Only after matching bound state **and certain
-  activation success** does public Go start its selected controller. On failure,
-  revoke what is still unclaimed; never repeat activation or a relay transition.
+  activation success** does public Go retire its finite rendezvous root/FIFO
+  handles and captured source handle, then start its selected controller. A
+  retirement failure prevents startup and takes owned cleanup/cancellation;
+  uncertain closes are never repeated. The controller uses its verified private
+  image and finite stdin, not the public relay lease, so normal caller return
+  does not revoke it. After any possibly successful start, workspace ownership
+  stays with the controller, even if the finite handoff reports failure. On
+  failure before start, revoke what is still unclaimed; never repeat activation
+  or a relay transition.
 - Public Go precreates 0700 workspace / 0600 one-link no-follow regular
   `request.json`, `menu.json`, `prepared.json`, `bound.json`, plus mode-0600 FIFO
   `lease`. Only the public owner retains a write-capable lease endpoint. Relay
