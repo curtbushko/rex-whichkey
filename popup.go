@@ -206,7 +206,10 @@ func (r popupRequest) resourceOriginBlock(ctx context.Context, client *rex.Clien
 // retry it or send a cancellation that could mask a possibly executed action.
 func (r popupRequest) complete(ctx context.Context, executable string, message Completion) error {
 	if message.textInput != nil {
-		return errors.New("whichkey: native text input cannot enter configured completion")
+		if message.Selection == nil || message.Selection.Text == nil || *message.Selection.Text != *message.textInput {
+			return errors.New("whichkey: rename result is missing validated name data")
+		}
+		message.textInput = nil // Only the typed selection text crosses the Lua bridge.
 	}
 	data, err := json.Marshal(message)
 	if err != nil || len(data) > popupMessageLimit {
@@ -218,6 +221,8 @@ func (r popupRequest) complete(ctx context.Context, executable string, message C
 	if err != nil {
 		return errors.New("whichkey: cannot encode popup completion")
 	}
+	// --client selects the GUI for any nested configuration-action queues; Rex
+	// still gives this fresh CLI activation its own actual caller identity.
 	command := exec.CommandContext(ctx, executable,
 		"--server", r.Server, "--client", r.ClientID, "--autostart=false", "--timeout", "3s",
 		"do", r.Completion, "--session", r.SessionID, "--block", r.BlockID, "--args", "-")
@@ -255,6 +260,10 @@ func RunPopupController(parent context.Context, input io.Reader) error {
 		return err
 	}
 	executable, err := popupRexExecutable()
+	if err != nil {
+		return err
+	}
+	config, err = prepareConfiguredRename(parent, request, config, executable)
 	if err != nil {
 		return err
 	}
@@ -407,9 +416,6 @@ func runPopupWithLifetime(parent context.Context, request popupRequest, config C
 		return err
 	}
 	if config.textEntry != nil {
-		if lifetime != popupNative {
-			return errors.New("whichkey: text entry requires native popup lifetime")
-		}
 		data, err := json.Marshal(config.textEntry)
 		if err != nil || len(data) > popupMessageLimit {
 			return errors.New("whichkey: cannot encode native text-entry presentation")
@@ -653,7 +659,13 @@ func readPopupResult(directory, capability string, config Config) (message Compl
 		Kind       string          `json:"kind"`
 		Selection  json.RawMessage `json:"selection"`
 	}{CompletionVersion, capability, CompletionComplete, plain})
-	if err != nil || json.Unmarshal(wrapped, &message) != nil || message.ValidateSelection(config.Spec) != nil {
+	if err != nil || json.Unmarshal(wrapped, &message) != nil {
+		return Completion{}, errors.New("whichkey: popup returned an invalid retained selection")
+	}
+	if message.Selection != nil {
+		message.Selection.Text = textInput
+	}
+	if err := message.ValidateSelection(config.Spec); err != nil {
 		return Completion{}, errors.New("whichkey: popup returned an invalid retained selection")
 	}
 	message.textInput = textInput
@@ -736,11 +748,9 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if err := errors.Join(decodeErr, input.Close()); err != nil {
 		return err
 	}
-	if deadline.IsZero() {
-		config.textEntry, err = readNativeTextSpec(root)
-		if err != nil {
-			return err
-		}
+	config.textEntry, err = readNativeTextSpec(root)
+	if err != nil {
+		return err
 	}
 	ctx := parent
 	if !deadline.IsZero() {

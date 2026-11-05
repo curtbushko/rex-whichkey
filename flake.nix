@@ -29,7 +29,7 @@
 
     # Build go-ai-lint from source
     go-ai-lint = {pkgs}:
-      pkgs.buildGoModule {
+      (pkgs.buildGoModule.override {go = pkgs.go;}) {
         pname = "go-ai-lint";
         version = "1.0.0";
         src = pkgs.fetchFromGitHub {

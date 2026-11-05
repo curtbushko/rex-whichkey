@@ -43,11 +43,16 @@ session/pane/tab placement and invokes typed `Session.Rename` once. No app actio
 or native rename dialog is used. An explicit app override is still validated;
 otherwise resource rename needs no GUI app binding. The private presentation
 file adds `session_initial`; private `text` data is allowed only for retained
-`wr` or `tr` rename selections. Canonical Config/Mapping and Completion v1 JSON,
-configured Lua callbacks and their strict decoder remain unchanged.
+`wr` or `tr` rename selections. Config/Mapping JSON remains unchanged. Registered
+Lua defaults now use the same rename form; typed Completion v1 selection allows
+bounded `text` only for the retained default rename intent. The Lua dispatcher
+revalidates the invocation and uses `session.set_label` or
+`session.set_window_label`, never a GUI dialog. Custom callbacks remain ordinary
+callbacks. See [rename input](tab-rename-input.md) for the updated wire contract.
 
 ## Evidence boundary
 
-Build, formatting and source checks are not interactive verification. No general,
-unit/race tests, UI trials, extra worker windows, user settings/config changes or
-reloads were performed, following the user's stop-testing instruction.
+Historical native-only delivery used build/source checks under the stop-testing
+instruction. The subsequent registered-rename parity correction has focused
+unit/race regression coverage described in [rename input](tab-rename-input.md).
+Neither record claims live rename verification or configuration/settings changes.

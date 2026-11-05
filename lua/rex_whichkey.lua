@@ -86,7 +86,7 @@ local function launch_expectation(text)
     return expected
 end
 
-local function connection(ctx)
+local function connection(ctx, target_id)
     local result, err = rex.session.list_clients({ session_id = ctx.session_id })
     if err ~= nil or type(result) ~= "table" or type(result.clients) ~= "table" then
         fail("cannot inspect originating client")
@@ -103,7 +103,10 @@ local function connection(ctx)
         if client.connection_state ~= "lost" and not valid_generation(client.connected_at) then
             fail("originating client has no valid connection generation")
         end
-        if client.client_id == ctx.client_id then
+        if client.client_id == target_id then
+            if not plain(client.info) or client.info.kind ~= "app" then
+                fail("target client is not a graphical app")
+            end
             matches = matches + 1
             if client.connection_state == "lost" then
                 fail("originating client connection was lost")
@@ -142,7 +145,19 @@ end
 -- Defaults are supplied by the defaults owner, not invented named actions here.
 -- Setup uses the delivered transactional loader/compiler and only then replaces
 -- the installed invocation registry. Failure retains the last working setup.
-function M.new(defaults, server_endpoint)
+function M.new(defaults, server_endpoint, execution)
+    execution = execution or {}
+    if not plain(execution) then
+        fail("execution options must be a table")
+    end
+    local helper = execution.helper or "rex-whichkey"
+    local rex_bin_dir = execution.rex_bin_dir
+    if type(helper) ~= "string" or helper == "" or helper:find("%z") then
+        fail("a helper executable is required")
+    end
+    if rex_bin_dir ~= nil and (type(rex_bin_dir) ~= "string" or rex_bin_dir:sub(1, 1) ~= "/" or rex_bin_dir:find("%z")) then
+        fail("rex_bin_dir must be an absolute directory")
+    end
     if server_endpoint ~= nil and type(server_endpoint) ~= "string" then
         fail("the optional server-owned endpoint override must be a string")
     end
@@ -162,7 +177,8 @@ function M.new(defaults, server_endpoint)
     end
 
     -- At configuration load, install a named action in THIS original server VM.
-    -- CLI origin data only constrains its actual ctx; keys/palette need no data.
+    -- CLI origin data constrains session/block and nominates a validated GUI
+    -- target; keys/palette already have an app caller and need no extra data.
     function menu.register_launch(name)
         if name == nil then
             name = "whichkey"
@@ -200,21 +216,27 @@ function M.new(defaults, server_endpoint)
         if registry == nil then
             fail("setup must succeed before launching")
         end
+        -- Rex versions may omit server for local actions. This module and its
+        -- registry already belong to one server VM; never invent an endpoint or
+        -- substitute caller data for a missing opaque identity.
         local server_kind = plain(ctx) and type(ctx.server)
         if
             not plain(ctx)
-            or (server_kind ~= "string" and server_kind ~= "table" and server_kind ~= "userdata")
+            or (server_kind ~= "nil" and server_kind ~= "string" and server_kind ~= "table" and server_kind ~= "userdata")
             or ctx.server == ""
             or not resource(ctx.session_id, "session")
             or not resource(ctx.block_id, "block")
             or not resource(ctx.client_id, "client")
         then
-            fail("the original action context with full server/session/block/client identities is required")
+            fail("the original action context with full session/block/client identities is required")
         end
         local expected = origin_json ~= nil and launch_expectation(origin_json) or nil
         -- Capture actual opaque identity without stringifying it or making a
-        -- replacement ctx. The caller's data cannot confer action authority.
-        local actual_server, session_id, block_id, client_id = ctx.server, ctx.session_id, ctx.block_id, ctx.client_id
+        -- replacement ctx. Target routing data cannot impersonate this caller.
+        local actual_server, session_id, block_id, request_client_id = ctx.server, ctx.session_id, ctx.block_id, ctx.client_id
+        -- CLI selectors nominate a GUI target; they do not impersonate that
+        -- app's connection. Keys/palette use their actual app client directly.
+        local client_id = expected and expected.client_id or request_client_id
         local generation, options = registry, installed
         local started = os.time()
         if type(started) ~= "number" then
@@ -229,34 +251,35 @@ function M.new(defaults, server_endpoint)
                 or not rawequal(ctx.server, actual_server)
                 or ctx.session_id ~= session_id
                 or ctx.block_id ~= block_id
-                or ctx.client_id ~= client_id
+                or ctx.client_id ~= request_client_id
                 or type(now) ~= "number"
                 or now < started
                 or now >= started + 30
             then
                 fail("origin or configuration changed during launch")
             end
-            if
-                expected
-                and (
-                    expected.session_id ~= session_id
-                    or expected.block_id ~= block_id
-                    or expected.client_id ~= client_id
-                )
-            then
-                fail("launch origin does not match the actual action context")
+            if expected then
+                for _, field in ipairs({ "session_id", "block_id" }) do
+                    if expected[field] ~= ctx[field] then
+                        fail("launch origin " .. field .. " does not match the actual action context")
+                    end
+                end
             end
         end
         local connected_at = expected and expected.connected_at or nil
         local function check_connection()
             check()
-            local current = connection(ctx)
+            local current = connection(ctx, client_id)
             check() -- list_clients yields; compare the actual ctx again.
             if connected_at ~= nil and connected_at ~= current then
                 fail("originating client connection changed during launch")
             end
             connected_at = current
         end
+        -- No reservation or secret exists yet. Preserve fixed, field-specific
+        -- preflight errors instead of hiding them behind the private-handoff
+        -- error boundary. Recheck inside that boundary before issuing a ticket.
+        check_connection()
         local records, ticket
         local failure =
             "popup launch failed; check the exact origin IDs, connection generation and setup; invocation cancelled"
@@ -264,13 +287,14 @@ function M.new(defaults, server_endpoint)
             -- Reject a supplied mismatched origin/generation BEFORE reserving or
             -- evaluating any user mapping. issue/bind retain placement checks.
             check_connection()
-            records, ticket = generation.issue(ctx)
+            records, ticket = generation.issue(ctx, { client_id = client_id, connected_at = connected_at })
             check_connection()
             local resolved = configuration(options, records)
-            -- rex.exec resolves the installed helper on THIS server's PATH.
+            -- Resolve the helper on this server, using its configured path when
+            -- an app-launched server has no user profile on PATH.
             -- Only captured stdout contains the random capability. Never return
             -- it to the invoking action, print it, or propagate child errors.
-            local prepare_argv = { "rex-whichkey", "prepare" }
+            local prepare_argv = { helper, "prepare" }
             if server_endpoint ~= nil then
                 prepare_argv[#prepare_argv + 1] = "--server"
                 prepare_argv[#prepare_argv + 1] = server_endpoint
@@ -283,6 +307,7 @@ function M.new(defaults, server_endpoint)
                 timeout = 3,
                 stdin = resolved,
                 stderr = false,
+                env = { REX_BIN_DIR = rex_bin_dir },
             })
             if prepare_err ~= nil or type(prepared) ~= "table" or not prepared.ok then
                 fail("server-side invocation preparation failed")
@@ -331,6 +356,7 @@ function M.new(defaults, server_endpoint)
                 "detached popup controller launch failed or origin changed; check the execution-host helper and context; invocation cancelled"
             local handle, launch_err = rex.exec.start({ secret.executable, "controller" }, {
                 stdin = handoff,
+                env = { REX_BIN_DIR = rex_bin_dir },
                 detach = true,
                 timeout = 35,
                 stdout = false,

@@ -9,7 +9,7 @@ import (
 
 const renameTextLimit = 4096
 
-// textEntrySpec is private native-popup presentation data, not a Mapping option
+// textEntrySpec is private popup presentation data, not a Mapping option
 // or callback argument. The parent retains the only executable target identity.
 type textEntrySpec struct {
 	Initial        string `json:"initial"`
@@ -17,6 +17,11 @@ type textEntrySpec struct {
 }
 
 func nativeRenameMapping(mapping Mapping) bool {
+	if len(mapping.Args) != 0 {
+		if _, err := completionObject(mapping.Args); err != nil {
+			return false // Custom retained arguments keep their ordinary action behavior.
+		}
+	}
 	return mapping.CallbackRef == "" && !mapping.Confirm &&
 		(mapping.Keys == "tr" && mapping.Action == "client.tab.rename" ||
 			mapping.Keys == "wr" && mapping.Action == "session.rename")

@@ -7,7 +7,8 @@ local spec = {
     { "tn", "client.tab.new", desc = "New tab", icon = "" },
     { "th", "client.tab.previous", desc = "Previous", icon = "" },
     { "tl", "client.tab.next", desc = "Next", icon = "" },
-    -- No replacement name: Rex opens its native rename interaction.
+    -- The default empty-argument intent opens WhichKey's inline rename page;
+    -- the dispatcher retains the tab ID and applies only the entered label.
     { "tr", "client.tab.rename", desc = "Rename", icon = "󰏫" },
     -- Confirmation belongs to the shared menu/dispatch path. Cancellation never
     -- queues this action; do not close tabs here or during configuration loading.

@@ -1,6 +1,6 @@
 -- Ordered spec fragment; mapping.go/docs/mapping-format.md own its format.
--- The dispatcher restores the authenticated origin before queueing these client
--- actions. Importing defaults must never split, focus or close a pane itself.
+-- The dispatcher restores the origin before explicitly routing these client
+-- actions to the retained GUI target. Importing defaults must never split, focus or close a pane itself.
 return {
     -- These are pane.split action directions, not CLI --split values: the
     -- downward action takes "down", whereas the CLI uses "below".

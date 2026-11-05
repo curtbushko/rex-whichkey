@@ -22,31 +22,23 @@ import (
 const endpointTimeout = 2 * time.Second
 
 // CanonicalEndpoint validates a concrete popup transport address, never a mutable
-// Rex host label. Absolute Unix socket paths become unix URIs; existing strict
-// unix URI, host:port and bracketed IPv6 forms retain their spelling. This does
+// Rex host label. Unix socket paths and URIs normalize to escaped unix URIs;
+// host:port and bracketed IPv6 forms retain their spelling. This does
 // not connect, inspect files, resolve DNS or interpret opaque Lua ctx.server.
 func CanonicalEndpoint(server string) (string, error) {
-	invalid := errors.New("rex: endpoint must be an absolute Unix socket path, unix URI or host:port with a nonzero numeric port; labels, whitespace and controls are not allowed")
-	if !utf8.ValidString(server) || strings.IndexFunc(server, func(char rune) bool {
-		return unicode.IsSpace(char) || unicode.IsControl(char)
-	}) >= 0 {
+	invalid := errors.New("rex: endpoint must be an absolute Unix socket path, unix URI or host:port with a nonzero numeric port; labels and controls are not allowed")
+	if !utf8.ValidString(server) || strings.IndexFunc(server, unicode.IsControl) >= 0 {
 		return "", invalid
 	}
 	if filepath.IsAbs(server) {
-		server = "unix://" + server
+		server = (&url.URL{Scheme: "unix", Path: server}).String()
 	}
 	if strings.HasPrefix(server, "unix://") {
-		address, err := url.Parse(server)
-		if err == nil && address.Host == "" && filepath.IsAbs(address.Path) &&
-			address.Path != "/" && address.Path == strings.TrimPrefix(server, "unix://") &&
-			address.RawQuery == "" && !address.ForceQuery && address.Fragment == "" && address.User == nil {
-			return server, nil
-		}
-		return "", invalid
+		return canonicalUnixEndpoint(server, invalid)
 	}
 	host, port, err := net.SplitHostPort(server)
 	if err != nil || host == "" || port == "" || strings.Trim(port, "0123456789") != "" ||
-		strings.ContainsAny(host, "/\\?#@%") {
+		strings.IndexFunc(host, unicode.IsSpace) >= 0 || strings.ContainsAny(host, "/\\?#@%") {
 		return "", invalid
 	}
 	value, err := strconv.ParseUint(port, 10, 16)
@@ -54,6 +46,18 @@ func CanonicalEndpoint(server string) (string, error) {
 		return "", invalid
 	}
 	return server, nil
+}
+
+func canonicalUnixEndpoint(server string, invalid error) (string, error) {
+	address, err := url.Parse(server)
+	if err != nil || address.Host != "" || !filepath.IsAbs(address.Path) || address.Path == "/" ||
+		!utf8.ValidString(address.Path) || strings.IndexFunc(address.Path, unicode.IsControl) >= 0 ||
+		address.RawQuery != "" || address.ForceQuery || strings.Contains(server, "#") || address.User != nil {
+		return "", invalid
+	}
+	// whoami uses escaped URI paths, including Application%20Support on
+	// macOS. Compare normalized addresses, not escaped versus decoded text.
+	return (&url.URL{Scheme: "unix", Path: address.Path}).String(), nil
 }
 
 // ResolveEndpoint captures one concrete endpoint on the execution host. A nil

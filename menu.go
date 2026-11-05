@@ -154,7 +154,7 @@ func (m *Menu) Done() bool { return m.done || m.current == nil }
 // Tab advances modulo pages (at least one); entering/leaving a group or prompt
 // resets the page. While prompting, exactly y selects, and every other key
 // cancels without selection or fallthrough to navigation or another mapping.
-// Native text entry instead owns all keys: Esc returns to its submenu, Enter
+// Inline text entry instead owns all keys: Esc returns to its submenu, Enter
 // validates/submits, and ordinary characters edit data rather than mappings.
 func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 	if m.Done() {

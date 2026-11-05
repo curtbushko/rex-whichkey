@@ -402,10 +402,17 @@ Enter emits bounded name data for retained `tr`/`wr` rename entries only. The pa
 private field before canonical Completion decoding, cleans the popup/files/lease,
 revalidates exact resource placement, and invokes typed `Window.Rename` or
 `Session.Rename` once, according to the parent-retained intent.
-Mapping/Config JSON, Completion v1 JSON and configured original-VM messages are
-unchanged; configured Lua rename still invokes Rex's native action. The private
-presentation file now also supplies the origin session label for `wr`. Native form
-data is rejected by configured completion rather than silently discarded.
+Mapping/Config JSON remains unchanged. Registered Lua defaults now share the
+same input page: the controller reads exact session/tab labels into that private
+presentation file before opening the popup. Completion v1 selection has an
+optional bounded `text` string only for the retained empty-argument `tr` tab or
+`wr` session rename intent. The original Lua registry validates it, rechecks
+conditions and origin, and calls `session.set_window_label` or `session.set_label`
+with retained resource IDs after popup cleanup. Missing text cannot fall through
+to a native dialog; text supplied for callbacks or other actions is rejected.
+The tab is frozen at reservation; a pane moved to another tab cannot redirect
+rename. Custom callbacks, custom retained arguments and replacement actions retain
+their normal dispatch. Both helper and Lua module must be updated together.
 
 Native `x`, `tx` and `wx` bypass app selection and native action registration.
 After validated confirmation and full UI/file/lease cleanup, existing typed Rex
@@ -580,7 +587,9 @@ There is no shell, `do -e`, Lua file, second VM, fake/token-only command, daemon
 uncertain retry. Preflight/activation share a 20-second context; individual
 preflight CLI calls are bounded to three seconds and activation to ten seconds,
 with earlier cancellation/deadlines taking precedence. Activation stdout/stderr
-share a discarded 64 KiB total output budget and a 250 ms pipe shutdown allowance.
+share a 64 KiB total output budget and a 250 ms pipe shutdown allowance. Output
+is discarded; a streaming matcher recognizes only the fixed legacy client-ID
+mismatch to give reinstall guidance, retaining no arbitrary child text.
 Errors are fixed safe text; top-level diagnostics quote errors against terminal
 escape injection. No private completion/capability data is exposed.
 
@@ -588,8 +597,9 @@ escape injection. No private completion/capability data is exposed.
 arguments, and passes the **actual ctx unchanged** to `menu.launch`. Lua consumes
 only the five documented fields, rejecting missing/unknown fields, wrong types,
 malformed full IDs, blank generation and oversized envelope data. It compares
-session/block/client with actual ctx and checks live `connected_at` **before**
-issuing/evaluating a reservation. Opaque `ctx.server` is retained by identity,
+session/block with actual ctx and independently validates the selected GUI app
+and live `connected_at` **before** issuing/evaluating a reservation. The actual
+CLI caller is not required to equal that GUI target. Opaque `ctx.server` is retained by identity,
 never stringified, serialized or replaced by `server`.
 
 Across yielding issue/evaluation, connection inspection, preparation and bind
@@ -608,6 +618,23 @@ is reopened; no selected action is retried.
 This envelope is transport context, **not** executable Lua, a capability,
 authority to fabricate ctx, or a second mapping schema. Other callers supplying
 it cannot change the actual action activation or bypass retained registry checks.
+
+## CLI caller versus GUI target
+
+Accepted decision **REXWHICHKEY-20261104-172117** separates each real activation
+caller from its GUI routing target. Launch and completion use different CLI
+connections; neither impersonates the app. The private capability plus exact
+server/session/block authenticates a fresh completion, while the registry retains
+and revalidates the GUI app and attachment generation. Caller identity is frozen
+within each activation, not compared across separate CLI processes.
+
+Dotted client actions use explicit `client.perform` with the retained app,
+session/block and arguments, never an ambient queue on the transient CLI.
+Configuration actions remain original-VM `rex.invoke` calls. Callbacks retain
+`ctx.client_id` as GUI routing context and additionally receive
+`ctx.request_client_id` as the actual completion caller. This callback table
+does not replace the real Rex activation. See
+[CLI/GUI delegation](cli-gui-delegation.md) for authority, limitations and migration.
 
 ## Configured production route (source trace)
 
@@ -637,8 +664,9 @@ it cannot change the actual action activation or bypass retained registry checks
    completion to the installed action.
    The original VM checks one-shot capability, connection/configuration generation,
    snapshot, expiry, confirmation and focus; original closures remain there and
-   named/client actions use the actual completion activation. No popup-origin or
-   fabricated-context dispatch is substituted.
+   named configuration actions use `rex.invoke` in the actual completion
+   activation. Client actions use `client.perform` with the retained GUI target.
+   No popup-origin or fabricated-context dispatch is substituted.
 
 ## Execution-host routing
 
@@ -680,23 +708,26 @@ native discovery; the product's existing platform build constraints still apply.
 
 ## Concrete endpoints, not identities
 
-Accepted forms are an absolute Unix socket path (normalized by adding `unix://`),
-a strict absolute `unix:///...` URI, or `host:port`, including bracketed IPv6.
-Ports must be decimal, nonzero and fit 16 bits. Unix URIs must have an empty host,
-a non-root absolute path, no user/query/fragment and no encoded-path ambiguity.
-Invalid UTF-8, whitespace, controls, mutable Rex host labels and missing addresses
-are rejected. Socket paths retain their spelling; no filesystem or symlink lookup
-is used to rewrite them. This validation retains the previous popup URI/address
-checks and adds absolute-path input normalization. Transport authentication is
-still Rex's responsibility.
+Accepted forms are an absolute Unix socket path, an absolute `unix:///...` URI,
+or `host:port`, including bracketed IPv6. Socket paths and URI paths normalize to
+percent-encoded Unix URIs, so macOS `Application Support` and Rex's reported
+`Application%20Support` address agree. Ports must be decimal, nonzero and fit
+16 bits. Unix URIs must have an empty host, a non-root absolute path and no
+user/query/fragment. Invalid UTF-8, controls (including encoded controls),
+whitespace in network hosts, mutable Rex host labels and missing addresses are
+rejected. No filesystem or symlink lookup rewrites paths. Transport
+authentication remains Rex's responsibility.
 
 After resolution, consumers pass the concrete endpoint explicitly. The controller
 calls `CanonicalEndpoint` directly, **not** `ResolveEndpoint`: an absent controller
 server is always invalid and can never acquire a default. Generic `rex.New` keeps
 its existing broader behavior; the popup supplies its validated server explicitly.
-A routable endpoint is not the opaque Lua `ctx.server`. That value stays unchanged
-in the original action context and remains subject to the dispatcher's original-VM
-identity checks.
+A routable endpoint is not the opaque Lua `ctx.server`. When present, that value
+stays unchanged and is compared by identity. Some Rex versions omit it from local
+action contexts; absence is also retained and compared exactly. The invocation
+registry and completion action remain private to the original server Lua VM;
+no caller-provided endpoint or replacement context supplies server authority.
+Exact session/block/client IDs and live connection generation remain required.
 
 ## Captured preparation API
 

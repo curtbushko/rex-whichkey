@@ -1,11 +1,11 @@
-# Tab rename text-entry prototype
+# Tab and session rename input
 
 ## Accepted flow
 
 **REXWHICHKEY-20261103-085109 — Accepted.** The user explicitly approved a
 text-entry state inside the existing popup rather than another popup.
 
-In the built-in native menu, **Tabs → Rename** opens an input screen in the same
+In both the native menu and the registered Lua defaults, **Tabs → Rename** opens an input screen in the same
 layer and fixed rectangle. The current server tab label is prefilled. The field
 starts selected: typing replaces it; arrows/Home/End allow editing instead.
 
@@ -38,23 +38,35 @@ Only afterward does it revalidate the frozen resource/placement and call typed
 replacement target, uncertain retry or label-based lookup is used. Explicit app
 overrides retain their strict checks but no app binding is required by default.
 
-`native-input.json` is private native-popup presentation data. It contains
-`initial` for tab rename and `session_initial` for session rename, and is removed
-with the other owned transport files. The native result may carry a `text` field
-only for the retained `tr` or `wr` rename selection. The parent strips that field before the
-canonical strict Completion decoder and retains the validated name privately.
-This does not extend Mapping/Config JSON, Completion v1 JSON or the Lua bridge.
-Configured completion rejects native form data rather than dropping it.
+`native-input.json` remains the compatible private presentation filename for
+both routes. It contains `initial` for tab rename and `session_initial` for session
+rename and is removed with other owned transport files. Mapping/Config JSON stays
+unchanged. The typed Completion v1 selection now permits optional `text` only for
+the retained empty-argument `tr`/`client.tab.rename` or `wr`/`session.rename` intent,
+without callback/confirmation. Those intents require text; other actions reject it.
+The controller validates the child result before forwarding this name data.
 
 ## Scope and evidence
 
-This prototype is enabled only for the **built-in native menu**. Configured Lua
-menus and callbacks keep their existing authenticated completion protocol and
-Rex-native tab rename action. Session rename now reuses this screen, and Switch
-Session uses our dynamic submenu; see [session UI](session-owned-ui.md). The
-command palette retains Rex's UI.
+The earlier prototype was native-only. The user's configured-menu parity
+correction extends the same input state to registered Lua defaults. Lua retains
+the reservation's exact tab/session, validates text, guards, capability, origin
+and connection, then invokes `session.set_window_label` or `session.set_label`
+after popup cleanup. A pane moved to another tab cannot redirect rename. Custom
+callbacks, replacement actions and nonempty retained arguments are not
+intercepted; incoming text cannot turn them into resource renames. Failed or
+uncertain rename requests are consumed and never retried.
 
-Compilation and source/format/whitespace checks are separate from interactive
-verification. No unit/general/race suites, UI trials, extra worker windows,
-configuration reloads or font/settings changes were performed for this change,
-following the user's stop-testing instruction.
+Registered WhichKey defaults no longer open Rex rename dialogs. Rex's own command
+palette is unchanged. Native Switch Session remains its separate dynamic submenu;
+see [session UI](session-owned-ui.md).
+
+Current regression coverage includes both menu pages, prefilled names, Escape,
+name transport/validation, retained mapping/resource binding, custom callbacks,
+moved origins, uncertainty and replay. These are unit/race checks, not a claim
+that live tab/session rename was exercised.
+
+Historical prototype evidence: compilation/source checks only were performed
+for the original native-only delivery under the stop-testing instruction. The
+current parity regression checks above are distinct from that historical record;
+no live rename, configuration reload or settings change was performed here.

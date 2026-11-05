@@ -28,19 +28,26 @@ local function resource(value, kind)
     return prefix == kind and #a == 8 and #b == 4 and #c == 4 and #d == 4 and #e == 12
 end
 
-local function origin(ctx)
+local function inline_rename(record)
+    return record.callback_ref == nil and not record.confirm
+        and (record.keys == "tr" and record.action == "client.tab.rename"
+            or record.keys == "wr" and record.action == "session.rename")
+        and (record.args == nil or plain(record.args) and next(record.args) == nil)
+end
+
+local function activation(ctx)
     if not plain(ctx) then
         fail("a Rex action context is required")
     end
     local server_kind = type(ctx.server)
     if
-        (server_kind ~= "string" and server_kind ~= "table" and server_kind ~= "userdata")
+        (server_kind ~= "nil" and server_kind ~= "string" and server_kind ~= "table" and server_kind ~= "userdata")
         or ctx.server == ""
         or not resource(ctx.session_id, "session")
         or not resource(ctx.block_id, "block")
         or not resource(ctx.client_id, "client")
     then
-        fail("origin server, session, block and client identities are required")
+        fail("origin session, block and client identities are required")
     end
     return {
         server = ctx.server,
@@ -52,21 +59,24 @@ local function origin(ctx)
 end
 
 local function same_origin(ctx, expected)
-    -- The activation's source (key/palette versus cli/api) is NOT identity.
-    -- server remains Rex's opaque identity; never resolve it via a local fallback.
+    -- The capability authorizes a fresh caller in the same server/session/block,
+    -- not impersonation of the retained GUI target. Each activation's own caller
+    -- is frozen separately by live(). Older Rex omits server; compare absence
+    -- exactly because the registry is already scoped to this server Lua VM.
     return plain(ctx)
         and rawequal(ctx.server, expected.server)
         and ctx.session_id == expected.session_id
         and ctx.block_id == expected.block_id
-        and ctx.client_id == expected.client_id
+        and resource(ctx.client_id, "client")
 end
 
-local function callback_context(expected)
+local function callback_context(expected, ctx)
     return {
         server = expected.server,
         session_id = expected.session_id,
         block_id = expected.block_id,
         client_id = expected.client_id,
+        request_client_id = ctx.client_id,
         origin = expected.origin,
     }
 end
@@ -275,7 +285,7 @@ local function completion(text)
         capability = string_value,
         kind = string_value,
         selection = function()
-            return object({ keys = string_value, callback_ref = string_value, confirmed = boolean_value })
+            return object({ keys = string_value, callback_ref = string_value, confirmed = boolean_value, text = string_value })
         end,
     })
     whitespace()
@@ -298,6 +308,13 @@ local function completion(text)
         if selected.callback_ref ~= nil then
             reference(selected.callback_ref)
         end
+        if selected.text ~= nil then
+            if #selected.text > 4096 or (selected.keys ~= "tr" and selected.keys ~= "wr")
+                or selected.callback_ref ~= nil or selected.confirmed then
+                invalid()
+            end
+            reference(selected.text) -- Same strict Unicode/nonblank/control rules as Go.
+        end
     else
         invalid()
     end
@@ -309,7 +326,7 @@ end
 --   local dispatch = require("rex_whichkey.dispatch")
 --   dispatch.register_completion("whichkey_complete")
 --   local registry = dispatch.new(compiled_template)
--- In the original action: records, ticket = registry.issue(ctx); obtain a fresh
+-- In the original action: registry.issue(ctx, {client_id=APP, connected_at=TIME}); obtain a fresh
 -- capability from Go NewInvocationCapability via the trusted launcher, then
 -- registry.bind(ticket, ctx, capability) BEFORE exposing the popup. On launch
 -- failure registry.cancel(ticket). Never serialize ticket or put a capability in
@@ -320,9 +337,10 @@ end
 --     --block BLOCK --args -
 -- stdin is {"message": RAW_COMPLETION_JSON_STRING}, encoded as JSON data. SERVER
 -- must explicitly select the captured endpoint, and CLIENT/SESSION/BLOCK must be
--- captured full IDs, never defaults or popup IDs. Use argument arrays. This run
--- wrapper gets the ACTUAL fresh action ctx; copying ctx fields cannot rebind the
--- ambient rex.invoke/client.queue activation. No public dispatch(ctx, ...) exists.
+-- captured full IDs, never defaults or popup IDs. The wrapper gets the ACTUAL
+-- fresh CLI action ctx, whose client_id is not APP. Authenticate the capability
+-- and exact server/session/block, then use the independently retained GUI binding
+-- for explicit client.perform calls. No public dispatch(ctx, ...) exists.
 function M.register_completion(name)
     if type(name) ~= "string" or not name:match("^[a-z0-9_]+$") then
         fail("a valid completion configuration action name is required")
@@ -372,7 +390,7 @@ function M.new(template)
                 entry.invocation.release()
                 entry.invocation = nil
             end
-            entry.context, entry.snapshot, entry.capability = nil, nil, nil
+            entry.context, entry.activation, entry.origin, entry.snapshot, entry.capability = nil, nil, nil, nil, nil
         end
     end
 
@@ -417,8 +435,8 @@ function M.new(template)
         if entries[ticket] ~= entry then
             fail("invalid, expired, cancelled or consumed invocation")
         end
-        if not same_origin(ctx, entry.origin) then
-            fail("action is not targeted at the invocation origin")
+        if not same_origin(ctx, entry.origin) or ctx.client_id ~= entry.activation.client_id then
+            fail("action is not targeted at the invocation origin or its caller changed")
         end
     end
 
@@ -463,7 +481,7 @@ function M.new(template)
                 matches = matches + 1
                 -- API contract: missing/unknown state is connected; only lost is
                 -- disconnected. connected_at is still mandatory generation data.
-                if client.connection_state == "lost" then
+                if client.connection_state == "lost" or not plain(client.info) or client.info.kind ~= "app" then
                     fail("origin client connection was lost")
                 end
                 connected_at = client.connected_at
@@ -476,20 +494,33 @@ function M.new(template)
             fail("origin client connection changed")
         end
         entry.connected_at = connected_at
+        return placed_window.window_id
     end
 
     -- Reserve BEFORE evaluation. The unforgeable table ticket stays private to
     -- the trusted launcher. It has no transport representation or bearer spelling.
-    function registry.issue(ctx)
+    function registry.issue(ctx, target)
+        local caller = activation(ctx)
+        target = target or { client_id = caller.client_id }
+        if not plain(target) or not resource(target.client_id, "client") then
+            fail("an exact GUI target is required")
+        end
+        local bound = {
+            server = caller.server, session_id = caller.session_id, block_id = caller.block_id,
+            client_id = target.client_id, origin = caller.origin,
+        }
         local now = sweep()
         if count >= max_pending then
             fail("too many pending invocations")
         end
         local ticket = {}
-        local entry = { context = ctx, origin = origin(ctx), expires = now + lifetime, state = "evaluating" }
+        local entry = {
+            context = ctx, activation = caller, origin = bound, connected_at = target.connected_at,
+            expires = now + lifetime, state = "evaluating",
+        }
         entries[ticket], count = entry, count + 1
         local ok, records = pcall(function()
-            inspect(ticket, entry, ctx)
+            entry.window_id = inspect(ticket, entry, ctx)
             local data, invocation = evaluate.evaluate(template)
             -- Invalidation may have released the reservation while user code
             -- yielded. Attach its new handle before checking, then release below.
@@ -498,7 +529,10 @@ function M.new(template)
             local snapshot = {}
             for _, record in ipairs(data) do
                 if record.action or record.callback_ref then
-                    snapshot[record.keys] = { callback_ref = record.callback_ref, confirm = record.confirm == true }
+                    snapshot[record.keys] = {
+                        callback_ref = record.callback_ref, confirm = record.confirm == true,
+                        rename = inline_rename(record),
+                    }
                 end
             end
             entry.snapshot, entry.state = snapshot, "prepared"
@@ -559,6 +593,9 @@ function M.new(template)
         -- entries until done: in-progress work counts toward the bounded capacity
         -- and remains revocable by expiry/reload/local cancellation.
         entry.state = "claimed"
+        -- The bearer capability permits this fresh CLI activation, not client
+        -- impersonation. Freeze its real caller for all subsequent yield checks.
+        entry.activation = activation(ctx)
         -- Keep the spelling reserved until release, even though claimed state
         -- revokes its authority now. A concurrent bind cannot reuse a live token.
         local stage = "completion validation failed"
@@ -574,7 +611,8 @@ function M.new(template)
             stage = "completion validation failed"
             local selected = value.selection
             local record = entry.snapshot[selected.keys]
-            if not record or record.callback_ref ~= selected.callback_ref or record.confirm ~= selected.confirmed then
+            if not record or record.callback_ref ~= selected.callback_ref or record.confirm ~= selected.confirmed
+                or record.rename ~= (selected.text ~= nil) then
                 fail("selection does not match the retained invocation")
             end
             -- The evaluator owns original closures/args/guards. Its resolver is
@@ -583,7 +621,10 @@ function M.new(template)
             local retained = entry.invocation.resolve(selected.keys, selected.callback_ref, selected.confirmed)
             live(ticket, entry, ctx)
             stage = "origin validation failed"
-            inspect(ticket, entry, ctx)
+            local before_focus = inspect(ticket, entry, ctx)
+            if record.rename and before_focus ~= entry.window_id then
+                fail("rename origin moved to another tab")
+            end
             stage = "origin focus failed"
             local focused, err = rex.session.focus_block({
                 session_id = entry.origin.session_id,
@@ -597,19 +638,48 @@ function M.new(template)
             -- Rex has no atomic focus-and-execute transaction: an external move
             -- or disconnect can still race the final check. Never retry actions.
             stage = "post-focus origin validation failed"
-            inspect(ticket, entry, ctx, true)
+            local current_window = inspect(ticket, entry, ctx, true)
             live(ticket, entry, ctx)
-            if retained.callback then
+            if record.rename then
+                -- Text supplies only a label. The original VM retains the
+                -- action and exact session/window; never open an app dialog.
+                stage = "rename origin changed"
+                if current_window ~= entry.window_id then
+                    fail("rename origin moved to another tab")
+                end
+                stage = "rename failed or uncertain"
+                local result, rename_err
+                if retained.action == "session.rename" and selected.keys == "wr" then
+                    result, rename_err = rex.session.set_label({
+                        session_id = entry.origin.session_id, label = selected.text,
+                    })
+                elseif retained.action == "client.tab.rename" and selected.keys == "tr" then
+                    result, rename_err = rex.session.set_window_label({
+                        session_id = entry.origin.session_id, window_id = entry.window_id, label = selected.text,
+                    })
+                else
+                    fail("invalid retained rename action")
+                end
+                if rename_err ~= nil or not plain(result) then
+                    fail("rename failed or uncertain")
+                end
+            elseif retained.callback then
                 stage = "callback failed"
-                retained.callback(callback_context(entry.origin), retained.args)
+                retained.callback(callback_context(entry.origin, ctx), retained.args)
             elseif retained.action:find(".", 1, true) then
-                -- Custom Actions/Lua API: dotted names are client/block actions.
-                -- Queue on this ACTUAL origin-targeted completion activation;
-                -- the registered wrapper returns without swallowing any error.
-                stage = "client action queue failed"
-                local _, queue_err = rex.client.queue(retained.action, retained.args)
-                if queue_err ~= nil then
-                    fail("client action queue failed")
+                -- Never queue on the transient CLI connection. The retained
+                -- app binding is independent of both activation caller IDs.
+                stage = "client action failed or uncertain"
+                local result, perform_err = rex.call("client.perform", {
+                    client_id = entry.origin.client_id,
+                    session_id = entry.origin.session_id,
+                    block_id = entry.origin.block_id,
+                    action = retained.action,
+                    args = retained.args,
+                    timeout_ms = 3000,
+                })
+                if perform_err ~= nil or not plain(result) or result.performed_by ~= entry.origin.client_id then
+                    fail("client action failed or uncertain")
                 end
             else
                 stage = "named action failed"

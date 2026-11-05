@@ -325,7 +325,7 @@ type Completion struct {
 	Kind       string               `json:"kind"`
 	Selection  *CompletionSelection `json:"selection,omitempty"`
 
-	// Private native form data; never serialized to the original Lua bridge.
+	// Private child-result bookkeeping. Only Selection.Text crosses the Lua bridge.
 	textInput *string
 }
 
@@ -335,6 +335,8 @@ type CompletionSelection struct {
 	Keys        string `json:"keys"`
 	CallbackRef string `json:"callback_ref,omitempty"`
 	Confirmed   bool   `json:"confirmed"`
+	// Text supplies only a bounded label for a retained default rename intent.
+	Text *string `json:"text,omitempty"`
 }
 
 // NewInvocationCapability returns 256 unpredictable bits as 64 lowercase hex
@@ -397,10 +399,23 @@ func (c Completion) Validate() error {
 		if c.Selection.CallbackRef != "" && strings.TrimSpace(c.Selection.CallbackRef) == "" {
 			return errors.New("whichkey: completion callback reference must not be blank")
 		}
+		if err := validateCompletionText(c.Selection); err != nil {
+			return err
+		}
 	default:
 		return errors.New("whichkey: invalid completion kind")
 	}
 	return nil
+}
+
+func validateCompletionText(selection *CompletionSelection) error {
+	if selection.Text == nil {
+		return nil
+	}
+	if (selection.Keys != "tr" && selection.Keys != "wr") || selection.CallbackRef != "" || selection.Confirmed {
+		return errors.New("whichkey: text requires an inline rename selection")
+	}
+	return validateRenameText(*selection.Text)
 }
 
 // ValidateSelection checks identity and confirmation against a retained, evaluated
@@ -434,6 +449,9 @@ func (c Completion) ValidateSelection(mappings []Mapping) error {
 		if mapping.Confirm != c.Selection.Confirmed {
 			return errors.New("whichkey: completion confirmation does not match retained requirement")
 		}
+		if nativeRenameMapping(mapping) != (c.Selection.Text != nil) {
+			return errors.New("whichkey: completion text does not match retained rename intent")
+		}
 		return nil
 	}
 	return errors.New("whichkey: completion does not select an enabled retained action")
@@ -464,7 +482,7 @@ func (c *Completion) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	var candidate Completion
-	if err := json.Unmarshal(fields["version"], &candidate.Version); err != nil {
+	if decodeErr := json.Unmarshal(fields["version"], &candidate.Version); decodeErr != nil {
 		return errors.New("whichkey: completion version must be an integer")
 	}
 	if candidate.Capability, err = completionString(fields["capability"]); err != nil {
@@ -474,32 +492,46 @@ func (c *Completion) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if raw, present := fields["selection"]; present {
-		selection, err := completionObject(raw, "keys", "callback_ref", "confirmed")
+		candidate.Selection, err = decodeCompletionSelection(raw)
 		if err != nil {
 			return err
 		}
-		value := new(CompletionSelection)
-		if value.Keys, err = completionString(selection["keys"]); err != nil {
-			return err
-		}
-		if raw, present := selection["callback_ref"]; present {
-			if value.CallbackRef, err = completionString(raw); err != nil {
-				return err
-			}
-			if value.CallbackRef == "" {
-				return errors.New("whichkey: omit an absent completion callback reference")
-			}
-		}
-		if err := json.Unmarshal(selection["confirmed"], &value.Confirmed); err != nil {
-			return errors.New("whichkey: completion confirmed must be an explicit boolean")
-		}
-		candidate.Selection = value
 	}
-	if err := candidate.Validate(); err != nil {
-		return err
+	if validationErr := candidate.Validate(); validationErr != nil {
+		return validationErr
 	}
 	*c = candidate
 	return nil
+}
+
+func decodeCompletionSelection(data []byte) (*CompletionSelection, error) {
+	fields, err := completionObject(data, "keys", "callback_ref", "confirmed", "text")
+	if err != nil {
+		return nil, err
+	}
+	value := new(CompletionSelection)
+	if value.Keys, err = completionString(fields["keys"]); err != nil {
+		return nil, err
+	}
+	if raw, present := fields["callback_ref"]; present {
+		if value.CallbackRef, err = completionString(raw); err != nil {
+			return nil, err
+		}
+		if value.CallbackRef == "" {
+			return nil, errors.New("whichkey: omit an absent completion callback reference")
+		}
+	}
+	if decodeErr := json.Unmarshal(fields["confirmed"], &value.Confirmed); decodeErr != nil {
+		return nil, errors.New("whichkey: completion confirmed must be an explicit boolean")
+	}
+	if raw, present := fields["text"]; present {
+		text, parseErr := completionString(raw)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		value.Text = &text
+	}
+	return value, nil
 }
 
 // Decode fields individually: decoding straight into a struct would accept case

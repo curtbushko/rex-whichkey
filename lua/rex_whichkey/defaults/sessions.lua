@@ -3,7 +3,8 @@
 -- its spec; importing this module neither registers nor executes Rex actions.
 --
 -- Keep these as client actions: the authenticated dispatcher restores the origin
--- and queues them on that client, not through server session resource methods.
+-- and targets that app explicitly. The default wr rename intent instead uses
+-- WhichKey's input page and the retained session's set_label resource method.
 -- session.switch delegates the picker (and its cancellation) to Rex; it is not
 -- an enumerated submenu or a request to attach to a remote host.
 return {

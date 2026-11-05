@@ -27,7 +27,8 @@ type LaunchOptions struct {
 }
 
 // launchOrigin is Go-owned transport context, not a capability or mapping data.
-// Lua compares it with the actual fresh action ctx; it must never replace ctx.
+// Lua compares session/block with the real action ctx and validates the GUI
+// binding independently; ClientID is the target app, not the CLI caller.
 type launchOrigin struct {
 	Server      string `json:"server"`
 	SessionID   string `json:"session_id"`
@@ -153,7 +154,8 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 		"do", action, "--session", origin.SessionID, "--block", origin.BlockID, "--args", "-")
 	command.Stdin = bytes.NewReader(arguments)
 	// Share one comparable writer: os/exec serializes stdout/stderr writes.
-	// Count and discard all child output, including arbitrary user-code errors.
+	// Discard arbitrary child output. Only recognize the fixed legacy mismatch
+	// diagnostic to explain a stale Lua installation without exposing child text.
 	output := &launchOutput{remaining: popupMessageLimit}
 	command.Stdout, command.Stderr = output, output
 	command.WaitDelay = 250 * time.Millisecond
@@ -161,18 +163,40 @@ func LaunchPopup(parent context.Context, options LaunchOptions) error {
 		if activation.Err() != nil {
 			return errors.New("whichkey: registered launch activation timed out or was cancelled; result uncertain, not retried and not switched to native mode")
 		}
+		if output.legacyClientBinding {
+			return errors.New("whichkey: installed Lua module still equates the CLI caller with the GUI target; reinstall the matching Lua modules and reload Rex configuration; no retry or native fallback")
+		}
 		return errors.New("whichkey: registered launch action failed or is uncertain; check its setup/completion registration, server-host helper/modules and app Remote Control; private action diagnostics suppressed, no retry or native fallback")
 	}
 	return nil
 }
 
 // No handoff or arbitrary process diagnostics are retained or displayed.
-type launchOutput struct{ remaining int }
+type launchOutput struct {
+	remaining           int
+	legacyMatch         int
+	legacyClientBinding bool
+}
 
 func (output *launchOutput) Write(data []byte) (int, error) {
 	if len(data) > output.remaining {
 		return 0, io.ErrShortWrite
 	}
 	output.remaining -= len(data)
+	// Retain only a prefix length and a boolean, never process output (which
+	// may contain capabilities). The literal has no overlapping proper prefix.
+	const legacy = "rex_whichkey: launch origin client_id does not match the actual action context"
+	for _, char := range data {
+		if char != legacy[output.legacyMatch] {
+			output.legacyMatch = 0
+		}
+		if char == legacy[output.legacyMatch] {
+			output.legacyMatch++
+			if output.legacyMatch == len(legacy) {
+				output.legacyClientBinding = true
+				output.legacyMatch = 0
+			}
+		}
+	}
 	return len(data), nil
 }

@@ -105,6 +105,22 @@ menu.setup() -- built-ins; alternatively menu.setup(inline_options, "my_whichkey
 menu.register_launch("whichkey")
 ```
 
+For app-launched servers without the user profile on PATH, pass an optional
+third argument to `popup.new(defaults, nil, execution)`. Set `execution.helper`
+to the absolute helper executable and `execution.rex_bin_dir` to the directory
+containing the server-host Rex CLI. The CLI directory is passed to both helper
+processes as `REX_BIN_DIR`; neither option changes the selected server endpoint.
+
+When developing, `make build run` rebuilds the local launcher, but a registered
+Lua menu still starts its configured **installed helper**. Updating only the local
+binary does not update that popup child. With a locked local Nix flake input,
+refresh `rex-whichkey` in the consuming configuration (`nix flake update
+rex-whichkey`), rebuild/switch that configuration, then reload Rex's configuration.
+
+On macOS, terminal readiness uses `select()` because `poll()` can report the
+controlling `/dev/tty` as disconnected. The PTY regression test covers both
+initial output and an idle menu remaining open until cancellation.
+
 Register completion once, at configuration load time, in the **same server Lua
 VM** as launch. Completion and launch action names must be distinct and unique
 in your configuration. `menu.register_launch()` also defaults to `whichkey`;
@@ -197,16 +213,18 @@ Tabs retain New, Previous, Next, Rename and Close.
 
 ### Tab rename input screen
 
-In the **built-in native menu**, Tabs → Rename (`tr`) opens a text-entry screen
+In both the native menu and the registered Lua defaults, Tabs → Rename (`tr`) opens a text-entry screen
 inside the same popup and fixed bounds, prefilled with the current tab label.
 Typing replaces the selected name; arrows/Home/End edit it. Enter confirms,
 Escape returns to Tabs, and Ctrl-U clears the field. Backspace/Delete handle
 whole graphemes; bounded paste cannot submit or trigger mappings.
 
-After the popup and private files are cleaned up, Go renames the captured tab ID
-directly through Rex's CLI—no app selection or native rename dialog. Names must
-be nonblank text without control characters, at most 4096 bytes. **Configured Lua
-menus retain their existing native rename action and completion protocol.**
+After popup cleanup, native dispatch renames the captured tab through the Rex CLI;
+configured dispatch authenticates the name against the original Lua invocation
+and calls `session.set_window_label` with the retained tab ID. Neither route opens
+Rex's rename dialog. Names must be nonblank text without control characters, at
+most 4096 bytes. Custom callbacks or replacement actions at `tr` keep their own
+behavior; only the default empty-argument rename intent opens this input page.
 See [prototype design and scope](docs/tab-rename-input.md).
 
 ### Session switch and rename screens
@@ -221,7 +239,9 @@ parent retains exact destination IDs and revalidates the choice before sending
 Sessions → Rename (`wr`) uses the same text-entry screen as tab rename, prefilled
 with the current session name. Enter confirms; Escape returns to Sessions. After
 cleanup, the parent renames the captured session directly—no native dialog or
-app chooser. Configured Lua menus retain their existing native actions.
+app chooser. The registered Lua defaults use the same input page and authenticated
+`session.set_label` dispatch. Custom callbacks/replacement actions remain unchanged.
+Install the matching helper and Lua modules together and reload Rex configuration.
 See [session UI details](docs/session-owned-ui.md).
 
 ### Native app actions
@@ -301,11 +321,16 @@ already-running server's environment.
 
 Accepted endpoints are absolute Unix socket paths (normalized to `unix:///...`),
 strict absolute Unix URIs or `host:port` with a nonzero numeric port (bracket IPv6).
-No whitespace, controls or mutable host labels are accepted. Routing is not
-runtime authority: opaque `ctx.server` is never converted into an address, and
-exact server/session/block checks remain mandatory. Configured launch and native
+Socket paths may contain spaces; Unix URIs use percent encoding, including
+Rex's macOS `Application%20Support` path. Controls and mutable host labels are
+rejected. Routing is not runtime authority: opaque `ctx.server`, when supplied,
+is never converted into an address. Rex versions that omit it use the existing
+server-local Lua registry; exact session/block checks remain mandatory. Configured launch and native
 selected-action dispatch additionally validate app identity/generation. This
 refines the earlier explicit-only setup, not its fail-closed safety rationale.
+CLI launch/completion callers are distinct from the retained GUI target; see
+[CLI/GUI delegation](docs/cli-gui-delegation.md). Both updated Go and Lua modules
+must be installed together, followed by a Rex configuration reload.
 See the [launch contract](docs/launch-contract.md) for exact validation, discovery
 bounds, source traces and runtime-unverified limits.
 

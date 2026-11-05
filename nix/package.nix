@@ -20,7 +20,7 @@ buildGoModule {
       || (!lib.hasInfix "/" relative && lib.hasSuffix ".go" relative);
   };
 
-  vendorHash = "sha256-cITs+d9e4Wq1mduwGDqbRQH61IQyDS9YVb4dxw1TfqU=";
+  vendorHash = "sha256-Y29DnvGzSEIrKl4wZStCRsmpF44QpR3Lfzd9GdxzhlY=";
   subPackages = ["cmd"];
   ldflags = ["-s" "-w"];
 

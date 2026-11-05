@@ -1,15 +1,58 @@
 package whichkey
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
+	"time"
 
 	"golang.org/x/sys/unix"
+
+	"temp/rex"
 )
 
+// Keep the private filename compatible with native popups; configured popups
+// now use the same input presentation without changing Config JSON.
 const nativeTextFile = "native-input.json"
+
+func prepareConfiguredRename(ctx context.Context, request popupRequest, config Config, executable string) (Config, error) {
+	needed := false
+	for _, mapping := range config.Spec {
+		needed = needed || mapping.Enabled() && nativeRenameMapping(mapping)
+	}
+	if !needed {
+		return config, nil
+	}
+	ctx, cancel := context.WithDeadline(ctx, time.Unix(request.Expires, 0))
+	defer cancel()
+	client, err := rex.New(rex.Options{Executable: executable, Server: request.Server,
+		Session: request.SessionID, Timeout: 3 * time.Second})
+	if err != nil {
+		return Config{}, errors.New("whichkey: cannot construct rename presentation client")
+	}
+	session, err := client.Session(ctx, request.SessionID)
+	if err != nil {
+		return Config{}, errors.New("whichkey: cannot inspect rename session label")
+	}
+	block, err := session.Block(ctx, request.BlockID)
+	if err != nil {
+		return Config{}, errors.New("whichkey: cannot inspect rename origin")
+	}
+	window, err := session.Window(ctx, block.WindowID)
+	if err != nil {
+		return Config{}, errors.New("whichkey: cannot inspect rename tab label")
+	}
+	config.textEntry = &textEntrySpec{Initial: window.Label, SessionInitial: session.Label}
+	if len(config.textEntry.Initial) > renameTextLimit || validateText(config.textEntry.Initial) != nil {
+		config.textEntry.Initial = ""
+	}
+	if len(config.textEntry.SessionInitial) > renameTextLimit || validateText(config.textEntry.SessionInitial) != nil {
+		config.textEntry.SessionInitial = ""
+	}
+	return config, nil
+}
 
 func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 	file, err := root.OpenFile(nativeTextFile, os.O_RDONLY|unix.O_NOFOLLOW, 0)
@@ -43,8 +86,8 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 	return &textEntrySpec{Initial: initial, SessionInitial: sessionInitial}, nil
 }
 
-// The extra text field belongs only to native private transport. Ordinary
-// WriteMenuResult and the configured Completion/Lua wire format stay unchanged.
+// The child result carries only bounded name data; controller and Lua retain
+// the action and resource identity independently.
 func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) error {
 	if event.Selection == nil || event.Selection.textInput == nil {
 		return WriteMenuResult(output, event)
@@ -68,7 +111,10 @@ func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) erro
 // this data never supplies an action, arguments, app or resource identity.
 func nativeTextSelection(data []byte, spec *textEntrySpec) ([]byte, *string, error) {
 	if spec == nil {
-		return data, nil, nil // Configured decoding still rejects any extra field.
+		if _, err := completionObject(data, "keys", "callback_ref", "confirmed"); err != nil {
+			return nil, nil, err // No input page was authorized for this child.
+		}
+		return data, nil, nil
 	}
 	fields, err := completionObject(data, "keys", "callback_ref", "confirmed", "text")
 	if err != nil {
@@ -86,14 +132,14 @@ func nativeTextSelection(data []byte, spec *textEntrySpec) ([]byte, *string, err
 		return data, nil, nil
 	}
 	if !supplied {
-		return nil, nil, errors.New("whichkey: rename requires confirmed text input")
+		return data, nil, nil // The retained mapping decides whether text is required.
 	}
 	value, err := completionString(raw)
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := validateRenameText(value); err != nil {
-		return nil, nil, err
+	if validationErr := validateRenameText(value); validationErr != nil {
+		return nil, nil, validationErr
 	}
 	delete(fields, "text")
 	plain, err := json.Marshal(fields)

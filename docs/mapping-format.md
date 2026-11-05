@@ -293,8 +293,10 @@ configuration action in the same server Lua VM** authenticates completion and
 resolves the retained ticket. Do not require the original action's table identity
 or a suspended original action. Conversely, copying context fields into a Lua
 table does not change the ambient Rex action identity: composition must actually
-target the captured server/session/block/client when invoking that fresh action.
-Never route through the popup, a current-client default or a local-server fallback.
+target the captured server/session/block when invoking that fresh action. Its
+actual caller client is distinct from the retained GUI target; app effects must
+explicitly select that target. Never route through the popup, a current-client
+default or a local-server fallback.
 
 The exact JSON field sets are:
 
@@ -308,6 +310,15 @@ The exact JSON field sets are:
   action and must exactly match the retained opaque reference for a callback.
   An explicitly empty callback reference is invalid; omit it instead.
   `confirmed` must be present even when false; no strings, numbers or nulls.
+- Selection may additionally contain string `text` only for inline rename:
+  canonical `tr` + retained `client.tab.rename`, or `wr` + retained
+  `session.rename`, without callback, confirmation or nonempty retained args.
+  Those mappings require text; all other mappings reject it. Names must be
+  nonblank UTF-8 without controls, at most 4096 bytes. Text provides only a label,
+  never a resource ID, action or replacement args. The original Lua registry
+  retains and checks the tab/session identities and invokes the resource API
+  after popup cleanup. Custom rename-key callbacks are not intercepted.
+  Older decoders reject this optional field, so install matching Go/Lua versions.
 
 Complete example (the all-zero capability is illustrative, never generate it):
 
@@ -383,8 +394,10 @@ resources on every exit path; this producer does not implement that transport.
 
 One live registry entry binds the capability to ALL of:
 
-- The exact originating server/runtime identity and session/block/client IDs.
-  Window placement is not identity: a block may move within its session.
+- The exact originating server/runtime identity and session/block IDs, plus an
+  independently validated GUI target client ID. Separate CLI activation callers
+  are not required to equal that app. Window placement is not identity: a block
+  may move within its session.
 - The captured client **connection generation**, not just a reused client ID
   (for the delivered Rex consumer this is the server-provided `connected_at`
   connection value). Missing, lost, detached, ambiguous or changed connection
@@ -412,7 +425,9 @@ in-progress entries; failed candidate setup leaves the working generation intact
 ### Completion, cancellation and races
 
 For either kind, strictly decode first, look up the live capability and compare
-the fresh action's actual origin with the captured origin. Claim its open state
+the fresh action's server/session/block with the captured origin. Its actual
+client ID is a fresh caller, not necessarily the retained GUI target; freeze that
+caller within the activation. Claim its open state
 **before** condition evaluation or any yielding call, then validate the current
 client connection/config generation and expiry. Reentrant, expired, cancelled,
 consumed, wrong-origin or stale-generation requests cannot execute. An
@@ -426,7 +441,13 @@ For completion, resolve identity and confirmation solely against the retained
 snapshot, recheck condition guards, inspect the originating session's current
 placement and exact client connection, then focus the stable origin block in that
 session. Execute only in the fresh action genuinely targeted at that origin,
-using retained action/args or `callback(ctx, args)` in the original Lua VM. Recheck
+using retained action/args or `callback(ctx, args)` in the original Lua VM.
+Dotted client actions use explicit `client.perform` targeting the retained GUI,
+not a queue on the transient CLI. Named configuration actions use `rex.invoke`.
+Callback `ctx.client_id` is the GUI routing target; `ctx.request_client_id` is
+the actual completion caller. Neither field fabricates an ambient activation.
+This refines the old app/caller equality requirement under accepted decision
+REXWHICHKEY-20261104-172117; see [CLI/GUI delegation](cli-gui-delegation.md). Recheck
 expiry, generation, registry state and origin after every yielding boundary and
 immediately before side effects. If a configuration change invalidates a ticket
 while evaluation returns a new invocation handle, release that handle as well.

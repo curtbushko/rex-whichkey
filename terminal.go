@@ -199,7 +199,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			}
 		default:
 		}
-		if _, err := unix.Poll(poll, terminalPollInterval); err != nil {
+		if _, err := pollTerminal(poll, terminalPollInterval); err != nil {
 			if errors.Is(err, unix.EINTR) {
 				continue
 			}
@@ -290,7 +290,7 @@ func writeTerminal(ctx context.Context, fd int, text string) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if _, err := unix.Poll(poll, terminalPollInterval); err != nil {
+		if _, err := pollTerminal(poll, terminalPollInterval); err != nil {
 			if errors.Is(err, unix.EINTR) {
 				continue
 			}
