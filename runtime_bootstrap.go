@@ -1099,8 +1099,8 @@ func decodeRuntimeSlot(data []byte, name, hash string, payload any) error {
 
 func runtimeLeaseAlive(lease *os.File) error {
 	var buffer [1]byte
-	n, err := unix.Read(int(lease.Fd()), buffer[:])
-	if n == 0 && (errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EWOULDBLOCK)) {
+	_, err := unix.Read(int(lease.Fd()), buffer[:])
+	if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EWOULDBLOCK) {
 		return nil // EOF, data and every other error mean owner loss/invalidity.
 	}
 	return errRuntimeRelay
