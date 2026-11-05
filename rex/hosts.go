@@ -15,6 +15,8 @@ import (
 type InventoryOptions struct {
 	// Executable follows the same execution-host resolution rules as Options.
 	Executable string
+	// Selection reuses the same frozen execution-host CLI as the launcher.
+	Selection *CLISelection
 	// Timeout bounds the CLI process. Zero uses ten seconds; an earlier context
 	// deadline still takes precedence.
 	Timeout time.Duration
@@ -82,7 +84,11 @@ func Hosts(ctx context.Context, options InventoryOptions) (HostInventory, error)
 	if options.Timeout == 0 {
 		options.Timeout = defaultTimeout
 	}
-	executable, err := resolveExecutable(options.Executable)
+	selectionOptions := CLIOptions{Selection: options.Selection}
+	if options.Executable != "" {
+		selectionOptions.Executable = &options.Executable
+	}
+	selection, err := ResolveCLI(ctx, selectionOptions)
 	if err != nil {
 		return HostInventory{}, fmt.Errorf("rex hosts: %w", err)
 	}
@@ -91,16 +97,16 @@ func Hosts(ctx context.Context, options InventoryOptions) (HostInventory, error)
 	defer cancel()
 	// No --server, session selector, or API call: these do not select the
 	// effective inventory. Do not start a missing local server for a menu.
-	output, err := run(ctx, executable, []string{
+	output, err := run(ctx, selection.Executable.Path, []string{
 		"--autostart=false", "--timeout", options.Timeout.String(),
 		"hosts", "--json",
-	})
+	}, selection)
 	if err != nil {
 		return HostInventory{}, fmt.Errorf("rex hosts: %w", err)
 	}
 	inventory, err := decodeHostInventory(output)
 	if err != nil {
-		return HostInventory{}, fmt.Errorf("rex hosts decode inventory: %w", err)
+		return HostInventory{}, errors.New("rex: invalid CLI inventory JSON; update the execution-host integration and Rex software; not retried")
 	}
 	return inventory, nil
 }

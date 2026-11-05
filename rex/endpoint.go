@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -64,7 +62,7 @@ func canonicalUnixEndpoint(server string, invalid error) (string, error) {
 // override means absent, not an explicitly empty value. Only native discovery
 // invokes Rex: platform runtime/home path algorithms remain Rex's responsibility.
 // Callers must pass the returned address explicitly on all subsequent calls.
-func ResolveEndpoint(ctx context.Context, explicit *string) (string, error) {
+func ResolveEndpoint(ctx context.Context, explicit *string, frozen ...*CLISelection) (string, error) {
 	if explicit != nil {
 		return CanonicalEndpoint(*explicit)
 	}
@@ -77,50 +75,47 @@ func ResolveEndpoint(ctx context.Context, explicit *string) (string, error) {
 	if ctx == nil {
 		return "", errors.New("rex: endpoint discovery requires a context")
 	}
-	executable, err := resolveExecutable("")
+	if len(frozen) > 1 {
+		return "", errCLIInput
+	}
+	var options CLIOptions
+	if len(frozen) == 1 {
+		if frozen[0] == nil {
+			return "", errCLIInput
+		}
+		options.Selection = frozen[0]
+	}
+	selection, err := ResolveCLI(ctx, options)
 	if err != nil {
-		return "", errors.New("rex: endpoint discovery requires the matching Rex CLI on the execution host (REX_BIN_DIR or PATH)")
+		return "", err
 	}
 	ctx, cancel := context.WithTimeout(ctx, endpointTimeout)
 	defer cancel()
-	command := exec.CommandContext(ctx, executable,
-		"--autostart=false", "--timeout", endpointTimeout.String(), "whoami", "--json")
 	// Do not let the originating terminal's target selectors redirect a query
 	// intended for Rex's native platform default. Preserve HOME, XDG_*, Rex's
 	// runtime/home settings and authentication environment without guessing paths.
-	command.Env = make([]string, 0, len(os.Environ()))
+	environment := make([]string, 0, len(os.Environ()))
 	for _, entry := range os.Environ() {
 		key, _, _ := strings.Cut(entry, "=")
 		switch key {
 		case "REX_SERVER", "REX_CLIENT", "REX_SESSION", "REX_WINDOW", "REX_BLOCK":
 			continue
 		}
-		command.Env = append(command.Env, entry)
+		environment = append(environment, entry)
 	}
-	var output endpointOutput
-	command.Stdout, command.Stderr, command.Stdin = &output, io.Discard, nil
-	command.WaitDelay = 250 * time.Millisecond
-	if err := command.Run(); err != nil {
+	output, err := runSelected(ctx, selection, []string{
+		"--autostart=false", "--timeout", endpointTimeout.String(), "whoami", "--json",
+	}, environment, 64<<10)
+	if err != nil {
 		// Never return process diagnostics/argv or raw identity data: preparation
 		// is a private pipe boundary, not a place to display external output.
-		return "", errors.New("rex: native endpoint discovery failed or timed out; check the running execution-host server and Rex runtime/home settings, or supply an explicit endpoint; not retried")
+		return "", errors.Join(errors.New("rex: native endpoint discovery failed or timed out; check the running execution-host server and Rex runtime/home settings, or supply an explicit endpoint; not retried"), ctx.Err())
 	}
-	server, err := identityEndpoint(output.buffer.Bytes())
+	server, err := identityEndpoint(output)
 	if err != nil {
 		return "", errors.New("rex: native identity JSON has no valid concrete endpoint; use a matching Rex CLI or supply an explicit endpoint")
 	}
 	return server, nil
-}
-
-// Bound captured identity output without leaving a pipe reader or child behind.
-// A writer error makes os/exec fail; no truncated response can become a target.
-type endpointOutput struct{ buffer bytes.Buffer }
-
-func (output *endpointOutput) Write(data []byte) (int, error) {
-	if len(data) > (64<<10)-output.buffer.Len() {
-		return 0, errors.New("rex: native identity output exceeds limit")
-	}
-	return output.buffer.Write(data)
 }
 
 func identityEndpoint(data []byte) (string, error) {

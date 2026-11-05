@@ -16,11 +16,13 @@ const defaultTimeout = 10 * time.Second
 
 // Options selects the CLI and its target in the host running this Go process.
 type Options struct {
-	// Executable is a program name or path on the execution host, not the
-	// remote server. Empty uses REX_BIN_DIR/rex, or rex from PATH.
+	// Executable is an internal absolute execution-host path. Empty uses the
+	// shared environment/layout/PATH policy. It cannot accompany Selection.
 	Executable string
-	// Server is passed unchanged to --server. Empty uses REX_SERVER. A server
-	// is required: losing originating context must not select a local server.
+	// Selection reuses the bootstrap's already-frozen CLI without discovery.
+	Selection *CLISelection
+	// Server is a concrete endpoint. Empty uses REX_SERVER. A server remains
+	// required here: endpoint discovery is a separate, explicit bootstrap step.
 	Server string
 	// Session scopes every call made by this client. Empty leaves calls
 	// unscoped; api call does not default to REX_SESSION. A session_id in the
@@ -35,14 +37,26 @@ type Options struct {
 // Use an unscoped client for methods such as session.list and session.create.
 type Client struct {
 	executable string
+	selection  *CLISelection
 	server     string
 	session    string
 	timeout    time.Duration
 }
 
-// New captures the target and resolves the executable in the execution host's
-// environment. It does not connect to Rex or start a server.
+// New is the context-free convenience entry for NewContext. It performs bounded
+// read-only compatibility checks, never autostarts or mutates a server.
 func New(options Options) (*Client, error) {
+	return NewContext(context.Background(), options)
+}
+
+// NewContext freezes one CLI and concrete target, checking read-only API metadata
+// before returning. Use this entry when bootstrap cancellation is available.
+func NewContext(ctx context.Context, options Options) (*Client, error) {
+	if ctx == nil {
+		return nil, errors.New("rex: client construction requires a context")
+	}
+	ctx, cancel := context.WithTimeout(ctx, discoveryTimeout)
+	defer cancel()
 	if options.Server == "" {
 		options.Server = os.Getenv("REX_SERVER")
 	}
@@ -58,22 +72,43 @@ func New(options Options) (*Client, error) {
 	if options.Timeout == 0 {
 		options.Timeout = defaultTimeout
 	}
-	executable, err := resolveExecutable(options.Executable)
+	server, err := CanonicalEndpoint(options.Server)
 	if err != nil {
 		return nil, err
 	}
-	return &Client{
-		executable: executable,
-		server:     options.Server,
+	selectionOptions := CLIOptions{Selection: options.Selection}
+	if options.Executable != "" {
+		selectionOptions.Executable = &options.Executable
+	}
+	selection, err := ResolveCLI(ctx, selectionOptions)
+	if err != nil {
+		return nil, err
+	}
+	client := &Client{
+		executable: selection.Executable.Path,
+		selection:  selection,
+		server:     server,
 		session:    options.Session,
 		timeout:    options.Timeout,
-	}, nil
+	}
+	if err := client.checkMethod(ctx, "server.version"); err != nil {
+		return nil, err
+	}
+	output, err := runSelected(ctx, selection, client.metadataArgs("api", "call", "--", "server.version"), nil, 64<<10)
+	if err != nil {
+		return nil, err
+	}
+	version, err := decodeVersion(output)
+	if err != nil || version.APIMinRevision > selection.Version.APIRevision || selection.Version.APIMinRevision > version.APIRevision {
+		return nil, errCLICompatibility
+	}
+	return client, nil
 }
 
 // Call invokes a documented API method exactly once. Arguments must marshal to
 // one JSON object, or be nil to omit ARGS. Pass json.RawMessage for raw JSON.
 // Result must be a non-nil pointer, or nil to discard the validated JSON result.
-// JSON decoding errors retain their encoding/json types through error wrapping.
+// Child output and user-defined decoding errors are never diagnostic text.
 // A timeout or decode error does not mean the operation had no effect; callers
 // must not blindly retry mutations.
 func (c *Client) Call(ctx context.Context, method string, arguments, result any) error {
@@ -84,7 +119,7 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 		return errors.New("rex: call requires a context")
 	}
 	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("rex call %q: %w", method, err)
+		return errors.Join(errors.New("rex: API call cancelled; not retried"), err)
 	}
 	if strings.TrimSpace(method) == "" || strings.ContainsRune(method, '\x00') {
 		return errors.New("rex: API method must not be empty or contain NUL")
@@ -92,7 +127,7 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 	if result != nil {
 		value := reflect.ValueOf(result)
 		if value.Kind() != reflect.Pointer || value.IsNil() {
-			return fmt.Errorf("rex call %q result: %w", method, &json.InvalidUnmarshalError{Type: value.Type()})
+			return fmt.Errorf("rex: invalid result destination: %w", &json.InvalidUnmarshalError{Type: value.Type()})
 		}
 	}
 
@@ -110,30 +145,33 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 	if arguments != nil {
 		data, err := json.Marshal(arguments)
 		if err != nil {
-			return fmt.Errorf("rex call %q arguments: %w", method, err)
+			return errors.New("rex: API arguments cannot be encoded as a JSON object")
 		}
 		var object map[string]json.RawMessage
 		if err := json.Unmarshal(data, &object); err != nil {
-			return fmt.Errorf("rex call %q arguments must be a JSON object: %w", method, err)
+			return errors.New("rex: API arguments must encode one JSON object")
 		}
 		if object == nil {
-			return fmt.Errorf("rex call %q arguments must be a JSON object, not null", method)
+			return errors.New("rex: API arguments must be a JSON object, not null")
 		}
 		argv = append(argv, string(data))
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	output, err := run(ctx, c.executable, argv)
+	if err := c.checkMethod(ctx, method); err != nil {
+		return err
+	}
+	output, err := run(ctx, c.executable, argv, c.selection)
 	if err != nil {
-		return fmt.Errorf("rex call %q: %w", method, err)
+		return errors.Join(errors.New("rex: API call failed or uncertain; not retried"), err)
 	}
 	if result == nil {
 		var discarded json.RawMessage
 		result = &discarded
 	}
 	if err := json.Unmarshal(output, result); err != nil {
-		return fmt.Errorf("rex call %q decode result (operation may have succeeded): %w", method, err)
+		return errors.New("rex: invalid API result (operation may have succeeded); not retried")
 	}
 	return nil
 }
