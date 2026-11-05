@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-10-31T11:24:33.217Z'
+dateModified: '2026-11-05T00:33:34.932Z'
 tags:
   - task
 type: task
@@ -20,6 +20,8 @@ id: 944be7fb-2bf1-4dee-8864-9686519b06a0
 
 | Permanent ID | State | Decision | Rationale / relationships |
 | --- | --- | --- | --- |
+| REXWHICHKEY-20261104-193124 | Accepted | Runtime executable discovery and compatibility belong in application code; Nix only builds/installs and init.lua only supplies keybindings/customization. Create Phase 15 to fix required path wiring and component pairing. | Explicit user correction: "it should all be in code", followed by "create a new phase to fix this". Refines the former constructor/Nix path workaround, not origin/callback/privacy safeguards. ID assigned during capture, not an exact historical agreement timestamp. See designs/rex-whichkey-runtime-ownership.md and phases/rex-whichkey-15-code-owned-runtime.md. |
+| REXWHICHKEY-20261104-172117 | Accepted | Separate the actual CLI activation caller from the validated GUI target for configured launch and completion; explicitly route app actions to the retained target. | User explicitly replied "yes, please fix" to this proposal. Refines the earlier activation/app client-ID equality contract; preserves exact origin, capability, connection, expiry and replay checks. Current design: docs/cli-gui-delegation.md. |
 | REXWHICHKEY-20261031-072107 | Accepted | Stop further tests/experiments; prioritize which-key behavior and treat Rex as a documented API. Update the plans accordingly. | Explicit user correction and follow-up instruction. Supersedes the experimental execution scope of REXWHICHKEY-20261030-165746, the probe execution scope of REXWHICHKEY-20261030-215048, the final-test scheduling in REXWHICHKEY-20261030-221324, and the blanket tested-RFC-before-implementation gate. Does not approve provisional interfaces or claim untested behavior passed. |
 | REXWHICHKEY-20261030-165746 | Superseded | Earlier bounded research execution. | Replaced by REXWHICHKEY-20261031-072107; retain its original approval/history. |
 | REXWHICHKEY-20261030-215048 | Superseded | Earlier guarded configuration probe. | No further probe/config operation under this workstream; replaced by REXWHICHKEY-20261031-072107. |
