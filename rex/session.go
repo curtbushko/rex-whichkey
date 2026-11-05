@@ -182,7 +182,7 @@ func (c *Client) resourceCommand(ctx context.Context, result any, args ...string
 	argv = append(argv, args...)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	output, err := run(ctx, c.executable, argv)
+	output, err := run(ctx, c.executable, argv, c.selection)
 	if err != nil {
 		return fmt.Errorf("rex resource command: %w", err)
 	}

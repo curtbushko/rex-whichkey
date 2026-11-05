@@ -13,7 +13,25 @@ import (
 	"unicode/utf8"
 )
 
-const discoveryTimeout = 3 * time.Second
+const (
+	discoveryTimeout = 3 * time.Second
+	flagServer       = "--server"
+	flagNoAutostart  = "--autostart=false"
+	flagTimeout      = "--timeout"
+	flagJSON         = "--json"
+	layoutProvenance = "layout-dependency"
+	schemaNull       = "null"
+	schemaObject     = "object"
+	schemaArray      = "array"
+	schemaString     = "string"
+	schemaBoolean    = "boolean"
+	schemaNumber     = "number"
+	fieldFocus       = "focus"
+	fieldSession     = "session_id"
+	fieldBlock       = "block_id"
+	fieldBounds      = "bounds"
+	fieldLabel       = "label"
+)
 
 // ExecError deliberately excludes child diagnostics and arguments from Error.
 // Stderr is kept empty; public fields remain for source compatibility only.
@@ -33,22 +51,44 @@ func (e *ExecError) Error() string {
 // Unwrap returns a fixed failure or context cancellation, never child output.
 func (e *ExecError) Unwrap() error { return e.Err }
 
-// run's optional frozen input is transitional for the existing concrete resource
-// wrapper. An unbound invocation is rejected, never silently reselected. All
-// callers must pass the selection captured by their Client.
-func run(ctx context.Context, executable string, argv []string, frozen ...*CLISelection) ([]byte, error) {
-	if len(frozen) != 1 || frozen[0] == nil || frozen[0].Executable.Path != executable {
-		return nil, errors.New("rex: resource command requires its client's frozen CLI selection; update the integration; not retried")
+// run is the shared resource boundary. Inventory has no endpoint; all other
+// commands require the client's retained endpoint/schema receipt. Identity loss
+// after an effect is uncertain, never permission to repeat it.
+func run(ctx context.Context, executable string, argv []string, selection *CLISelection) ([]byte, error) {
+	if selection == nil || selection.Executable.Path != executable {
+		return nil, errCLIChanged
 	}
-	return runSelected(ctx, frozen[0], argv, nil, 8<<20)
+	inventory := inventoryArgs(argv)
+	if !inventory {
+		if len(argv) < 2 || argv[0] != flagServer || selection.Capabilities == nil || argv[1] != selection.Capabilities.Endpoint {
+			return nil, errCLIChanged
+		}
+		if err := selection.checkServer(ctx); err != nil {
+			return nil, err
+		}
+	}
+	output, err := runSelected(ctx, selection, argv, nil, 8<<20)
+	if err != nil {
+		return nil, err
+	}
+	if !inventory {
+		if err := selection.checkServer(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return output, nil
+}
+
+func inventoryArgs(argv []string) bool {
+	return len(argv) == 5 && argv[0] == flagNoAutostart && argv[1] == flagTimeout && argv[3] == "hosts" && argv[4] == flagJSON
 }
 
 func runSelected(ctx context.Context, selection *CLISelection, argv, environment []string, limit int) ([]byte, error) {
 	if ctx == nil {
 		return nil, errors.New("rex: CLI invocation requires a context")
 	}
-	ctx, cancel := context.WithTimeout(ctx, discoveryTimeout)
-	defer cancel()
+	// Callers own the invocation deadline (including long terminal waits).
+	// Metadata callers supply their own short discovery bound.
 	if err := selection.checkFiles(ctx); err != nil {
 		return nil, err
 	}
@@ -103,8 +143,8 @@ func decodeVersion(data []byte) (CLIVersion, error) {
 			return CLIVersion{}, errCLICompatibility
 		}
 	}
-	for _, field := range []string{"version", "api_revision", "api_min_revision"} {
-		if value, present := object[field]; present && bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+	for _, field := range []string{"rex_version", "api_revision", "api_min_revision"} {
+		if value, present := object[field]; present && bytes.Equal(bytes.TrimSpace(value), []byte(schemaNull)) {
 			return CLIVersion{}, errCLICompatibility
 		}
 	}

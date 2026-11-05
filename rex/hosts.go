@@ -98,8 +98,8 @@ func Hosts(ctx context.Context, options InventoryOptions) (HostInventory, error)
 	// No --server, session selector, or API call: these do not select the
 	// effective inventory. Do not start a missing local server for a menu.
 	output, err := run(ctx, selection.Executable.Path, []string{
-		"--autostart=false", "--timeout", options.Timeout.String(),
-		"hosts", "--json",
+		flagNoAutostart, flagTimeout, options.Timeout.String(),
+		"hosts", flagJSON,
 	}, selection)
 	if err != nil {
 		return HostInventory{}, fmt.Errorf("rex hosts: %w", err)

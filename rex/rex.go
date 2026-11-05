@@ -91,18 +91,25 @@ func NewContext(ctx context.Context, options Options) (*Client, error) {
 		session:    options.Session,
 		timeout:    options.Timeout,
 	}
-	if err := client.checkMethod(ctx, "server.version"); err != nil {
-		return nil, err
-	}
-	output, err := runSelected(ctx, selection, client.metadataArgs("api", "call", "--", "server.version"), nil, 64<<10)
-	if err != nil {
-		return nil, err
-	}
-	version, err := decodeVersion(output)
-	if err != nil || version.APIMinRevision > selection.Version.APIRevision || selection.Version.APIMinRevision > version.APIRevision {
-		return nil, errCLICompatibility
+	if selection.Capabilities == nil {
+		if err := client.captureCapabilities(ctx); err != nil {
+			return nil, err
+		}
+	} else if selection.Capabilities.Endpoint != server {
+		// Frozen evidence for another endpoint never authorizes this target.
+		return nil, errCLIChanged
 	}
 	return client, nil
+}
+
+// Selection returns a detached receipt snapshot for the trusted Go bootstrap.
+// It is not execution authority when obtained from untrusted serialized input.
+// NewContext and every resource call consume/recheck this same bound selection.
+func (c *Client) Selection() *CLISelection {
+	if c == nil || c.selection == nil {
+		return nil
+	}
+	return c.selection.clone()
 }
 
 // Call invokes a documented API method exactly once. Arguments must marshal to
@@ -132,9 +139,9 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 	}
 
 	argv := []string{
-		"--server", c.server,
-		"--autostart=false",
-		"--timeout", c.timeout.String(),
+		flagServer, c.server,
+		flagNoAutostart,
+		flagTimeout, c.timeout.String(),
 		"api", "call",
 	}
 	if c.session != "" {
@@ -159,7 +166,7 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	if err := c.checkMethod(ctx, method); err != nil {
+	if err := c.checkMethod(method); err != nil {
 		return err
 	}
 	output, err := run(ctx, c.executable, argv, c.selection)

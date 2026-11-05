@@ -51,18 +51,19 @@ type FileIdentity struct {
 // the original private receipt, not a newly nominated path after detachment.
 // Environment provenance is deliberately not a terminal-context assertion.
 type CLISelection struct {
-	Executable FileIdentity   `json:"executable"`
-	Provenance string         `json:"provenance"`
-	OS         string         `json:"os"`
-	Arch       string         `json:"arch"`
-	Version    CLIVersion     `json:"version"`
-	Layout     []FileIdentity `json:"layout,omitempty"`
+	Executable   FileIdentity     `json:"executable"`
+	Provenance   string           `json:"provenance"`
+	OS           string           `json:"os"`
+	Arch         string           `json:"arch"`
+	VersionJSON  string           `json:"version_json"`
+	Layout       []FileIdentity   `json:"layout,omitempty"`
+	Capabilities *APICapabilities `json:"capabilities,omitempty"`
 }
 
-// CLIVersion records read-only CLI metadata. Missing API revision fields mean
-// zero. Release strings are audit data, not CLI/server equality requirements.
+// CLIVersion records the documented server.version result. Missing API revision
+// fields mean zero. Release strings are audit data, not equality requirements.
 type CLIVersion struct {
-	Version        string `json:"version"`
+	Version        string `json:"rex_version"`
 	APIRevision    uint64 `json:"api_revision"`
 	APIMinRevision uint64 `json:"api_min_revision"`
 }
@@ -72,7 +73,7 @@ var (
 	errCLIAbsent        = errors.New("rex: no execution-host Rex CLI source; install the integration with its licensed dependency or use a Rex terminal; not retried")
 	errCLIPath          = errors.New("rex: PATH must contain only nonempty absolute execution-host directories and one unambiguous Rex executable; not retried")
 	errCLILayout        = errors.New("rex: invalid application runtime dependency layout; reinstall the integration for this execution host; not retried")
-	errCLIChanged       = errors.New("rex: frozen CLI or runtime asset identity is invalid or changed; start a new invocation after checking the installation; not retried")
+	errCLIChanged       = errors.New("rex: frozen CLI, runtime asset or server/config identity is invalid or changed; inspect any possibly completed operation before a new invocation; not retried")
 	errCLICompatibility = errors.New("rex: unsupported CLI/API metadata; update the execution-host integration and Rex software through normal installation; not retried")
 )
 
@@ -93,12 +94,11 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 		if options.Executable != nil || options.Anchor != nil || options.LayoutRevision != 0 {
 			return nil, errCLIInput
 		}
-		selection := *options.Selection
-		selection.Layout = append([]FileIdentity(nil), selection.Layout...)
+		selection := options.Selection.clone()
 		if err := selection.validate(ctx); err != nil {
 			return nil, err
 		}
-		return &selection, nil
+		return selection, nil
 	}
 	selection := &CLISelection{OS: runtime.GOOS, Arch: runtime.GOARCH}
 	var source string
@@ -122,7 +122,7 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 			return nil, err
 		}
 		if applicable {
-			selection.Provenance = "layout-dependency"
+			selection.Provenance = layoutProvenance
 		} else {
 			source, err = pathExecutable(ctx)
 			if err != nil {
@@ -133,91 +133,58 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 	}
 	selection.Executable, err = inspectFile(ctx, source, true)
 	if err != nil {
-		if selection.Provenance == "layout-dependency" {
+		if selection.Provenance == layoutProvenance {
 			return nil, errCLILayout
 		}
 		return nil, errCLIInput
 	}
-	output, err := runSelected(ctx, selection, []string{"--autostart=false", "version", "--json"}, nil, 64<<10)
+	output, err := runSelected(ctx, selection, []string{flagNoAutostart, "version", flagJSON}, nil, 64<<10)
 	if err != nil {
 		return nil, errors.Join(errCLICompatibility, ctx.Err())
 	}
-	selection.Version, err = decodeVersion(output)
-	if err != nil {
-		return nil, err
+	// The version command's JSON fields are not specified by the CLI docs.
+	// Retain its bounded nonempty object verbatim, not an invented CLI revision
+	// range. Successful server metadata calls establish transport compatibility.
+	version, err := metadataObject(output)
+	if err != nil || len(version) == 0 {
+		return nil, errCLICompatibility
 	}
+	selection.VersionJSON = string(output)
 	return selection, nil
 }
 
 // metadataArgs never inherits endpoint intent from a later environment value.
 func (c *Client) metadataArgs(arguments ...string) []string {
-	argv := []string{"--server", c.server, "--autostart=false", "--timeout", "2s"}
+	argv := make([]string, 0, 5+len(arguments))
+	argv = append(argv, flagServer, c.server, flagNoAutostart, flagTimeout, "2s")
 	return append(argv, arguments...)
 }
 
-// checkMethod accepts only the concrete API shapes used by this application.
-// This is deliberately not a JSON Schema interpreter: references/combinators or
-// missing properties are unsupported evidence, not guessed compatibility.
-func (c *Client) checkMethod(ctx context.Context, method string) error {
-	var arguments, results map[string]string
-	switch method {
-	case "server.version":
-		results = map[string]string{"version": "string"}
-	case "server.status":
-		results = map[string]string{"instance_id": "string", "config.hash": "string", "config.generation": "integer"}
-	case "session.list":
-		results = map[string]string{"sessions": "array"}
-	case "session.list_clients":
-		arguments = map[string]string{"session_id": "string"}
-		results = map[string]string{"clients": "array"}
-	case "session.describe_block":
-		arguments = map[string]string{"session_id": "string", "block_id": "string"}
-		results = map[string]string{"block": "object"}
-	case "session.focus_block":
-		arguments = map[string]string{"session_id": "string", "block_id": "string"}
-	case "session.resize_layer":
-		arguments = map[string]string{"session_id": "string", "layer_id": "string", "bounds": "object"}
-	case "session.new_layer":
-		arguments = map[string]string{"session_id": "string", "window_id": "string", "bounds": "object", "focus": "boolean", "layout": "object"}
-		results = map[string]string{"layer_id": "string", "block_ids": "array"}
-	case "client.perform":
-		arguments = map[string]string{"client_id": "string", "action": "string", "args": "object", "timeout_ms": "integer"}
-	default:
-		return errCLICompatibility
+// checkMethod reads the immutable receipt, never re-fetches a descriptor during
+// a resource call. The execution boundary separately rechecks server identity.
+func (c *Client) checkMethod(method string) error {
+	if c.selection.Capabilities != nil {
+		for _, entry := range c.selection.Capabilities.Methods {
+			if entry.Name == method {
+				return nil
+			}
+		}
 	}
-	data, err := runSelected(ctx, c.selection, c.metadataArgs("api", "describe", "--json", "--", method), nil, 64<<10)
-	if err != nil {
-		return errors.Join(errCLICompatibility, ctx.Err())
-	}
-	entry, err := metadataObject(data)
-	if err != nil || !compatibleSchema(entry["args_schema"], arguments, true) || !compatibleSchema(entry["output_schema"], results, false) {
-		return errCLICompatibility
-	}
-	return nil
+	return errCLICompatibility
 }
 
 func compatibleSchema(data json.RawMessage, fields map[string]string, input bool) bool {
-	// Known no-argument methods may omit their input schema; this does not
-	// permit an absent result schema or an unknown method.
-	if input && len(fields) == 0 && (len(data) == 0 || string(data) == "null") {
+	// No-argument inputs and deliberately discarded outputs need no shape.
+	// Every consumed output below still requires its documented schema.
+	if len(fields) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
 		return true
 	}
 	schema, err := metadataObject(data)
-	if err != nil || !schemaType(schema, "object") {
+	if err != nil || !schemaType(schema, schemaObject) {
 		return false
 	}
-	if input {
-		var required []string
-		if raw, present := schema["required"]; present {
-			if err := json.Unmarshal(raw, &required); err != nil {
-				return false
-			}
-		}
-		for _, field := range required {
-			if _, known := fields[field]; !known {
-				return false
-			}
-		}
+	if input && !knownRequired(schema["required"], fields) {
+		return false
 	}
 	for path, kind := range fields {
 		if !schemaHasField(schema, strings.Split(path, "."), kind) {
@@ -227,7 +194,35 @@ func compatibleSchema(data json.RawMessage, fields map[string]string, input bool
 	return true
 }
 
+func knownRequired(data json.RawMessage, fields map[string]string) bool {
+	if len(data) == 0 {
+		return true
+	}
+	var required []string
+	if err := json.Unmarshal(data, &required); err != nil || required == nil {
+		return false
+	}
+	seen := make(map[string]bool, len(required))
+	for _, field := range required {
+		if _, known := fields[field]; !known || seen[field] {
+			return false
+		}
+		seen[field] = true
+	}
+	return true
+}
+
 func schemaHasField(schema map[string]json.RawMessage, path []string, kind string) bool {
+	if path[0] == "[]" {
+		item, err := metadataObject(schema["items"])
+		if err != nil || !schemaType(schema, schemaArray) {
+			return false
+		}
+		if len(path) == 1 {
+			return schemaType(item, kind)
+		}
+		return schemaType(item, schemaObject) && schemaHasField(item, path[1:], kind)
+	}
 	properties, err := metadataObject(schema["properties"])
 	if err != nil {
 		return false
@@ -239,7 +234,11 @@ func schemaHasField(schema map[string]json.RawMessage, path []string, kind strin
 	if len(path) == 1 {
 		return schemaType(field, kind)
 	}
-	return schemaType(field, "object") && schemaHasField(field, path[1:], kind)
+	parentKind := schemaObject
+	if path[1] == "[]" {
+		parentKind = schemaArray
+	}
+	return schemaType(field, parentKind) && schemaHasField(field, path[1:], kind)
 }
 
 func schemaType(schema map[string]json.RawMessage, kind string) bool {
@@ -258,12 +257,275 @@ func schemaType(schema map[string]json.RawMessage, kind string) bool {
 	}
 	found := false
 	for _, value := range kinds {
-		if value != "null" && value != kind {
+		if value != schemaNull && value != kind {
 			return false
 		}
 		found = found || value == kind
 	}
 	return found
+}
+
+// APICapabilities is an invocation-local receipt, not a process-global cache.
+// Descriptors are exact bounded server-help entries, retained for root receipt
+// binding. Only documented input_schema/output_schema entries are supported.
+// This proves the structural operations below, not arbitrary JSON Schema support
+// or compatibility with a release that has not supplied this evidence.
+type APICapabilities struct {
+	Endpoint        string           `json:"endpoint"`
+	SelectionSHA256 string           `json:"selection_sha256"`
+	Server          ServerIdentity   `json:"server"`
+	Version         CLIVersion       `json:"version"`
+	Methods         []MethodEvidence `json:"methods"`
+	SHA256          string           `json:"sha256"`
+}
+
+// ServerIdentity is the minimum freshness binding. Host IDs are intentionally
+// absent: equality is neither authorization nor execution-host provenance.
+type ServerIdentity struct {
+	InstanceID string `json:"instance_id"`
+	ConfigHash string `json:"config_hash"`
+	Generation uint64 `json:"generation"`
+}
+
+// MethodEvidence retains the documented descriptor without mutable JSON maps.
+type MethodEvidence struct {
+	Name string `json:"name"`
+	JSON string `json:"json"`
+}
+
+type methodContract struct {
+	name          string
+	input, output map[string]string
+}
+
+// These are the actual non-test Call methods and the API operations behind the
+// documented resource CLI wrappers. CLI layout construction and CLI result
+// formatting stay with Rex: their API output schemas are retained, not assumed
+// identical to CLI JSON. This is a fixed subset, not a schema framework.
+func requiredMethods() []methodContract {
+	return []methodContract{
+		{"server.version", nil, map[string]string{"rex_version": schemaString}},
+		{"server.status", nil, map[string]string{"instance_id": schemaString, "config.hash": schemaString, "config.generation": "integer"}},
+		{"session.list", nil, map[string]string{"sessions": schemaArray, "sessions.[].session_id": schemaString, "sessions.[].label": schemaString}},
+		{"session.list_clients", map[string]string{fieldSession: schemaString}, map[string]string{"clients": schemaArray, "clients.[].client_id": schemaString, "clients.[].connected_at": schemaString, "clients.[].connection_state": schemaString, "clients.[].info.kind": schemaString}},
+		{"session.describe_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, map[string]string{"block.block_id": schemaString, "block.window_id": schemaString, "block.placement": schemaString, "block.owner": schemaString}},
+		{"session.focus_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
+		{"session.resize_layer", map[string]string{fieldSession: schemaString, "layer_id": schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber}, nil},
+		{"session.new_layer", map[string]string{fieldSession: schemaString, "window_id": schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber, fieldFocus: schemaBoolean, "layout": schemaObject}, map[string]string{"layer_id": schemaString, "block_ids": schemaArray, "block_ids.[]": schemaString}},
+		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, "args": schemaObject, "timeout_ms": "integer", "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
+		{"session.view", map[string]string{fieldSession: schemaString}, nil},
+		{"session.create", map[string]string{"initial_windows": schemaArray}, nil},
+		{"session.set_label", map[string]string{fieldSession: schemaString, fieldLabel: schemaString}, nil},
+		{"session.destroy", map[string]string{fieldSession: schemaString}, nil},
+		{"session.new_window", map[string]string{fieldSession: schemaString, "layout": schemaObject}, nil},
+		{"session.focus_window", map[string]string{fieldSession: schemaString, "window_id": schemaString}, nil},
+		{"session.focus_next_window", map[string]string{fieldSession: schemaString, "wrap": schemaBoolean}, nil},
+		{"session.focus_previous_window", map[string]string{fieldSession: schemaString, "wrap": schemaBoolean}, nil},
+		{"session.set_window_label", map[string]string{fieldSession: schemaString, "window_id": schemaString, fieldLabel: schemaString}, nil},
+		{"session.close_window", map[string]string{fieldSession: schemaString, "window_id": schemaString}, nil},
+		{"block.close", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
+		{"block.method", map[string]string{fieldSession: schemaString, fieldBlock: schemaString, "method": schemaString, "args": schemaObject}, nil},
+	}
+}
+
+func (selection *CLISelection) clone() *CLISelection {
+	snapshot := *selection
+	snapshot.Layout = append([]FileIdentity(nil), selection.Layout...)
+	if selection.Capabilities != nil {
+		receipt := *selection.Capabilities
+		receipt.Methods = append([]MethodEvidence(nil), receipt.Methods...)
+		snapshot.Capabilities = &receipt
+	}
+	return &snapshot
+}
+
+func (selection *CLISelection) fingerprint() (string, error) {
+	snapshot := *selection
+	snapshot.Capabilities = nil
+	return metadataDigest(snapshot)
+}
+
+func metadataDigest(value any) (string, error) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return "", errCLICompatibility
+	}
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func (receipt APICapabilities) fingerprint() (string, error) {
+	receipt.SHA256 = ""
+	return metadataDigest(receipt)
+}
+
+func (c *Client) captureCapabilities(ctx context.Context) error {
+	before, err := c.selection.serverIdentity(ctx, c.server)
+	if err != nil {
+		return err
+	}
+	versionJSON, err := runSelected(ctx, c.selection, c.metadataArgs("api", "call", "--", "server.version"), nil, 64<<10)
+	if err != nil {
+		return err
+	}
+	version, err := decodeVersion(versionJSON)
+	if err != nil {
+		return err
+	}
+	// One bounded help snapshot avoids independently fetched descriptors spanning
+	// generations. The CLI docs specify api list --json as help.all's document.
+	data, err := runSelected(ctx, c.selection, c.metadataArgs("api", "list", flagJSON), nil, 8<<20)
+	if err != nil {
+		return err
+	}
+	methods, err := captureMethods(data)
+	if err != nil {
+		return err
+	}
+	receipt := &APICapabilities{Endpoint: c.server, Server: before, Version: version, Methods: methods}
+	receipt.SelectionSHA256, err = c.selection.fingerprint()
+	if err != nil {
+		return err
+	}
+	receipt.SHA256, err = receipt.fingerprint()
+	if err != nil {
+		return err
+	}
+	c.selection.Capabilities = receipt
+	// Any change across capture invalidates the whole invocation, not just the
+	// last descriptor. No new endpoint, generation or candidate is selected.
+	return c.selection.checkServer(ctx)
+}
+
+func captureMethods(data []byte) ([]MethodEvidence, error) {
+	help, err := metadataObject(data)
+	if err != nil {
+		return nil, errCLICompatibility
+	}
+	var entries []json.RawMessage
+	if decodeErr := json.Unmarshal(help["methods"], &entries); decodeErr != nil || len(entries) == 0 || len(entries) > 4096 {
+		return nil, errCLICompatibility
+	}
+	byName := make(map[string]string, len(entries))
+	for _, raw := range entries {
+		entry, entryErr := metadataObject(raw)
+		var name string
+		if entryErr != nil || json.Unmarshal(entry["name"], &name) != nil || !metadataText(name) || byName[name] != "" {
+			return nil, errCLICompatibility
+		}
+		byName[name] = string(raw)
+	}
+	var methods []MethodEvidence
+	for _, required := range requiredMethods() {
+		raw := byName[required.name]
+		if !compatibleMethod(raw, required) {
+			return nil, errCLICompatibility
+		}
+		methods = append(methods, MethodEvidence{Name: required.name, JSON: raw})
+	}
+	return methods, nil
+}
+
+func compatibleMethod(raw string, required methodContract) bool {
+	if len(raw) == 0 || len(raw) > 64<<10 {
+		return false
+	}
+	entry, err := metadataObject([]byte(raw))
+	var name string
+	if err != nil || json.Unmarshal(entry["name"], &name) != nil || name != required.name ||
+		!compatibleSchema(entry["input_schema"], required.input, true) ||
+		!compatibleSchema(entry["output_schema"], required.output, false) {
+		return false
+	}
+	// Optional inputs may exist, but must not become mandatory when an actual
+	// application call omits them. The server still validates each value.
+	input, err := metadataObject(entry["input_schema"])
+	if err != nil {
+		return len(required.input) == 0
+	}
+	return knownRequired(input["required"], suppliedFields(required))
+}
+
+func suppliedFields(method methodContract) map[string]string {
+	supplied := make(map[string]string, len(method.input))
+	for key, kind := range method.input {
+		supplied[key] = kind
+	}
+	switch method.name {
+	case "client.perform":
+		delete(supplied, fieldSession)
+		delete(supplied, fieldBlock)
+	case "block.method":
+		delete(supplied, "args")
+	}
+	return supplied
+}
+
+func (selection *CLISelection) validateCapabilities() error {
+	receipt := selection.Capabilities
+	endpoint, err := CanonicalEndpoint(receipt.Endpoint)
+	if err != nil || endpoint != receipt.Endpoint || !metadataText(receipt.Server.InstanceID) || !metadataText(receipt.Server.ConfigHash) ||
+		!metadataText(receipt.Version.Version) || receipt.Version.APIMinRevision > receipt.Version.APIRevision {
+		return errCLIChanged
+	}
+	identity, err := selection.fingerprint()
+	if err != nil || identity != receipt.SelectionSHA256 {
+		return errCLIChanged
+	}
+	digest, err := receipt.fingerprint()
+	if err != nil || digest != receipt.SHA256 {
+		return errCLIChanged
+	}
+	required := requiredMethods()
+	if len(required) != len(receipt.Methods) {
+		return errCLIChanged
+	}
+	for index, method := range required {
+		entry := receipt.Methods[index]
+		if entry.Name != method.name || !compatibleMethod(entry.JSON, method) {
+			return errCLICompatibility
+		}
+	}
+	return nil
+}
+
+func metadataText(value string) bool {
+	return value != "" && len(value) <= 256 && utf8.ValidString(value) && strings.IndexFunc(value, unicode.IsControl) < 0
+}
+
+func (selection *CLISelection) serverIdentity(ctx context.Context, endpoint string) (ServerIdentity, error) {
+	ctx, cancel := context.WithTimeout(ctx, endpointTimeout)
+	defer cancel()
+	data, err := runSelected(ctx, selection, []string{flagServer, endpoint, flagNoAutostart, flagTimeout, "2s", "api", "call", "--", "server.status"}, nil, 64<<10)
+	if err != nil {
+		return ServerIdentity{}, err
+	}
+	object, err := metadataObject(data)
+	if err != nil {
+		return ServerIdentity{}, errCLICompatibility
+	}
+	config, err := metadataObject(object["config"])
+	var identity ServerIdentity
+	if err != nil || json.Unmarshal(object["instance_id"], &identity.InstanceID) != nil ||
+		json.Unmarshal(config["hash"], &identity.ConfigHash) != nil || json.Unmarshal(config["generation"], &identity.Generation) != nil ||
+		strings.TrimSpace(string(config["generation"])) == schemaNull || !metadataText(identity.InstanceID) || !metadataText(identity.ConfigHash) {
+		return ServerIdentity{}, errCLICompatibility
+	}
+	return identity, nil
+}
+
+func (selection *CLISelection) checkServer(ctx context.Context) error {
+	if selection == nil || selection.Capabilities == nil {
+		return errCLIChanged
+	}
+	actual, err := selection.serverIdentity(ctx, selection.Capabilities.Endpoint)
+	if err != nil {
+		return err
+	}
+	if actual != selection.Capabilities.Server {
+		return errCLIChanged
+	}
+	return nil
 }
 
 func validAbsolutePath(path string) bool {
@@ -373,16 +635,26 @@ func (selection *CLISelection) validate(ctx context.Context) error {
 		return errCLIChanged
 	}
 	switch selection.Provenance {
-	case "internal-explicit", "execution-env", "terminal-env", "layout-dependency", "path":
+	case "internal-explicit", "execution-env", "terminal-env", layoutProvenance, "path":
 	default:
 		return errCLIChanged
 	}
-	if selection.Version.Version == "" || selection.Version.APIMinRevision > selection.Version.APIRevision ||
-		(selection.Provenance == "layout-dependency" && len(selection.Layout) != 2) ||
-		(selection.Provenance != "layout-dependency" && len(selection.Layout) != 0) {
+	version, err := metadataObject([]byte(selection.VersionJSON))
+	if err != nil || len(version) == 0 || len(selection.VersionJSON) > 64<<10 ||
+		(selection.Provenance == layoutProvenance && len(selection.Layout) != 2) ||
+		(selection.Provenance != layoutProvenance && len(selection.Layout) != 0) {
 		return errCLIChanged
 	}
-	return selection.checkFiles(ctx)
+	if err := selection.checkFiles(ctx); err != nil {
+		return err
+	}
+	if selection.Capabilities != nil {
+		if err := selection.validateCapabilities(); err != nil {
+			return err
+		}
+		return selection.checkServer(ctx)
+	}
+	return nil
 }
 
 func (selection *CLISelection) checkFiles(ctx context.Context) error {

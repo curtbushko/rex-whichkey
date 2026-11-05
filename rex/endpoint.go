@@ -104,7 +104,7 @@ func ResolveEndpoint(ctx context.Context, explicit *string, frozen ...*CLISelect
 		environment = append(environment, entry)
 	}
 	output, err := runSelected(ctx, selection, []string{
-		"--autostart=false", "--timeout", endpointTimeout.String(), "whoami", "--json",
+		flagNoAutostart, flagTimeout, endpointTimeout.String(), "whoami", flagJSON,
 	}, environment, 64<<10)
 	if err != nil {
 		// Never return process diagnostics/argv or raw identity data: preparation
