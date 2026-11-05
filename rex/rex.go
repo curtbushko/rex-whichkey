@@ -126,7 +126,7 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 		return errors.New("rex: call requires a context")
 	}
 	if err := ctx.Err(); err != nil {
-		return errors.Join(errors.New("rex: API call cancelled; not retried"), err)
+		return errors.Join(errors.New("rex: API call canceled; not retried"), err)
 	}
 	if strings.TrimSpace(method) == "" || strings.ContainsRune(method, '\x00') {
 		return errors.New("rex: API method must not be empty or contain NUL")
@@ -150,18 +150,11 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 	// End flag parsing before positional values, including user-supplied ones.
 	argv = append(argv, "--", method)
 	if arguments != nil {
-		data, err := json.Marshal(arguments)
+		encoded, err := encodeArguments(arguments)
 		if err != nil {
-			return errors.New("rex: API arguments cannot be encoded as a JSON object")
+			return err
 		}
-		var object map[string]json.RawMessage
-		if err := json.Unmarshal(data, &object); err != nil {
-			return errors.New("rex: API arguments must encode one JSON object")
-		}
-		if object == nil {
-			return errors.New("rex: API arguments must be a JSON object, not null")
-		}
-		argv = append(argv, string(data))
+		argv = append(argv, encoded)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -181,4 +174,19 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 		return errors.New("rex: invalid API result (operation may have succeeded); not retried")
 	}
 	return nil
+}
+
+func encodeArguments(arguments any) (string, error) {
+	data, err := json.Marshal(arguments)
+	if err != nil {
+		return "", errors.New("rex: API arguments cannot be encoded as a JSON object")
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return "", errors.New("rex: API arguments must encode one JSON object")
+	}
+	if object == nil {
+		return "", errors.New("rex: API arguments must be a JSON object, not null")
+	}
+	return string(data), nil
 }

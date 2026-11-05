@@ -17,7 +17,12 @@ import (
 	"unicode/utf8"
 )
 
-const maxExecutableBytes = 512 << 20
+const (
+	maxExecutableBytes = 512 << 20
+	fieldLayout        = "layout"
+	fieldWindow        = "window_id"
+	schemaInteger      = "integer"
+)
 
 // CLIOptions are execution-host inputs, never paths supplied by menu text or a
 // viewing client. Anchor is the trusted file-loader anchor from the application
@@ -100,6 +105,27 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 		}
 		return selection, nil
 	}
+	selection, err := selectCLI(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	output, err := runSelected(ctx, selection, []string{flagNoAutostart, "version", flagJSON}, nil, 64<<10)
+	if err != nil {
+		return nil, errors.Join(errCLICompatibility, ctx.Err())
+	}
+	// The version command's JSON fields are not specified by the CLI docs.
+	// Retain its bounded nonempty object verbatim, not an invented CLI revision
+	// range. Successful server metadata calls establish transport compatibility.
+	version, err := metadataObject(output)
+	if err != nil || len(version) == 0 {
+		return nil, errCLICompatibility
+	}
+	selection.VersionJSON = string(output)
+	return selection, nil
+}
+
+// selectCLI fixes the source and installation identity before running metadata.
+func selectCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) {
 	selection := &CLISelection{OS: runtime.GOOS, Arch: runtime.GOARCH}
 	var source string
 	var err error
@@ -138,18 +164,6 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 		}
 		return nil, errCLIInput
 	}
-	output, err := runSelected(ctx, selection, []string{flagNoAutostart, "version", flagJSON}, nil, 64<<10)
-	if err != nil {
-		return nil, errors.Join(errCLICompatibility, ctx.Err())
-	}
-	// The version command's JSON fields are not specified by the CLI docs.
-	// Retain its bounded nonempty object verbatim, not an invented CLI revision
-	// range. Successful server metadata calls establish transport compatibility.
-	version, err := metadataObject(output)
-	if err != nil || len(version) == 0 {
-		return nil, errCLICompatibility
-	}
-	selection.VersionJSON = string(output)
 	return selection, nil
 }
 
@@ -173,17 +187,14 @@ func (c *Client) checkMethod(method string) error {
 	return errCLICompatibility
 }
 
-func compatibleSchema(data json.RawMessage, fields map[string]string, input bool) bool {
-	// No-argument inputs and deliberately discarded outputs need no shape.
-	// Every consumed output below still requires its documented schema.
+func compatibleSchema(data json.RawMessage, fields map[string]string) bool {
+	// Deliberately discarded outputs need no shape. Every consumed output
+	// below still requires its documented schema.
 	if len(fields) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
 		return true
 	}
 	schema, err := metadataObject(data)
 	if err != nil || !schemaType(schema, schemaObject) {
-		return false
-	}
-	if input && !knownRequired(schema["required"], fields) {
 		return false
 	}
 	for path, kind := range fields {
@@ -192,6 +203,63 @@ func compatibleSchema(data json.RawMessage, fields map[string]string, input bool
 		}
 	}
 	return true
+}
+
+// Request paths below describe only the application's fixed producers. Dots
+// separate child lookups; they never count as literal properties in required.
+// At each object, only fields guaranteed by that producer may be mandatory.
+func compatibleRequest(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string) bool {
+	if !schemaType(schema, kind) {
+		return false
+	}
+	switch kind {
+	case schemaObject:
+		return compatibleRequestObject(schema, fields, supplied)
+	case schemaArray:
+		itemKind, known := fields["[]"]
+		if !known {
+			return false
+		}
+		item, err := metadataObject(schema["items"])
+		return err == nil && compatibleRequest(item, itemKind, childFields(fields, "[]"), childFields(supplied, "[]"))
+	default:
+		return true
+	}
+}
+
+func compatibleRequestObject(schema map[string]json.RawMessage, fields, supplied map[string]string) bool {
+	if !knownRequired(schema["required"], supplied) {
+		return false
+	}
+	// Opaque objects (for example user action args) prove no mandatory children.
+	// Optional server properties remain server-owned; none is invented here.
+	if len(fields) == 0 {
+		return true
+	}
+	properties, err := metadataObject(schema["properties"])
+	if err != nil {
+		return false
+	}
+	for name, kind := range fields {
+		if strings.Contains(name, ".") {
+			continue
+		}
+		field, fieldErr := metadataObject(properties[name])
+		if fieldErr != nil || !compatibleRequest(field, kind, childFields(fields, name), childFields(supplied, name)) {
+			return false
+		}
+	}
+	return true
+}
+
+func childFields(fields map[string]string, name string) map[string]string {
+	children := make(map[string]string)
+	for path, kind := range fields {
+		if child, found := strings.CutPrefix(path, name+"."); found {
+			children[child] = kind
+		}
+	}
+	return children
 }
 
 func knownRequired(data json.RawMessage, fields map[string]string) bool {
@@ -204,7 +272,7 @@ func knownRequired(data json.RawMessage, fields map[string]string) bool {
 	}
 	seen := make(map[string]bool, len(required))
 	for _, field := range required {
-		if _, known := fields[field]; !known || seen[field] {
+		if _, known := fields[field]; !known || strings.Contains(field, ".") || seen[field] {
 			return false
 		}
 		seen[field] = true
@@ -305,24 +373,29 @@ type methodContract struct {
 func requiredMethods() []methodContract {
 	return []methodContract{
 		{"server.version", nil, map[string]string{"rex_version": schemaString}},
-		{"server.status", nil, map[string]string{"instance_id": schemaString, "config.hash": schemaString, "config.generation": "integer"}},
+		{"server.status", nil, map[string]string{"instance_id": schemaString, "config.hash": schemaString, "config.generation": schemaInteger}},
 		{"session.list", nil, map[string]string{"sessions": schemaArray, "sessions.[].session_id": schemaString, "sessions.[].label": schemaString}},
 		{"session.list_clients", map[string]string{fieldSession: schemaString}, map[string]string{"clients": schemaArray, "clients.[].client_id": schemaString, "clients.[].connected_at": schemaString, "clients.[].connection_state": schemaString, "clients.[].info.kind": schemaString}},
 		{"session.describe_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, map[string]string{"block.block_id": schemaString, "block.window_id": schemaString, "block.placement": schemaString, "block.owner": schemaString}},
 		{"session.focus_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
 		{"session.resize_layer", map[string]string{fieldSession: schemaString, "layer_id": schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber}, nil},
-		{"session.new_layer", map[string]string{fieldSession: schemaString, "window_id": schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber, fieldFocus: schemaBoolean, "layout": schemaObject}, map[string]string{"layer_id": schemaString, "block_ids": schemaArray, "block_ids.[]": schemaString}},
-		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, "args": schemaObject, "timeout_ms": "integer", "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
+		{"session.new_layer", map[string]string{fieldSession: schemaString, fieldWindow: schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber, fieldFocus: schemaBoolean,
+			fieldLayout: schemaObject, "layout.block": schemaObject, "layout.block.flavor": schemaString,
+			"layout.block.options": schemaObject, "layout.block.options.command": schemaArray, "layout.block.options.command.[]": schemaString,
+			"layout.block.options.shell": schemaString, "layout.block.options.exit": schemaObject, "layout.block.options.exit.on_completion": schemaBoolean,
+			"layout.block.options.size": schemaObject, "layout.block.options.size.columns": schemaInteger, "layout.block.options.size.rows": schemaInteger,
+			"layout.block.options.size.cell_width_px": schemaInteger, "layout.block.options.size.cell_height_px": schemaInteger}, map[string]string{"layer_id": schemaString, "block_ids": schemaArray, "block_ids.[]": schemaString}},
+		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, "args": schemaObject, "timeout_ms": schemaInteger, "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
 		{"session.view", map[string]string{fieldSession: schemaString}, nil},
-		{"session.create", map[string]string{"initial_windows": schemaArray}, nil},
+		{"session.create", map[string]string{"initial_windows": schemaArray, "initial_windows.[]": schemaObject}, nil},
 		{"session.set_label", map[string]string{fieldSession: schemaString, fieldLabel: schemaString}, nil},
 		{"session.destroy", map[string]string{fieldSession: schemaString}, nil},
-		{"session.new_window", map[string]string{fieldSession: schemaString, "layout": schemaObject}, nil},
-		{"session.focus_window", map[string]string{fieldSession: schemaString, "window_id": schemaString}, nil},
+		{"session.new_window", map[string]string{fieldSession: schemaString, fieldLayout: schemaObject}, nil},
+		{"session.focus_window", map[string]string{fieldSession: schemaString, fieldWindow: schemaString}, nil},
 		{"session.focus_next_window", map[string]string{fieldSession: schemaString, "wrap": schemaBoolean}, nil},
 		{"session.focus_previous_window", map[string]string{fieldSession: schemaString, "wrap": schemaBoolean}, nil},
-		{"session.set_window_label", map[string]string{fieldSession: schemaString, "window_id": schemaString, fieldLabel: schemaString}, nil},
-		{"session.close_window", map[string]string{fieldSession: schemaString, "window_id": schemaString}, nil},
+		{"session.set_window_label", map[string]string{fieldSession: schemaString, fieldWindow: schemaString, fieldLabel: schemaString}, nil},
+		{"session.close_window", map[string]string{fieldSession: schemaString, fieldWindow: schemaString}, nil},
 		{"block.close", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
 		{"block.method", map[string]string{fieldSession: schemaString, fieldBlock: schemaString, "method": schemaString, "args": schemaObject}, nil},
 	}
@@ -433,17 +506,19 @@ func compatibleMethod(raw string, required methodContract) bool {
 	entry, err := metadataObject([]byte(raw))
 	var name string
 	if err != nil || json.Unmarshal(entry["name"], &name) != nil || name != required.name ||
-		!compatibleSchema(entry["input_schema"], required.input, true) ||
-		!compatibleSchema(entry["output_schema"], required.output, false) {
+		!compatibleInput(entry["input_schema"], required) ||
+		!compatibleSchema(entry["output_schema"], required.output) {
 		return false
 	}
-	// Optional inputs may exist, but must not become mandatory when an actual
-	// application call omits them. The server still validates each value.
-	input, err := metadataObject(entry["input_schema"])
-	if err != nil {
-		return len(required.input) == 0
+	return true
+}
+
+func compatibleInput(data json.RawMessage, method methodContract) bool {
+	if len(method.input) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
+		return true
 	}
-	return knownRequired(input["required"], suppliedFields(required))
+	schema, err := metadataObject(data)
+	return err == nil && compatibleRequest(schema, schemaObject, method.input, suppliedFields(method))
 }
 
 func suppliedFields(method methodContract) map[string]string {
@@ -457,6 +532,13 @@ func suppliedFields(method methodContract) map[string]string {
 		delete(supplied, fieldBlock)
 	case "block.method":
 		delete(supplied, "args")
+	case "session.new_layer":
+		// Unsized creation omits size; sized creation always supplies rows and
+		// columns, but omits zero pixel dimensions. Required is checked at each
+		// parent even when its optional child has a known conditional shape.
+		delete(supplied, "layout.block.options.size")
+		delete(supplied, "layout.block.options.size.cell_width_px")
+		delete(supplied, "layout.block.options.size.cell_height_px")
 	}
 	return supplied
 }
@@ -544,23 +626,31 @@ func validPath(path string) bool {
 	return true
 }
 
+func runtimeAnchor(options CLIOptions) (*string, error) {
+	if options.Anchor != nil {
+		if options.LayoutRevision != 1 {
+			return nil, errCLILayout
+		}
+		return options.Anchor, nil
+	}
+	if options.LayoutRevision != 0 {
+		return nil, errCLILayout
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return nil, errCLILayout
+	}
+	if !strings.HasSuffix(filepath.ToSlash(self), "/rex_whichkey/runtime/rex-whichkey") {
+		return nil, nil
+	}
+	candidate := filepath.Join(filepath.Dir(self), "anchor.lua")
+	return &candidate, nil
+}
+
 func layoutDependency(ctx context.Context, options CLIOptions) (string, []FileIdentity, bool, error) {
-	anchor := options.Anchor
-	if anchor == nil {
-		if options.LayoutRevision != 0 {
-			return "", nil, false, errCLILayout
-		}
-		self, err := os.Executable()
-		if err != nil {
-			return "", nil, false, errCLILayout
-		}
-		if !strings.HasSuffix(filepath.ToSlash(self), "/rex_whichkey/runtime/rex-whichkey") {
-			return "", nil, false, nil
-		}
-		candidate := filepath.Join(filepath.Dir(self), "anchor.lua")
-		anchor = &candidate
-	} else if options.LayoutRevision != 1 {
-		return "", nil, true, errCLILayout
+	anchor, err := runtimeAnchor(options)
+	if err != nil || anchor == nil {
+		return "", nil, false, err
 	}
 	logical := filepath.ToSlash(*anchor)
 	if !validPath(*anchor) || (logical != "rex_whichkey/runtime/anchor.lua" && !strings.HasSuffix(logical, "/rex_whichkey/runtime/anchor.lua")) {
@@ -697,53 +787,77 @@ func inspectFile(ctx context.Context, source string, executable bool) (identity 
 		return identity, errCLIChanged
 	}
 	defer func() {
-		if err := file.Close(); err != nil {
+		if closeErr := file.Close(); closeErr != nil {
 			resultErr = errCLIChanged
 		}
 	}()
 	before, err := file.Stat()
-	if err != nil || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxExecutableBytes ||
-		before.Mode().Perm()&0022 != 0 || (executable && before.Mode().Perm()&0111 == 0) {
+	if err != nil {
 		return identity, errCLIChanged
 	}
-	stat, ok := before.Sys().(*syscall.Stat_t)
+	stat, ok := trustedFile(before, executable)
+	if !ok {
+		return identity, errCLIChanged
+	}
+	digest, count, err := fileDigest(ctx, file)
+	if err != nil {
+		return identity, err
+	}
+	if !unchangedFile(ctx, file, source, canonical, links, before, count) {
+		return identity, errCLIChanged
+	}
+	return FileIdentity{Source: source, Path: canonical, SHA256: digest, LinksSHA256: links,
+		Device: uint64(stat.Dev), Inode: stat.Ino, Size: count, ModifiedNS: before.ModTime().UnixNano(),
+		Mode: uint32(before.Mode()), Owner: stat.Uid}, nil
+}
+
+func trustedFile(info os.FileInfo, executable bool) (*syscall.Stat_t, bool) {
+	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > maxExecutableBytes ||
+		info.Mode().Perm()&0022 != 0 || (executable && info.Mode().Perm()&0111 == 0) {
+		return nil, false
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || (stat.Uid != 0 && stat.Uid != uint32(os.Geteuid())) {
-		return identity, errCLIChanged
+		return nil, false
 	}
+	return stat, true
+}
+
+func fileDigest(ctx context.Context, file *os.File) (string, int64, error) {
 	digest := sha256.New()
 	buffer := make([]byte, 128<<10)
 	var count int64
 	for {
 		if err := ctx.Err(); err != nil {
-			return identity, err
+			return "", 0, err
 		}
 		n, readErr := file.Read(buffer)
 		count += int64(n)
 		if count > maxExecutableBytes {
-			return identity, errCLIChanged
+			return "", 0, errCLIChanged
 		}
 		if _, err := digest.Write(buffer[:n]); err != nil {
-			return identity, errCLIChanged
+			return "", 0, errCLIChanged
 		}
 		if errors.Is(readErr, io.EOF) {
-			break
+			return hex.EncodeToString(digest.Sum(nil)), count, nil
 		}
 		if readErr != nil {
-			return identity, errCLIChanged
+			return "", 0, errCLIChanged
 		}
 	}
+}
+
+// The open file, logical link chain and canonical target must still agree after
+// hashing. A metadata/content race invalidates selection instead of choosing again.
+func unchangedFile(ctx context.Context, file *os.File, source, canonical, links string, before os.FileInfo, count int64) bool {
 	after, err := file.Stat()
 	linked, linkErr := os.Stat(source)
 	resolved, resolveErr := filepath.EvalSymlinks(source)
 	afterLinks, linksErr := installationLinks(ctx, source)
-	if err != nil || linkErr != nil || resolveErr != nil || linksErr != nil || afterLinks != links || resolved != canonical || !os.SameFile(before, after) ||
-		!os.SameFile(after, linked) || count != before.Size() || before.Size() != after.Size() ||
-		before.Mode() != after.Mode() || before.ModTime() != after.ModTime() {
-		return identity, errCLIChanged
-	}
-	return FileIdentity{Source: source, Path: canonical, SHA256: hex.EncodeToString(digest.Sum(nil)), LinksSHA256: links,
-		Device: uint64(stat.Dev), Inode: stat.Ino, Size: count, ModifiedNS: before.ModTime().UnixNano(),
-		Mode: uint32(before.Mode()), Owner: stat.Uid}, nil
+	return err == nil && linkErr == nil && resolveErr == nil && linksErr == nil && afterLinks == links && resolved == canonical &&
+		os.SameFile(before, after) && os.SameFile(after, linked) && count == before.Size() && before.Size() == after.Size() &&
+		before.Mode() == after.Mode() && before.ModTime().Equal(after.ModTime())
 }
 
 // Include logical directory links and intermediate link targets, not only the
@@ -808,7 +922,7 @@ func safeParents(path string) bool {
 		}
 		// Root-owned sticky temporary directories do not let unrelated users
 		// replace a trusted child. Other group/world writers are unsupported.
-		if info.Mode().Perm()&0022 != 0 && !(stat.Uid == 0 && info.Mode()&os.ModeSticky != 0) {
+		if info.Mode().Perm()&0022 != 0 && (stat.Uid != 0 || info.Mode()&os.ModeSticky == 0) {
 			return false
 		}
 		if filepath.Dir(directory) == directory {
