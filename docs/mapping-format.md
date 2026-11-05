@@ -550,10 +550,30 @@ are converted to owned nonblocking/pollable descriptors so Darwin/Linux deadline
 work; all duplicates are retired. `Start` transfers ownership irrevocably: failure,
 cancellation, rejected/lost acknowledgment, deadline or release/close error after
 that point must not retry, kill an uncertain child or delete its workspace.
-Before `Start`, only authenticated owned cleanup/cancellation is permitted. The
-key launcher returns success only after this handshake (an accepted stdout
+Before `Start`, only authenticated owned cleanup/cancellation is permitted. A
+complete expired key handoff still rejects startup: the finite launcher uses the
+same receipt/copy/self-image authentication as the child to adopt only its owned
+workspace before the live-authority checks reject expiry. Its bounded failure
+path retires the captured image and removes only fixed owned workspace entries;
+it does not require a live popup, origin or callback to authenticate that local
+cleanup, and sends no completion after expiry. Cleanup errors remain failures,
+and uncertain closes are never repeated. Malformed/partial input or failed
+receipt/copy/self-image authentication cannot authorize deletion of nominated
+paths; such input may leave preparation artifacts. A possibly started detached
+child remains the workspace owner even if its acknowledgment is lost. Lua must
+not infer permission to release from a failed finite launcher result.
+The key launcher returns success only after this handshake (an accepted stdout
 object alone without successful launcher exit is insufficient). Neither
 that object nor public success proves visible popup display or later dispatch.
+
+Source-review scenarios for this ownership boundary (all **UNEXECUTED**):
+
+| Input / transition | Required source outcome |
+| --- | --- |
+| Complete authentic key handoff expires before finite launcher decoding; its private copy and receipt still match | `decodePopupRequest` retains the request; `validateRuntime` adopts its verified image before rejecting expiry; launcher closes input once, retires the image and removes the exact owned workspace before returning failure. No child start, accepted stdout, popup or completion action. |
+| Truncated/malformed handoff, mismatched receipt/hash/configuration/workspace, or foreign self-image/copy | No authenticated image is adopted, so launcher performs no nominated workspace deletion, child start or completion; any retained preparation is an explicit limitation, not successful cleanup. |
+| Child `Start` succeeded but acknowledgment/launcher result is lost, rejected or late | Transferred ownership suppresses launcher workspace removal even on failure. Neither Go nor Lua retries the spawn or releases the possibly running child's workspace; expiry revokes registry authority without claiming artifact removal. |
+| Authentic expired pre-child handoff encounters an image-close or owned-file removal failure | Return startup failure joined with the cleanup error; do not retry an uncertain close, report cleanup success or send stale cancellation/completion. |
 
 Controller compatibility/placement/rename checks precede popup creation. After
 rename and geometry yields, read-only `whichkey_runtime` revalidates the exact

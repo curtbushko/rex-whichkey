@@ -251,17 +251,14 @@ func RunPopupController(parent context.Context, input io.Reader, output io.Write
 		input = pipe
 	}
 	request, _, err := decodePopupRequest(input)
-	if err != nil {
-		if closer, ok := input.(io.Closer); ok {
-			return errors.Join(errRuntimeStartup, closer.Close())
-		}
-		return errRuntimeStartup
-	}
 	var inputErr error
 	if closer, ok := input.(io.Closer); ok {
 		inputErr = closer.Close()
 	}
-	validationErr := errors.Join(inputErr, request.validateRuntime(ctx))
+	// Like the child, authenticate a retained expired request for local cleanup.
+	// validateRuntime adopts the owned image before checking live authority;
+	// decode failure still rejects startup, and unauthenticated input owns nothing.
+	validationErr := errors.Join(err, inputErr, request.validateRuntime(ctx))
 	transferred := false
 	defer func() {
 		if request.image != nil {
