@@ -10,9 +10,10 @@ import (
 	"unicode/utf8"
 )
 
-// DecodeConfig reads one resolved, data-only configuration from the originating
-// Lua runtime. It does not load modules, evaluate conditions or execute callbacks.
-// The wire fields and validation belong to mapping.go, not a second Lua schema.
+// DecodeConfig is the legacy resolved-config wire decoder, retained for the
+// transitional caller and compatibility tests. It is not the public file loader;
+// LoadMenuConfig accepts versioned menu options and rejects callback_ref.
+// Neither decoder evaluates code.
 func DecodeConfig(input io.Reader) (Config, error) {
 	const limit = 4 << 20
 	data, err := io.ReadAll(io.LimitReader(input, limit+1))

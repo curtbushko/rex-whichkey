@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "title": "My Rex menu",
+  "position": "center",
+  "icons": {"breadcrumb": ">", "group": "+"},
+  "spec": [
+    {"keys": "w", "group": "Sessions"},
+    {"keys": "wn", "desc": "New session", "action": "session.new"},
+    {"keys": "ws", "desc": "Switch session", "action": "session.switch"},
+    {"keys": "wr", "desc": "Rename session", "action": "session.rename"},
+    {"keys": "wx", "desc": "Close session", "action": "session.close", "confirm": true},
+    {"keys": "t", "group": "Tabs"},
+    {"keys": "tn", "desc": "New tab", "action": "client.tab.new"},
+    {"keys": "tr", "desc": "Rename tab", "action": "client.tab.rename"},
+    {"keys": "tx", "desc": "Close tab", "action": "client.tab.close", "confirm": true},
+    {"keys": "v", "desc": "Split right", "action": "pane.split", "args": {"direction": "right"}},
+    {"keys": "s", "desc": "Split down", "action": "pane.split", "args": {"direction": "down"}},
+    {"keys": "x", "desc": "Close pane", "action": "pane.close", "confirm": true},
+    {"keys": "e", "desc": "Sidebar", "action": "client.sidebar.toggle"},
+    {"keys": "c", "desc": "Command palette", "action": "client.palette.toggle", "hidden": true},
+    {"keys": "l", "group": "Resource lists"},
+    {"keys": "ls", "group": "Sessions", "provider": "sessions"},
+    {"keys": "lw", "group": "Windows", "provider": "windows"},
+    {"keys": "lp", "group": "Panes", "provider": "panes"},
+    {"keys": "lh", "group": "Known hosts (listing only)", "provider": "known-hosts"}
+  ]
+}
