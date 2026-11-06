@@ -284,6 +284,20 @@ func (admission *requestAdmission) anyOfFailure(schema map[string]json.RawMessag
 	if json.Unmarshal(data, &branches) != nil || len(branches) == 0 || len(branches) > maxRequestBranches {
 		return path + ": anyOf array/limit"
 	}
+	// Check every root before OR short-circuiting; malformed schemas are not
+	// merely unsupported alternatives. Shape checks share the work budget.
+	for _, branch := range branches {
+		if admission.remaining == 0 {
+			return path + ": schema work limit"
+		}
+		admission.remaining--
+		// Unmarshal above guarantees nonempty, syntactically valid JSON roots.
+		switch strings.TrimSpace(string(branch))[0] {
+		case '{', 't', 'f':
+		default:
+			return path + ": anyOf branch schema"
+		}
+	}
 	for _, branch := range branches {
 		if reason := admission.propertyFailure(branch, kind, fields, supplied, path); reason == "" {
 			return ""
