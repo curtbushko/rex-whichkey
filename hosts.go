@@ -63,6 +63,11 @@ func resolveHostMenu(ctx context.Context, config Config, selection *rex.CLISelec
 }
 
 func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr error) ([]Mapping, error) {
+	keys, err := NormalizeKeys(mapping.Keys)
+	if err != nil {
+		return nil, err
+	}
+	mapping.Keys = keys // Standalone UI callers may not have a canonical snapshot yet.
 	var rows []Mapping
 	if readErr == nil {
 		var formatErr error
@@ -71,6 +76,12 @@ func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr erro
 			return nil, formatErr
 		}
 	} else {
+		budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
+		for range 2 {
+			if err := budget.reserve(len(mapping.Keys), 1); err != nil {
+				return nil, err
+			}
+		}
 		label := "Warning: inventory unavailable (read failed, timed out or invalid); not retried"
 		scope := "Inventory: execution host and its configured Rex home; reachability unknown"
 		rows = []Mapping{mapping, {Keys: mapping.Keys + "i", Group: &scope}, {Keys: mapping.Keys + "w", Group: &label}}
@@ -87,47 +98,83 @@ func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr erro
 	return rows, nil
 }
 
-// Count pagination and details before constructing growing listing paths.
-func hostMenuRowCount(inventory rex.HostInventory) int {
-	rows := 5 + len(inventory.Home) + (len(inventory.Home)-1)/9
-	if len(inventory.Home) == 0 {
-		rows++
+// Reserve exact full-key lengths before formatting any host rows. Prefixes are
+// canonical bytes; all generated suffix tokens are single-byte ASCII. Include
+// the root as in the host formatter's original row/key bound.
+func hostMenuKeyBudget(prefixBytes int, inventory rex.HostInventory) error {
+	budget := menuKeyBudget{rowsLeft: 1025, bytesLeft: menuConfigLimit}
+	if err := budget.reserve(prefixBytes, 0); err != nil {
+		return err
+	}
+	// Inventory, home, warnings and hosts headings.
+	for range 4 {
+		if err := budget.reserve(prefixBytes, 1); err != nil {
+			return err
+		}
+	}
+	if err := budget.reserveFields(prefixBytes+1, len(inventory.Home)); err != nil {
+		return err
 	}
 	if len(inventory.Warnings) == 0 {
-		rows++
-	}
-	for _, warning := range inventory.Warnings {
-		fields := len(warning)
-		rows += 2 + fields + max(0, (fields-1)/9)
-		if fields == 0 {
-			rows++
+		if err := budget.reserve(prefixBytes, 2); err != nil {
+			return err
 		}
 	}
-	rows += max(0, (len(inventory.Warnings)-1)/9)
+	for index, warning := range inventory.Warnings {
+		keysBytes, err := budget.reserveList(prefixBytes+1, index)
+		if err != nil {
+			return err
+		}
+		if err := budget.reserve(keysBytes, 1); err != nil {
+			return err
+		}
+		if err := budget.reserveFields(keysBytes+1, len(warning)); err != nil {
+			return err
+		}
+	}
 	if len(inventory.Hosts) == 0 {
-		rows++
+		return budget.reserve(prefixBytes, 2)
 	}
-	for _, entry := range inventory.Hosts {
-		rows += 6 + len(entry.Host.Endpoints) + max(0, (len(entry.Host.Endpoints)-1)/9)
-		if len(entry.Host.Endpoints) == 0 {
-			rows++
+	for index, entry := range inventory.Hosts {
+		keysBytes, err := budget.reserveList(prefixBytes+1, index)
+		if err != nil {
+			return err
 		}
-		if entry.Host.HostID != "" {
-			rows++
-		}
-		if entry.Host.Source != "" {
-			rows++
-		}
-		if entry.Host.AddedFrom != "" {
-			rows++
-		}
-		if entry.Host.UpdatedAt != "" {
-			rows++
+		if err := budget.reserveHostDetails(keysBytes, entry); err != nil {
+			return err
 		}
 	}
-	rows += max(0, (len(inventory.Hosts)-1)/9)
+	return nil
+}
 
-	return rows
+func (budget *menuKeyBudget) reserveHostDetails(keysBytes int, entry rex.HostEntry) error {
+	// ID, label, owner, held status and endpoints heading.
+	for range 5 {
+		if err := budget.reserve(keysBytes, 1); err != nil {
+			return err
+		}
+	}
+	for _, value := range []string{entry.Host.HostID, entry.Host.Source, entry.Host.AddedFrom, entry.Host.UpdatedAt} {
+		if value != "" {
+			if err := budget.reserve(keysBytes, 1); err != nil {
+				return err
+			}
+		}
+	}
+	return budget.reserveFields(keysBytes+1, len(entry.Host.Endpoints))
+}
+
+// Fields and endpoints share the same paginated shape, including an empty row.
+func (budget *menuKeyBudget) reserveFields(prefixBytes, count int) error {
+	if count == 0 {
+		return budget.reserve(prefixBytes, 1)
+	}
+	for index := range count {
+		if _, err := budget.reserveList(prefixBytes, index); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // HostMenuMappings presents one effective rex.Hosts snapshot beneath prefix.
@@ -147,9 +194,22 @@ func HostMenuMappings(prefix string, inventory rex.HostInventory) ([]Mapping, er
 	if inventory.Home == nil {
 		return nil, errors.New("whichkey: host menu requires effective inventory home data")
 	}
-	rows := hostMenuRowCount(inventory)
-	if rows > 1025 || rows*len(prefix) > menuConfigLimit {
+	// Reject impossible prefixes/counts before even cloning the sort input.
+	if len(prefix) > menuConfigLimit || len(inventory.Hosts) > 1024 {
 		return nil, errors.New("whichkey: host provider exceeds row/key bounds; not truncated")
+	}
+	// IDs, not mutable/duplicate labels, determine display order. Do not merge
+	// records or sort the caller's slice; Rex already owns inventory resolution.
+	hosts := slices.Clone(inventory.Hosts)
+	slices.SortStableFunc(hosts, func(a, b rex.HostEntry) int {
+		if order := strings.Compare(a.Host.ID, b.Host.ID); order != 0 {
+			return order
+		}
+		return strings.Compare(a.From, b.From)
+	})
+	inventory.Hosts = hosts // Admission must use the same pagination order as formatting.
+	if err := hostMenuKeyBudget(len(prefix), inventory); err != nil {
+		return nil, err
 	}
 
 	var mappings []Mapping
@@ -183,15 +243,6 @@ func HostMenuMappings(prefix string, inventory rex.HostInventory) ([]Mapping, er
 		}
 	}
 
-	// IDs, not mutable/duplicate labels, determine display order. Do not merge
-	// records or sort the caller's slice; Rex already owns inventory resolution.
-	hosts := slices.Clone(inventory.Hosts)
-	slices.SortStableFunc(hosts, func(a, b rex.HostEntry) int {
-		if order := strings.Compare(a.Host.ID, b.Host.ID); order != 0 {
-			return order
-		}
-		return strings.Compare(a.From, b.From)
-	})
 	add(prefix+"l", fmt.Sprintf("Known hosts (%d); open details only", len(hosts)))
 	if len(hosts) == 0 {
 		add(prefix+"l0", "No Rex-known hosts in this effective inventory")

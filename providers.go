@@ -74,18 +74,53 @@ func menuSnapshotBound(config Config) error {
 	return nil
 }
 
+// menuKeyBudget admits complete canonical keys before any child concatenation.
+// Subtraction keeps both the byte sum and pagination arithmetic overflow-safe.
+// Serialized batch/combined-menu bounds remain separate checks.
+type menuKeyBudget struct {
+	rowsLeft, bytesLeft int
+}
+
+func (budget *menuKeyBudget) reserve(prefixBytes, suffixBytes int) error {
+	if budget.rowsLeft <= 0 || prefixBytes > budget.bytesLeft || suffixBytes > budget.bytesLeft-prefixBytes {
+		return errors.New("whichkey: provider rows exceed transport bounds; not truncated")
+	}
+	budget.rowsLeft--
+	budget.bytesLeft -= prefixBytes + suffixBytes
+	return nil
+}
+
+// reserveList mirrors hostMenuListKey, including its intermediate More row.
+func (budget *menuKeyBudget) reserveList(prefixBytes, index int) (int, error) {
+	suffixBytes := index / 9
+	if index > 0 && index%9 == 0 {
+		if err := budget.reserve(prefixBytes, suffixBytes); err != nil {
+			return 0, err
+		}
+	}
+	suffixBytes++
+	if err := budget.reserve(prefixBytes, suffixBytes); err != nil {
+		return 0, err
+	}
+	return prefixBytes + suffixBytes, nil
+}
+
 // providerRows formats one bounded inventory. Full IDs lead labels; metadata is
 // escaped rather than treated as a resource selector. No row is truncated.
 func providerRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
-	rows := make([]Mapping, 0, len(entries))
-	keyBytes := 0
-	overflow := false
-	add := func(mapping Mapping) {
-		keyBytes += len(mapping.Keys)
-		if len(rows) >= 1024 || keyBytes > menuConfigLimit {
-			overflow = true
-			return
+	budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
+	if len(entries) == 0 {
+		if err := budget.reserve(len(marker.Keys), 1); err != nil {
+			return nil, err
 		}
+	}
+	for index := range entries {
+		if _, err := budget.reserveList(len(marker.Keys), index); err != nil {
+			return nil, err
+		}
+	}
+	rows := make([]Mapping, 0, 1024-budget.rowsLeft)
+	add := func(mapping Mapping) {
 		mapping.Hidden = marker.Hidden
 		rows = append(rows, mapping)
 	}
@@ -94,17 +129,11 @@ func providerRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
 		addGroup(marker.Keys+"0", "No resources in this snapshot")
 	}
 	for index, entry := range entries {
-		if overflow {
-			break
-		}
 		keys := hostMenuListKey(marker.Keys, index, len(entries), menuProvider(marker), addGroup)
 		mapping := entry.mapping
 		mapping.Keys = keys
 		mapping.Desc = "[" + entry.id + "] " + hostMenuText(entry.label)
 		add(mapping)
-	}
-	if overflow {
-		return nil, errors.New("whichkey: provider rows exceed transport bounds; not truncated")
 	}
 	return rows, nil
 }
@@ -241,6 +270,10 @@ func expandResourceMarker(marker Mapping, entries []providerRow, readErr error) 
 	}
 	var children []Mapping
 	if readErr != nil {
+		budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
+		if err := budget.reserve(len(marker.Keys), 1); err != nil {
+			return nil, err
+		}
 		label := "Warning: inventory unavailable; reopen to retry"
 		children = []Mapping{{Keys: marker.Keys + "0", Group: &label, Hidden: marker.Hidden}}
 	} else {
