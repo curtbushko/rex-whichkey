@@ -37,29 +37,36 @@ unique, distinct and not reserved `whichkey_runtime`. Keys/palette and direct
 modules live outside reserved `rex_whichkey`. Setup, callbacks, args, conditions
 and confirmation follow the [mapping standard](mapping-format.md).
 
-Normal layout revision 1 ships `rex_whichkey/runtime/anchor.lua`, the real
-application executable at its fixed sibling `rex-whichkey`, and `deps/rex` linked
-to the licensed execution-host CLI. The public `bin/rex-whichkey` symlink points
-into that layout, not the reverse: Go's implicit executable-relative dependency
-selection and Lua's explicit anchor reach the same installed image. Go validates
-canonical file/content/link identity, ownership and modes. Home Manager exposes
+A complete normal layout revision 1 ships `rex_whichkey/runtime/anchor.lua`, the
+real application executable at its fixed sibling `rex-whichkey`, and `deps/rex`
+linked to the licensed execution-host CLI. With that dependency installed, the
+public `bin/rex-whichkey` symlink points into the layout, not the reverse: Go's
+implicit executable-relative dependency selection and Lua's explicit anchor
+reach the same installed image. Go validates canonical file/content/link identity,
+ownership and modes. Home Manager exposes
 only the ordinary namespace (symlinks supported), not runtime directories/per-host
 selectors. The installer preserves upstream license, signature, loader/libraries
 and assets. The pinned source supplies x86_64/aarch64 Linux and Apple-silicon
 macOS, **not** Intel macOS. This is installation/source analysis, not a runtime
 or Nix build result.
 
-The default Intel macOS package omits `deps/rex`. Both configured public and
+The default Intel macOS package omits `deps/rex` and keeps its real public image
+at `bin/rex-whichkey`; `runtime/rex-whichkey` links back to it via
+`../../../../../bin/rex-whichkey`. Both configured public and
 key/palette routes therefore fail the anchored installation check before popup,
 even if public Go already selected a valid CLI or `REX_BIN_DIR`/PATH is usable.
 Neither PATH repair nor native fallback repairs that partial Lua layout. The
 existing installation override `rex-cli` can supply a legitimately available,
 licensed execution-host package exporting `bin/rex` to complete it; no upstream
 Intel artifact is invented. See [installation](../README.md#install-on-the-rex-server-host).
-Standalone native use outside the layout retains terminal `REX_BIN_DIR`/valid
-unambiguous PATH operation when the implicit default action is absent. Packaged
-native use can select a valid `REX_BIN_DIR` preference; without it the incomplete
-implicit layout rejects before PATH. Neither bypass enables configured launch.
+The default packaged public image is outside the implicit layout, preserving
+Intel standalone native use with an existing valid unambiguous absolute
+execution-host PATH CLI when `REX_BIN_DIR` and the implicit default are absent
+and no explicit action is required. No environment repair or dependency override
+is needed solely for native use; origin/endpoint/CLI checks remain. A valid
+terminal `REX_BIN_DIR` is still an optional preference. This is absence of an
+applicable implicit layout, not fallback from a broken layout or configured
+failure. Neither native case enables the incomplete configured integration.
 
 Standard file-loader absolute anchors work; relative anchors require unchanged
 server cwd. Synthetic/preloaded/custom-loader anchors, shadowed/mixed trees and
@@ -765,11 +772,12 @@ completion. Inspect/focus/effect remains non-atomic against external races.
 
 ## Cutover source scenarios (all UNEXECUTED)
 
-Normal public symlink/real-image layout and dependency selection without
-`REX_BIN_DIR`; explicit Lua anchoring and optional HM exposure; default incomplete
-Intel macOS configured/key rejection, licensed dependency override and retained
-standalone native use; standalone public rebuild versus unequal compatible
-installed/loaded builds; restricted-PATH original-VM keys with a complete layout;
+Complete public symlink/real-image layout and dependency selection without
+`REX_BIN_DIR`; explicit Lua anchoring and optional HM exposure; default Intel
+packaged native use with no environment preference, a valid execution-host PATH
+CLI and absent implicit default/no explicit action; incomplete Intel configured
+public/key rejection and licensed dependency override; standalone public rebuild
+versus unequal compatible installed/loaded builds; restricted-PATH original-VM keys with a complete layout;
 broken/mixed/synthetic modules; old/missing/text-incapable bridges; valid/equivalent/
 invalid/conflicting endpoints and explicit client intent; custom callbacks/args/
 conditions/confirmation; retained-resource rename; namespace symlink upgrades;

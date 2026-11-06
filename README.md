@@ -50,7 +50,7 @@ configuration actions and detached process execution.
 
 The flake exports `packages.<system>.rex-whichkey` (also `default`) for
 `x86_64-linux`, `aarch64-linux`, `x86_64-darwin` and `aarch64-darwin`.
-Normal installation includes:
+With a licensed CLI dependency, normal installation includes:
 
 ```text
 bin/rex-whichkey -> ../share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey
@@ -63,10 +63,11 @@ share/doc/rex-whichkey/{mapping-format,runtime-bootstrap}.md
 ```
 
 This is **layout revision 1**, declared by the normal anchor module, not a
-generated runtime configuration. The real executable lives beside the anchor;
-the public `bin` entry links to it, not the reverse. Go's implicit layout uses
-that executable location to reach `deps/rex` when `REX_BIN_DIR` is absent. Lua
-uses its explicit file-loader anchor to reach the same image and dependency.
+generated runtime configuration. In a complete installation the real executable
+lives beside the anchor; the public `bin` entry links to it, not the reverse.
+Go's implicit layout uses that executable location to reach `deps/rex` when
+`REX_BIN_DIR` is absent. Lua uses its explicit file-loader anchor to reach the
+same image and dependency.
 No wrapper, generated runtime path or constructor wiring implements discovery.
 This topology is source evidence, not an installed public/key launch result.
 On the two Linux architectures and Apple-silicon
@@ -81,7 +82,9 @@ in this repository. The pin is an installation source, **not** a minimum tested
 release or a version users must pair with the server.
 
 **Intel macOS:** that pinned upstream source has no artifact, so the default
-package omits `runtime/deps/rex` and has an incomplete layout. Both configured
+package omits `runtime/deps/rex`. It keeps the real executable at
+`bin/rex-whichkey`, outside the incomplete integration layout, and links
+`runtime/rex-whichkey -> ../../../../../bin/rex-whichkey`. Both configured
 public launch and key/palette launch reject that installation before popup,
 even with a valid `REX_BIN_DIR` or PATH CLI: the anchored layout check always
 requires the dependency. PATH repair cannot complete it, and configured failure
@@ -93,12 +96,25 @@ Manager can select that result with `programs.rex-whichkey.package`. This is
 ordinary dependency installation, not runtime selection or a required constructor
 setting; no new artifact, platform or licensing entitlement is asserted.
 
-Standalone native operation on Intel macOS is retained: a direct/local binary
-outside the layout may use an already installed execution-host CLI via terminal
-`REX_BIN_DIR` or valid unambiguous PATH, when the implicit default action is truly
-absent. The default packaged native route can use a valid `REX_BIN_DIR` preference;
-without it, its applicable but incomplete implicit layout fails rather than trying
-PATH. Neither native case enables the incomplete configured integration.
+Default packaged native operation on Intel macOS is retained, as is direct/local
+standalone use. With no `REX_BIN_DIR` preference and no applicable implicit layout,
+Go uses an already installed execution-host CLI from a valid unambiguous absolute
+PATH. No environment repair or dependency override is needed solely for native
+use. Normal origin/endpoint/CLI prerequisites still apply; the implicit default
+must be truly absent and no explicit action required. A valid terminal
+`REX_BIN_DIR` remains an optional preference. This is not fallback from a broken
+applicable layout or a configured failure: both configured routes still reject
+until their licensed dependency is installed.
+
+These are **UNEXECUTED source scenarios**, not installed runtime results:
+
+| Installation / intent | Source outcome |
+| --- | --- |
+| Default Intel package, no environment preference, valid execution-host PATH CLI, absent implicit default/no explicit action | Standalone public image has no implicit layout; normal native route remains available. |
+| Complete dependency installation, no environment preference | Public image's implicit layout selects its normal dependency; key/palette uses the explicit anchor. |
+| Default Intel configured public or key/palette | Explicit anchored dependency validation fails before popup; never native fallback. |
+| Legitimate `rex-cli` package override | Installs the dependency and complete topology; Go still validates assets, compatibility and endpoint intent. |
+| Invalid environment preference or broken applicable layout | Reject without trying a lower-precedence CLI. |
 
 The basic menu needs no Lua configuration. Optional customization needs the
 normal Lua namespace exposed to Rex; merely installing a package does not

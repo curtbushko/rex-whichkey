@@ -16,12 +16,16 @@ in {
       description = ''
         Package providing bin/rex-whichkey and share/rex-whichkey/lua.
         The flake module defaults to this flake's package for the host platform.
-        The public bin entry links to the real executable beside the layout-1
-        anchor. Includes the licensed execution-host Rex CLI dependency where
-        published. The default Intel macOS layout lacks that dependency, so both
-        configured public and key/palette launch are unavailable even with a
-        PATH/environment CLI. A package override supplying a legitimately
-        available licensed rex-cli dependency can complete the layout.
+        Includes the licensed execution-host Rex CLI dependency where published;
+        with that dependency the public bin entry links to the real executable
+        beside the layout-1 anchor. Without it (default Intel macOS), the real
+        executable stays in bin and the anchor's sibling links to it. Native
+        public launch with no implicit default or explicit action can use a
+        valid execution-host PATH CLI without environment repair or a dependency
+        override. Both
+        configured public and key/palette launch still reject the incomplete
+        layout even with a PATH/environment CLI. A package override supplying a
+        legitimately available licensed rex-cli dependency can complete it.
         Installation does not select an endpoint, configure a Rex service or
         reload the server.
       '';
