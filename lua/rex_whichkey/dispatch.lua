@@ -606,7 +606,11 @@ function M.new(template, is_current)
         entries[ticket], count = entry, count + 1
         local ok, records = pcall(function()
             entry.window_id = inspect(ticket, entry, ctx)
-            local data, invocation = evaluate.evaluate(template)
+            local data, invocation = evaluate.evaluate(template, function()
+                -- A prior condition/string may have yielded through revocation.
+                -- inspect rechecks lifetime/current caller after its own yields.
+                inspect(ticket, entry, ctx)
+            end)
             -- Invalidation may have released the reservation while user code
             -- yielded. Attach its new handle before checking, then release below.
             entry.invocation = invocation
@@ -709,7 +713,11 @@ function M.new(template, is_current)
             -- The evaluator owns original closures/args/guards. Its resolver is
             -- also single-use; bridge checks above strengthen its older internal
             -- acceptance of key aliases, absent flags and empty callback refs.
-            local retained = entry.invocation.resolve(selected.keys, selected.callback_ref, selected.confirmed)
+            local retained = entry.invocation.resolve(selected.keys, selected.callback_ref, selected.confirmed, function()
+                -- Use THIS completion's caller, not the original activation's.
+                -- No later retained guard may run after a stale user-code return.
+                inspect(ticket, entry, ctx)
+            end)
             live(ticket, entry, ctx)
             stage = "origin validation failed"
             local before_focus = inspect(ticket, entry, ctx)

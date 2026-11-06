@@ -21,8 +21,13 @@ local function copy(value)
     return result
 end
 
-local function call(fn, path)
+local function call(fn, path, after_user)
     local ok, value = pcall(fn)
+    -- User code can yield even when it eventually errors. Validate before any
+    -- later condition/dynamic value, without exposing its result or exception.
+    if after_user then
+        after_user()
+    end
     if not ok then
         -- An arbitrary thrown Lua value is not safe terminal-facing error text.
         fail(path, "evaluation failed")
@@ -30,9 +35,9 @@ local function call(fn, path)
     return value
 end
 
-local function condition(value, path)
+local function condition(value, path, after_user)
     if type(value) == "function" then
-        value = call(value, path)
+        value = call(value, path, after_user)
         if value == nil then
             return false
         end
@@ -47,7 +52,9 @@ end
 -- handle. The dispatch owner must retain that handle with the origin/runtime and
 -- installed configuration identity, and release it on replacement, dismissal or
 -- errors. This is not a wire envelope, registry or user-facing setup API.
-function M.evaluate(template)
+-- Optional after_user must return only while this evaluation is still valid;
+-- throwing aborts before another user function. Resolve takes a separate hook.
+function M.evaluate(template, after_user)
     if next_invocation >= 9007199254740991 then
         fail("invocation", "callback identity space exhausted")
     end
@@ -65,7 +72,7 @@ function M.evaluate(template)
         -- and strings are already resolved, so redraws/children never call them.
         if own.cond ~= nil then
             local guard = { value = own.cond, path = node.path .. ".cond" }
-            if not condition(guard.value, guard.path) then
+            if not condition(guard.value, guard.path, after_user) then
                 return
             end
             effective.cond = true
@@ -75,7 +82,7 @@ function M.evaluate(template)
             local value = own[key]
             if value ~= nil then
                 if type(value) == "function" then
-                    value = call(value, node.path .. "." .. key)
+                    value = call(value, node.path .. "." .. key, after_user)
                 end
                 if value ~= nil and type(value) ~= "string" then
                     fail(node.path .. "." .. key, "must resolve to a string or nil")
@@ -143,11 +150,22 @@ function M.evaluate(template)
     -- origin/config lifetime and restores focus before using the retained target.
     -- Only keys, the opaque callback reference (if any), and a boolean y-confirmed
     -- flag are accepted; replacement action names, code and args are never input.
-    function invocation.resolve(keys, callback_ref, confirmed)
+    function invocation.resolve(keys, callback_ref, confirmed, after_user)
         if state ~= "open" then
             fail("selection", "invocation is closed or already resolving")
         end
         state = "resolving"
+        -- Completion supplies its own fresh-context validator; never retain the
+        -- initial evaluation's caller. The validator can itself yield/release.
+        local function validate_return()
+            if state ~= "resolving" then
+                fail("selection", "invocation was released during condition evaluation")
+            end
+            after_user()
+            if state ~= "resolving" then
+                fail("selection", "invocation was released during condition evaluation")
+            end
+        end
         local ok, result = pcall(function()
             local _, canonical = mapping.parse_keys(keys, "selection.keys")
             local selection = selections[canonical]
@@ -173,7 +191,7 @@ function M.evaluate(template)
             for _, guard in ipairs(selection.guards) do
                 if not checked[guard.path] then
                     checked[guard.path] = true
-                    if not condition(guard.value, guard.path) then
+                    if not condition(guard.value, guard.path, after_user and validate_return) then
                         fail(guard.path, "selection is no longer enabled")
                     end
                 end
