@@ -50,7 +50,7 @@ const (
 
 var (
 	errRuntimeLayout        = errors.New("whichkey: helper/layout discovery failed; install the normal execution-host integration assets through the installer; not retried")
-	errRuntimeCompatibility = errors.New("whichkey: runtime compatibility failed; update and load the integration through the normal configuration lifecycle; no activation, retry or native fallback")
+	errRuntimeCompatibility = errors.New("whichkey: runtime contract not established; inspect the named contract before a new invocation; no activation, retry or native fallback")
 	errRuntimeOrigin        = errors.New("whichkey: runtime origin or generation changed; relaunch from the original Rex terminal; not retried")
 	errRuntimeEndpoint      = errors.New("whichkey: constructor endpoint intent is invalid or conflicts with the retained public endpoint; use matching constructor and public launch endpoints; not retried")
 	errRuntimeRelay         = errors.New("whichkey: private rendezvous failed; run on the server execution host with shared private files and current integration software; no retry or native fallback")
@@ -694,7 +694,7 @@ func runtimeClient(ctx context.Context, receipt runtimeReceipt) (*rex.Client, er
 func (receipt runtimeReceipt) checkOrigin(ctx context.Context) error {
 	client, err := runtimeClient(ctx, receipt)
 	if err != nil {
-		return errRuntimeOrigin
+		return errors.Join(errRuntimeCompatibility, err)
 	}
 	request := popupRequest{Server: receipt.Endpoint, SessionID: receipt.Origin.Session, BlockID: receipt.Origin.Block, ClientID: receipt.Origin.Client, ConnectedAt: receipt.Origin.ConnectedAt}
 	block, err := request.originBlock(ctx, client)

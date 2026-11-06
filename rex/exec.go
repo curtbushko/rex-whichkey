@@ -9,7 +9,6 @@ import (
 	"io"
 	"os/exec"
 	"time"
-	"unicode"
 	"unicode/utf8"
 )
 
@@ -131,21 +130,21 @@ func (output *boundedOutput) Write(data []byte) (int, error) {
 func decodeVersion(data []byte) (CLIVersion, error) {
 	object, err := metadataObject(data)
 	if err != nil {
-		return CLIVersion{}, errCLICompatibility
+		return CLIVersion{}, compatibilityFailure("server.version", "object")
 	}
 	var version CLIVersion
-	if err := json.Unmarshal(data, &version); err != nil || version.Version == "" || len(version.Version) > 256 ||
-		!utf8.ValidString(version.Version) || version.APIMinRevision > version.APIRevision {
-		return CLIVersion{}, errCLICompatibility
+	if json.Unmarshal(data, &version) != nil {
+		return CLIVersion{}, compatibilityFailure("server.version", "known field types")
 	}
-	for _, r := range version.Version {
-		if unicode.IsControl(r) {
-			return CLIVersion{}, errCLICompatibility
-		}
+	if !metadataText(version.Version) {
+		return CLIVersion{}, compatibilityFailure("server.version", "rex_version text")
+	}
+	if version.APIMinRevision > version.APIRevision {
+		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision exceeds api_revision")
 	}
 	for _, field := range []string{"rex_version", "api_revision", "api_min_revision"} {
 		if value, present := object[field]; present && bytes.Equal(bytes.TrimSpace(value), []byte(schemaNull)) {
-			return CLIVersion{}, errCLICompatibility
+			return CLIVersion{}, compatibilityFailure("server.version", field+" null")
 		}
 	}
 	return version, nil

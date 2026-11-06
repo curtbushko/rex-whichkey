@@ -97,13 +97,13 @@ func (b Block) newLayer(ctx context.Context, bounds Bounds, command []string, si
 	if size != nil {
 		options["size"] = *size
 	}
-	// The captured session.new_layer schema explicitly defines layout.block
-	// and the shell creator's command/shell/exit/size options. Call that API directly;
-	// popup creation needs no script VM or configuration action registration.
+	// The API documents a generic block/options layout, not an enumerated
+	// creator schema. Bounds are [x,y,w,h] on the wire; keep the Go rectangle
+	// internal. Direct creation needs no script VM or action registration.
 	arguments := map[string]any{
 		"session_id": b.client.session,
 		"window_id":  current.WindowID,
-		"bounds":     bounds,
+		"bounds":     [4]float64{bounds.X, bounds.Y, bounds.W, bounds.H},
 		"focus":      true,
 		"layout": map[string]any{"block": map[string]any{
 			"flavor":  "com.superlogical.terminal.shell",
@@ -146,10 +146,10 @@ func (l Layer) Resize(ctx context.Context, bounds Bounds) error {
 		return err
 	}
 	return l.client.Call(ctx, "session.resize_layer", struct {
-		SessionID string `json:"session_id"`
-		LayerID   string `json:"layer_id"`
-		Bounds    Bounds `json:"bounds"`
-	}{l.client.session, l.layerID, bounds}, nil)
+		SessionID string     `json:"session_id"`
+		LayerID   string     `json:"layer_id"`
+		Bounds    [4]float64 `json:"bounds"`
+	}{l.client.session, l.layerID, [4]float64{bounds.X, bounds.Y, bounds.W, bounds.H}}, nil)
 }
 
 // Close closes only the captured terminal, even if it has moved. Rex's

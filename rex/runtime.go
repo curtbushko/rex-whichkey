@@ -8,10 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
@@ -23,6 +26,12 @@ const (
 	fieldLayout        = "layout"
 	fieldWindow        = "window_id"
 	schemaInteger      = "integer"
+	schemaMinItems     = "minItems"
+	schemaMaxItems     = "maxItems"
+	schemaMinimum      = "minimum"
+	schemaMaximum      = "maximum"
+	schemaConst        = "const"
+	schemaEnum         = "enum"
 )
 
 // CLIOptions are execution-host inputs, never paths supplied by menu text or a
@@ -75,12 +84,12 @@ type CLIVersion struct {
 }
 
 var (
-	errCLIInput         = errors.New("rex: invalid explicit CLI source; supply an absolute execution-host executable or reinstall the integration; not retried")
+	errCLIInput         = errors.New("rex: invalid explicit CLI source; inspect the execution-host executable source before a new invocation; not retried")
 	errCLIAbsent        = errors.New("rex: no execution-host Rex CLI source; install the integration with its licensed dependency or use a Rex terminal; not retried")
 	errCLIPath          = errors.New("rex: PATH must contain only nonempty absolute execution-host directories and one unambiguous Rex executable; not retried")
-	errCLILayout        = errors.New("rex: invalid application runtime dependency layout; reinstall the integration for this execution host; not retried")
+	errCLILayout        = errors.New("rex: invalid application runtime dependency layout; inspect the execution-host dependency assets before a new invocation; not retried")
 	errCLIChanged       = errors.New("rex: frozen CLI, runtime asset or server/config identity is invalid or changed; inspect any possibly completed operation before a new invocation; not retried")
-	errCLICompatibility = errors.New("rex: unsupported CLI/API metadata; update the execution-host integration and Rex software through normal installation; not retried")
+	errCLICompatibility = errors.New("rex: CLI/API contract not established; activation refused, not retried; inspect the named metadata contract and any possibly completed operation before a new invocation")
 )
 
 // ResolveCLI selects once in precedence order: trusted frozen input, internal
@@ -112,14 +121,14 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 	}
 	output, err := runSelected(ctx, selection, []string{flagNoAutostart, "version", flagJSON}, nil, 64<<10)
 	if err != nil {
-		return nil, errors.Join(errCLICompatibility, ctx.Err())
+		return nil, errors.Join(compatibilityFailure("CLI version", "command failed"), err, ctx.Err())
 	}
 	// The version command's JSON fields are not specified by the CLI docs.
 	// Retain its bounded nonempty object verbatim, not an invented CLI revision
 	// range. Successful server metadata calls establish transport compatibility.
 	version, err := metadataObject(output)
 	if err != nil || len(version) == 0 {
-		return nil, errCLICompatibility
+		return nil, compatibilityFailure("CLI version", "nonempty object")
 	}
 	selection.VersionJSON = string(output)
 	return selection, nil
@@ -188,76 +197,177 @@ func (c *Client) checkMethod(method string) error {
 	return errCLICompatibility
 }
 
-func compatibleSchema(data json.RawMessage, fields map[string]string) bool {
-	// Deliberately discarded outputs need no shape. Every consumed output
-	// below still requires its documented schema.
-	if len(fields) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
-		return true
+func outputFailure(data json.RawMessage, required methodContract) string {
+	// Deliberately discarded outputs need no shape.
+	if len(required.output) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
+		return ""
 	}
 	schema, err := metadataObject(data)
 	if err != nil || !schemaType(schema, schemaObject) {
-		return false
+		return required.name + ": object schema/type"
 	}
-	for path, kind := range fields {
-		if !schemaHasField(schema, strings.Split(path, "."), kind) {
-			return false
+	for _, path := range sortedKeys(required.output) {
+		if !schemaHasField(schema, strings.Split(path, "."), required.output[path]) {
+			return required.name + "." + path + ": consumed field schema/type"
 		}
 	}
-	return true
+	return ""
 }
 
-// Request paths below describe only the application's fixed producers. Dots
-// separate child lookups; they never count as literal properties in required.
-// At each object, only fields guaranteed by that producer may be mandatory.
-func compatibleRequest(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) bool {
-	// An absent type imposes no restriction (notably client.perform.args).
-	// Explicit types still have to admit the producer's concrete kind.
-	if !supportedRequest(schema, kind) || (len(schema["type"]) != 0 && !schemaType(schema, kind)) ||
-		!compatibleValues(schema, requestValues(path, kind)) {
-		return false
+// Request paths describe fixed producers, not invented server properties.
+// Diagnostics use only these app-owned paths and fixed constraint names.
+func requestFailure(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	if constraint := unsupportedRequest(schema, kind, path); constraint != "" {
+		return path + ": " + constraint
+	}
+	if len(schema["type"]) != 0 && !schemaType(schema, kind) {
+		return path + ": type"
+	}
+	if constraint := valuesFailure(schema, requestValues(path, kind)); constraint != "" {
+		return path + ": " + constraint
 	}
 	switch kind {
 	case schemaObject:
-		return compatibleRequestObject(schema, fields, supplied, path)
+		return requestObjectFailure(schema, fields, supplied, path)
 	case schemaArray:
-		itemKind, known := fields["[]"]
-		if !known {
-			return false
-		}
-		item, err := metadataObject(schema["items"])
-		return err == nil && compatibleRequest(item, itemKind, childFields(fields, "[]"), childFields(supplied, "[]"), path+".[]")
+		return requestArrayFailure(schema, fields, supplied, path)
 	default:
-		return true
+		if boundsItems(path) {
+			if constraint := boundsRangeFailure(schema); constraint != "" {
+				return path + ": " + constraint
+			}
+		}
+		return ""
 	}
 }
 
-// supportedRequest is an allowlist, not a claim of general JSON Schema support.
-// Only these structural keywords and finite scalar values are proved below.
-// Ranges, patterns, formats, compositions, dependencies, conditionals and unknown
-// keywords fail closed, even when a particular request might satisfy them.
-func supportedRequest(schema map[string]json.RawMessage, kind string) bool {
-	for keyword := range schema {
+// This is intentionally not a general JSON Schema evaluator. Only bounds have
+// a proved fixed length and numeric range; other ranges/unknown constraints
+// still fail closed. Never include an unknown server keyword in a diagnostic.
+func unsupportedRequest(schema map[string]json.RawMessage, kind, path string) string {
+	for _, keyword := range sortedKeys(schema) {
 		if requestAnnotation(keyword) || keyword == "type" {
 			continue
 		}
 		switch keyword {
 		case "properties", "required", "additionalProperties":
-			if kind != schemaObject {
-				return false
+			if kind == schemaObject {
+				continue
 			}
 		case "items":
-			if kind != schemaArray {
-				return false
+			if kind == schemaArray {
+				continue
 			}
-		case "enum", "const":
-			if kind == schemaObject || kind == schemaArray {
-				return false
+		case schemaMinItems, schemaMaxItems:
+			if boundsRequest(path) {
+				continue
 			}
-		default:
-			return false
+		case schemaMinimum, schemaMaximum:
+			if boundsItems(path) {
+				continue
+			}
+		case schemaEnum, schemaConst:
+			if kind != schemaObject && kind != schemaArray {
+				continue
+			}
+		}
+		return constraintName(keyword)
+	}
+	return ""
+}
+
+func constraintName(keyword string) string {
+	switch keyword {
+	case "type", "properties", "required", "additionalProperties", "items",
+		schemaMinItems, schemaMaxItems, schemaMinimum, schemaMaximum, "exclusiveMinimum",
+		"exclusiveMaximum", schemaEnum, schemaConst, "pattern", "format", "minLength",
+		"maxLength", "allOf", "anyOf", "oneOf", "not", "$ref", "prefixItems",
+		"additionalItems", "uniqueItems", "contains", "multipleOf", "minProperties",
+		"maxProperties", "patternProperties", "propertyNames", "dependencies",
+		"dependentRequired", "dependentSchemas", "if", "then", "else":
+		return keyword
+	default:
+		return "unsupported constraint"
+	}
+}
+
+func sortedKeys[T any](values map[string]T) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func boundsRequest(path string) bool {
+	return path == "session.new_layer.bounds" || path == "session.resize_layer.bounds"
+}
+
+func boundsItems(path string) bool {
+	return path == "session.new_layer.bounds.[]" || path == "session.resize_layer.bounds.[]"
+}
+
+// Bounds.valid proves every emitted coordinate lies in [0,1]. These closed
+// endpoints are conservative for all four positions; tighter item constraints
+// are not silently waived, even if some individual positions might satisfy them.
+func boundsRangeFailure(schema map[string]json.RawMessage) string {
+	for _, keyword := range []string{schemaMinimum, schemaMaximum} {
+		if data, present := schema[keyword]; present {
+			limit, ok := boundedSchemaNumber(data)
+			if !ok || (keyword == schemaMinimum && limit.Sign() > 0) ||
+				(keyword == schemaMaximum && limit.Cmp(big.NewRat(1, 1)) < 0) {
+				return keyword
+			}
 		}
 	}
-	return true
+	return ""
+}
+
+// Compare schema limits exactly: float rounding near 0 or 1 could admit a
+// constraint that excludes a valid coordinate. Bound decimal/exponent work
+// independently of the descriptor's byte cap; unsupported numbers fail closed.
+func boundedSchemaNumber(data json.RawMessage) (*big.Rat, bool) {
+	number := strings.TrimSpace(string(data))
+	if len(number) == 0 || len(number) > 128 {
+		return nil, false
+	}
+	if index := strings.IndexAny(number, "eE"); index >= 0 {
+		exponent, err := strconv.Atoi(number[index+1:])
+		if err != nil || exponent < -1024 || exponent > 1024 {
+			return nil, false
+		}
+	}
+	return new(big.Rat).SetString(number)
+}
+
+func requestArrayFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
+	for _, keyword := range []string{schemaMinItems, schemaMaxItems} {
+		if data, present := schema[keyword]; present {
+			var limit uint64
+			if strings.TrimSpace(string(data)) == schemaNull || json.Unmarshal(data, &limit) != nil ||
+				(keyword == schemaMinItems && limit > 4) || (keyword == schemaMaxItems && limit < 4) {
+				return path + ": " + keyword
+			}
+		}
+	}
+	itemKind, known := fields["[]"]
+	if !known {
+		return path + ": items"
+	}
+	itemPath := path + ".[]"
+	return requestPropertyFailure(schema["items"], itemKind, childFields(fields, "[]"), childFields(supplied, "[]"), itemPath)
+}
+
+func requestPropertyFailure(data json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	if len(data) == 0 || strings.TrimSpace(string(data)) == "true" {
+		return ""
+	}
+	schema, err := metadataObject(data)
+	if err != nil {
+		return path + ": schema"
+	}
+	return requestFailure(schema, kind, fields, supplied, path)
 }
 
 func requestAnnotation(keyword string) bool {
@@ -270,8 +380,9 @@ func requestAnnotation(keyword string) bool {
 }
 
 // Only string/boolean values fixed by non-test producers are enumerated.
-// Numeric restrictions and finite restrictions on invocation-dependent strings
-// are unsupported. Variable booleans use both values, not a guessed default.
+// Finite numeric sets and restrictions on invocation-dependent strings are
+// unsupported; the separately proved bounds ranges are not finite sets.
+// Variable booleans use both values, not a guessed default.
 func requestValues(path, kind string) []any {
 	switch path {
 	case "session.new_layer.layout.block.flavor":
@@ -294,30 +405,30 @@ func requestValues(path, kind string) []any {
 	}
 }
 
-func compatibleValues(schema map[string]json.RawMessage, values []any) bool {
-	if data, present := schema["const"]; present {
+func valuesFailure(schema map[string]json.RawMessage, values []any) string {
+	if data, present := schema[schemaConst]; present {
 		var constant any
 		if len(values) == 0 || json.Unmarshal(data, &constant) != nil {
-			return false
+			return schemaConst
 		}
 		for _, value := range values {
 			if !reflect.DeepEqual(value, constant) {
-				return false
+				return schemaConst
 			}
 		}
 	}
-	if data, present := schema["enum"]; present {
+	if data, present := schema[schemaEnum]; present {
 		var allowed []any
 		if len(values) == 0 || json.Unmarshal(data, &allowed) != nil || len(allowed) == 0 {
-			return false
+			return schemaEnum
 		}
 		for _, value := range values {
 			if !containsValue(allowed, value) {
-				return false
+				return schemaEnum
 			}
 		}
 	}
-	return true
+	return ""
 }
 
 func containsValue(allowed []any, value any) bool {
@@ -329,49 +440,55 @@ func containsValue(allowed []any, value any) bool {
 	return false
 }
 
-func compatibleRequestObject(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) bool {
-	if !knownRequired(schema["required"], supplied) {
-		return false
-	}
-	if !compatibleAdditional(schema["additionalProperties"], !opaqueRequest(path)) {
-		return false
+func requestObjectFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
+	if reason := requiredFailure(schema["required"], fields, supplied, path); reason != "" {
+		return reason
 	}
 	properties := make(map[string]json.RawMessage)
 	if data, present := schema["properties"]; present {
 		var err error
 		properties, err = metadataObject(data)
 		if err != nil {
-			return false
+			return path + ": properties"
 		}
 	}
+	additional := schema["additionalProperties"]
 	if opaqueRequest(path) {
-		// These children are user/CLI-owned, not absent. Even an optional
-		// property constraint could reject a supplied child we cannot prove.
+		// CLI/user-owned children are not absent. Require all possible names
+		// and values to remain unconstrained, not merely optional.
+		if !unconstrainedAdditional(additional) {
+			return path + ": additionalProperties"
+		}
 		for _, property := range properties {
 			if !unconstrainedRequest(property) {
-				return false
+				return path + ": properties"
 			}
 		}
-		return true
+		return ""
 	}
-	for name, kind := range fields {
+	for _, name := range sortedKeys(fields) {
 		if strings.Contains(name, ".") {
 			continue
 		}
-		field, fieldErr := metadataObject(properties[name])
-		if fieldErr != nil || !compatibleRequest(field, kind, childFields(fields, name), childFields(supplied, name), path+"."+name) {
-			return false
+		property, declared := properties[name]
+		if !declared {
+			// JSON Schema defaults to allowing absent property declarations.
+			// Schema-valued additionalProperties constrains those values;
+			// false closes the object even for optional producer fields.
+			property = additional
+			if strings.TrimSpace(string(property)) == "false" {
+				return path + "." + name + ": additionalProperties"
+			}
+		}
+		if reason := requestPropertyFailure(property, fields[name], childFields(fields, name), childFields(supplied, name), path+"."+name); reason != "" {
+			return reason
 		}
 	}
-	return true
+	return ""
 }
 
-func compatibleAdditional(data json.RawMessage, closed bool) bool {
-	if len(data) == 0 {
-		return true
-	}
-	var allowed bool
-	return strings.TrimSpace(string(data)) != schemaNull && json.Unmarshal(data, &allowed) == nil && (allowed || closed)
+func unconstrainedAdditional(data json.RawMessage) bool {
+	return len(data) == 0 || unconstrainedRequest(data)
 }
 
 func opaqueRequest(path string) bool {
@@ -409,22 +526,29 @@ func childFields(fields map[string]string, name string) map[string]string {
 	return children
 }
 
-func knownRequired(data json.RawMessage, fields map[string]string) bool {
+func requiredFailure(data json.RawMessage, fields, supplied map[string]string, path string) string {
 	if len(data) == 0 {
-		return true
+		return ""
 	}
 	var required []string
 	if err := json.Unmarshal(data, &required); err != nil || required == nil {
-		return false
+		return path + ": required array"
 	}
 	seen := make(map[string]bool, len(required))
 	for _, field := range required {
-		if _, known := fields[field]; !known || strings.Contains(field, ".") || seen[field] {
-			return false
+		if _, known := fields[field]; !known || strings.Contains(field, ".") {
+			return path + ": required unproved field"
+		}
+		if seen[field] {
+			return path + ": required uniqueness"
+		}
+		if _, guaranteed := supplied[field]; !guaranteed {
+			// The name is safe only after membership in the app-owned map.
+			return path + "." + field + ": required"
 		}
 		seen[field] = true
 	}
-	return true
+	return ""
 }
 
 func schemaHasField(schema map[string]json.RawMessage, path []string, kind string) bool {
@@ -525,8 +649,8 @@ func requiredMethods() []methodContract {
 		{"session.list_clients", map[string]string{fieldSession: schemaString}, map[string]string{"clients": schemaArray, "clients.[].client_id": schemaString, "clients.[].connected_at": schemaString, "clients.[].connection_state": schemaString, "clients.[].info.kind": schemaString}},
 		{"session.describe_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, map[string]string{"block.block_id": schemaString, "block.window_id": schemaString, "block.placement": schemaString, "block.owner": schemaString}},
 		{"session.focus_block", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
-		{"session.resize_layer", map[string]string{fieldSession: schemaString, "layer_id": schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber}, nil},
-		{"session.new_layer", map[string]string{fieldSession: schemaString, fieldWindow: schemaString, fieldBounds: schemaObject, "bounds.x": schemaNumber, "bounds.y": schemaNumber, "bounds.w": schemaNumber, "bounds.h": schemaNumber, fieldFocus: schemaBoolean,
+		{"session.resize_layer", map[string]string{fieldSession: schemaString, "layer_id": schemaString, fieldBounds: schemaArray, "bounds.[]": schemaNumber}, nil},
+		{"session.new_layer", map[string]string{fieldSession: schemaString, fieldWindow: schemaString, fieldBounds: schemaArray, "bounds.[]": schemaNumber, fieldFocus: schemaBoolean,
 			fieldLayout: schemaObject, "layout.block": schemaObject, "layout.block.flavor": schemaString,
 			"layout.block.options": schemaObject, "layout.block.options.command": schemaArray, "layout.block.options.command.[]": schemaString,
 			"layout.block.options.shell": schemaString, "layout.block.options.exit": schemaObject, "layout.block.options.exit.on_completion": schemaBoolean,
@@ -586,7 +710,7 @@ func (c *Client) captureCapabilities(ctx context.Context) error {
 	}
 	versionJSON, err := runSelected(ctx, c.selection, c.metadataArgs("api", "call", "--", "server.version"), nil, 64<<10)
 	if err != nil {
-		return err
+		return errors.Join(compatibilityFailure("server.version", "command failed"), err)
 	}
 	version, err := decodeVersion(versionJSON)
 	if err != nil {
@@ -596,7 +720,7 @@ func (c *Client) captureCapabilities(ctx context.Context) error {
 	// generations. The CLI docs specify api list --json as help.all's document.
 	data, err := runSelected(ctx, c.selection, c.metadataArgs("api", "list", flagJSON), nil, 8<<20)
 	if err != nil {
-		return err
+		return errors.Join(compatibilityFailure("api list", "command failed"), err)
 	}
 	methods, err := captureMethods(data)
 	if err != nil {
@@ -620,52 +744,68 @@ func (c *Client) captureCapabilities(ctx context.Context) error {
 func captureMethods(data []byte) ([]MethodEvidence, error) {
 	help, err := metadataObject(data)
 	if err != nil {
-		return nil, errCLICompatibility
+		return nil, compatibilityFailure("api list", "object")
 	}
 	var entries []json.RawMessage
 	if decodeErr := json.Unmarshal(help["methods"], &entries); decodeErr != nil || len(entries) == 0 || len(entries) > 4096 {
-		return nil, errCLICompatibility
+		return nil, compatibilityFailure("api list", "methods array/limit")
 	}
 	byName := make(map[string]string, len(entries))
 	for _, raw := range entries {
 		entry, entryErr := metadataObject(raw)
 		var name string
 		if entryErr != nil || json.Unmarshal(entry["name"], &name) != nil || !metadataText(name) || byName[name] != "" {
-			return nil, errCLICompatibility
+			return nil, compatibilityFailure("api list", "method entry/name uniqueness")
 		}
 		byName[name] = string(raw)
 	}
 	var methods []MethodEvidence
 	for _, required := range requiredMethods() {
 		raw := byName[required.name]
-		if !compatibleMethod(raw, required) {
-			return nil, errCLICompatibility
+		if reason := methodFailure(raw, required); reason != "" {
+			return nil, compatibilityFailure("api list", reason)
 		}
 		methods = append(methods, MethodEvidence{Name: required.name, JSON: raw})
 	}
 	return methods, nil
 }
 
-func compatibleMethod(raw string, required methodContract) bool {
-	if len(raw) == 0 || len(raw) > 64<<10 {
-		return false
+// A failure contains only fixed stage/constraint names and app-owned contracts.
+// Never format raw descriptors, unknown keys, child output or invocation data.
+func compatibilityFailure(stage, reason string) error {
+	return fmt.Errorf("%w (%s: %s)", errCLICompatibility, stage, reason)
+}
+
+func methodFailure(raw string, required methodContract) string {
+	if len(raw) == 0 {
+		return required.name + ": missing method"
+	}
+	if len(raw) > 64<<10 {
+		return required.name + ": descriptor limit"
 	}
 	entry, err := metadataObject([]byte(raw))
 	var name string
-	if err != nil || json.Unmarshal(entry["name"], &name) != nil || name != required.name ||
-		!compatibleInput(entry["input_schema"], required) ||
-		!compatibleSchema(entry["output_schema"], required.output) {
-		return false
+	if err != nil || json.Unmarshal(entry["name"], &name) != nil || name != required.name {
+		return required.name + ": descriptor"
 	}
-	return true
+	if reason := inputFailure(entry["input_schema"], required); reason != "" {
+		return "input " + reason
+	}
+	if reason := outputFailure(entry["output_schema"], required); reason != "" {
+		return "output " + reason
+	}
+	return ""
 }
 
-func compatibleInput(data json.RawMessage, method methodContract) bool {
+func inputFailure(data json.RawMessage, method methodContract) string {
 	if len(method.input) == 0 && (len(data) == 0 || strings.TrimSpace(string(data)) == schemaNull) {
-		return true
+		return ""
 	}
 	schema, err := metadataObject(data)
-	return err == nil && compatibleRequest(schema, schemaObject, method.input, suppliedFields(method), method.name)
+	if err != nil {
+		return method.name + ": schema"
+	}
+	return requestFailure(schema, schemaObject, method.input, suppliedFields(method), method.name)
 }
 
 func suppliedFields(method methodContract) map[string]string {
@@ -711,8 +851,11 @@ func (selection *CLISelection) validateCapabilities() error {
 	}
 	for index, method := range required {
 		entry := receipt.Methods[index]
-		if entry.Name != method.name || !compatibleMethod(entry.JSON, method) {
-			return errCLICompatibility
+		if entry.Name != method.name {
+			return compatibilityFailure("frozen receipt", method.name+": method order")
+		}
+		if reason := methodFailure(entry.JSON, method); reason != "" {
+			return compatibilityFailure("frozen receipt", reason)
 		}
 	}
 	return nil
@@ -727,18 +870,25 @@ func (selection *CLISelection) serverIdentity(ctx context.Context, endpoint stri
 	defer cancel()
 	data, err := runSelected(ctx, selection, []string{flagServer, endpoint, flagNoAutostart, flagTimeout, "2s", "api", "call", "--", "server.status"}, nil, 64<<10)
 	if err != nil {
-		return ServerIdentity{}, err
+		return ServerIdentity{}, errors.Join(compatibilityFailure("server.status", "command failed"), err)
 	}
 	object, err := metadataObject(data)
 	if err != nil {
-		return ServerIdentity{}, errCLICompatibility
+		return ServerIdentity{}, compatibilityFailure("server.status", "object")
 	}
 	config, err := metadataObject(object["config"])
+	if err != nil {
+		return ServerIdentity{}, compatibilityFailure("server.status", "config object")
+	}
 	var identity ServerIdentity
-	if err != nil || json.Unmarshal(object["instance_id"], &identity.InstanceID) != nil ||
-		json.Unmarshal(config["hash"], &identity.ConfigHash) != nil || json.Unmarshal(config["generation"], &identity.Generation) != nil ||
-		strings.TrimSpace(string(config["generation"])) == schemaNull || !metadataText(identity.InstanceID) || !metadataText(identity.ConfigHash) {
-		return ServerIdentity{}, errCLICompatibility
+	if json.Unmarshal(object["instance_id"], &identity.InstanceID) != nil || !metadataText(identity.InstanceID) {
+		return ServerIdentity{}, compatibilityFailure("server.status", "instance_id text")
+	}
+	if json.Unmarshal(config["hash"], &identity.ConfigHash) != nil || !metadataText(identity.ConfigHash) {
+		return ServerIdentity{}, compatibilityFailure("server.status", "config.hash text")
+	}
+	if json.Unmarshal(config["generation"], &identity.Generation) != nil || strings.TrimSpace(string(config["generation"])) == schemaNull {
+		return ServerIdentity{}, compatibilityFailure("server.status", "config.generation unsigned integer")
 	}
 	return identity, nil
 }
