@@ -313,12 +313,6 @@ function M.new(defaults, server_endpoint, execution)
                     or not unchanged(ctx, actual) or not integer(now) or now < started or now >= deadline then fail(origin_failure) end
             end
             local public = args ~= nil
-            -- The integrated public relay cannot carry constructor endpoint
-            -- intent yet. Do not silently discard it or canonicalize it in Lua.
-            if public and server_endpoint ~= nil then
-                stage = "public runtime endpoint intent cannot be validated by this producer; update the integration; no reservation or popup, not retried"
-                fail(stage)
-            end
             local target, connected_at, expected_hash = actual.client_id, nil, nil
             if public then
                 if not plain(args) then fail(compatibility) end
@@ -345,8 +339,11 @@ function M.new(defaults, server_endpoint, execution)
                 local current_origin, current_status = inspect(ctx, actual, target, origin.connected_at, check)
                 if not same_origin(origin, current_origin) or not same_metadata(status, current_status) then fail(origin_failure) end
             end
-            local input = { anchor = anchor_path, layout_revision = 1, consumer = advertisement, origin = origin }
-            if public then input.descriptor = args.runtime else input.server = server_endpoint end
+            -- Preserve constructor intent byte-for-byte through describe/menu/
+            -- bound. Only Go canonicalizes it against the retained endpoint.
+            local input = { anchor = anchor_path, layout_revision = 1, consumer = advertisement, origin = origin,
+                server = server_endpoint }
+            if public then input.descriptor = args.runtime end
             local schema = { protocol_min = "integer", protocol_max = "integer", producer_build = "string",
                 features = { array = "string" }, layout_revision = "integer", receipt_hash = "string" }
             if public then schema.version, schema.relay = "integer", "string" else schema.receipt = "string" end
