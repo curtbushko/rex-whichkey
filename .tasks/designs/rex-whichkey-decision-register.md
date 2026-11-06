@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-06T15:12:48.902Z'
+dateModified: '2026-11-06T17:02:09.209Z'
 tags:
   - task
 type: task
@@ -117,13 +117,23 @@ ID assigned while processing the explicit user directive, not a claimed exact hi
 - **Relationship:** Operational prerequisite to Phase 15 execution; does not replace or broaden accepted responsibility correction `REXWHICHKEY-20261104-193124`. Current source delivery remains recorded on the phase/tasks through native mtn evidence.
 
 
-## REXWHICHKEY-20261106-101053 — Open integration lifecycle authorization
+## REXWHICHKEY-20261106-101053 — Superseded integration lifecycle request
 
-- **State:** Open; coordinator request, not user approval.
+- **State:** Superseded by REXWHICHKEY-20261106-114935. This request was Open and was never approved; no configuration/deployment/reload permission was granted.
 - **Requested action:** Deploy current normal integration assets, remove obsolete constructor runtime wiring, and reload Rex configuration without a Rex restart. Restrictions remain until explicit approval.
 - **Evidence:** Actual user-authorized builds/runs pass API admission but candidate10 exits1 at required whichkey_runtime registry check. Read-only installed module lacks advertisement/anchor; init.lua still passes retired helper. No Rex software reinstall/update evidence.
 - **Boundary:** Original VM callbacks/no native or second-VM bypass preserved. Source review may continue; runtime closure is blocked.
 - **Tracking:** Phase15 current-integration-lifecycle-blocker/1; private current-integration-source-diagnosis.json/candidate10 actual-run log.
+
+
+## REXWHICHKEY-20261106-114935 — Accepted CLI-only phase direction
+
+- **State:** Accepted for the CLI-only architecture and creation/planning of Phase 16 by the explicit user reply: yes, plan out a new phase for this proposal. Use CLI only. hooks are for the future. No implementation dispatch or deployment permission is inferred.
+- **Decision:** Go owns data configuration, dynamic menus, rendering/input and all application Rex interaction through built-in Rex CLI/API commands. Lua is a minimal keybinding starting the binary; no mandatory custom runtime/completion registrations or CLI-to-custom-Lua control plane. Hooks/callbacks and executable Lua configuration are deferred to the future, not implemented as placeholders.
+- **Rationale:** Keep the direct, registration-free CLI interface and remove the bidirectional bridge which blocked ordinary startup. Preserve the useful typed CLI client, current Go menu/defaults, resource targeting, confirmation, text rename and bounded owned cleanup.
+- **Relationships:** Supersedes unapproved deployment request REXWHICHKEY-20261106-101053 and the old Lua-callback/loader mechanism for the new phase. Earlier PRD Agreed labels are not treated as independent proof of user approval. REQ IDs remain unchanged: REQ005 is deferred; REQ003/004 and callback-specific usability clauses have explicit CLI-only interpretation in the new design. Phase15 failed-run evidence remains historical, not repaired by this planning decision.
+- **Records:** designs/rex-whichkey-cli-only-menu.md; phases/rex-whichkey-16-cli-only-menu.md. Exact format/path/CLI spelling and task graph remain planning details, not invented user decisions.
+- **Verification:** This entry records agreement and plan creation only, not code, runtime success, real configuration changes or completion.
 
 <!-- mtn:evidence:v1 -->
 
