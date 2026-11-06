@@ -498,21 +498,66 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
 
 - Public Go selects itself and the CLI before endpoint discovery, queries the
   loaded advertisement, and activates the chosen original action **once**, with
-  `{runtime:LOCATOR_JSON_STRING}` on stdin. The locator has `version:1`,
-  `workspace`, `request_sha256`, `receipt_hash`; no capability. A public native
-  launch is allowed only for a truly absent implicit default and the originating
-  execution-host terminal endpoint. An explicit/custom/registered menu never
-  falls back to native.
+  exactly `{runtime:LOCATOR_JSON_STRING, client_id:GUI_ID_STRING,
+  connected_at:CONNECTION_STRING}` on captured CLI stdin (`--args -`). These
+  are registered-action arguments, not new public CLI flags or setup options:
+
+  | Field | Type and exact sender value |
+  | --- | --- |
+  | `runtime` | Required opaque JSON string containing only locator `version:1`, `workspace`, `request_sha256`, `receipt_hash`; Lua passes it unchanged as `descriptor`. No capability. |
+  | `client_id` | Required full `client:UUID` string copied byte-for-byte from `base.Origin.Client`, the app already selected/validated by public Go. Explicit `--client`/`REX_CLIENT` intent remains exact. |
+  | `connected_at` | Required string copied byte-for-byte from `base.Origin.ConnectedAt`, the retained server connection generation; nonblank control-free UTF-8, at most 1024 bytes. Never parse it as a date/number or refresh it. |
+
+  All three fields are required for public launch; missing, extra, duplicate,
+  aliased, null or wrong-type fields fail before reservation/evaluation. Only
+  absence of all three selects the ordinary key/palette path; a partial public
+  argument set must never become key launch. The GUI
+  fields are **untrusted nomination data**, not authority. They do not replace
+  the fresh CLI action's actual `ctx.client_id`. Freeze the actual original
+  `ctx.server` identity (opaque, including a legitimately absent local identity),
+  `ctx.session_id`, `ctx.block_id` and `ctx.client_id` independently before any
+  yield. Never fabricate a replacement action context or revive an earlier CLI
+  ID. A public native launch is allowed only for a truly absent implicit default
+  and the originating execution-host terminal endpoint. An explicit/custom/
+  registered menu never falls back to native.
+- Before preflight, derive the complete `origin` using only that original action
+  context, its direct read-only server APIs and the nomination:
+
+  | Required `origin` field | Source before calling Go |
+  | --- | --- |
+  | `session_id`, `block_id` | Frozen actual `ctx.session_id`, `ctx.block_id`; full typed UUID strings. |
+  | `caller_id` | Frozen actual `ctx.client_id`, a full `client:UUID`; **not** nominated `client_id`. |
+  | `window_id`, `layer_id` | Unique placement of that exact block in `rex.session.view({session_id=SESSION})`, under `windows[].layers[].blocks[]`; full typed IDs, with `layer_id:""` only for genuinely absent layer identity. Missing/ambiguous/moved placement fails, never substitutes the focused pane. |
+  | `client_id`, `connected_at` | The exact nominated strings above, independently checked using `rex.session.list_clients` for that exact ID, attached app kind, non-lost connection and unchanged generation. No other app or pane owner may replace it. |
+
+  Recheck frozen actual context, loaded consumer/menu/config identity and retained
+  placement/connection after every yield. This constructs all seven required
+  `runtimeOrigin` fields **before** describe; no Go reply is needed to discover
+  the app. The locator stays opaque: Lua never opens `request.json`, follows an
+  arbitrary locator path, or executes a caller-nominated helper.
 - Before issue/evaluation, the original action runs only its fixed anchored
-  helper's `runtime-describe`, adding `descriptor:LOCATOR_JSON_STRING` to its
-  describe input and omitting `server`. This path reuses the public frozen CLI;
-  it does not choose another CLI/helper. Output is `{version:1, protocol_min,
+  helper's `runtime-describe` with exactly `{anchor, layout_revision:1, consumer,
+  origin, descriptor:LOCATOR_JSON_STRING}`, omitting `server`. This path reuses
+  the public frozen CLI; it does not choose another CLI/helper. Go strictly
+  decodes the complete origin, authenticates the owned private directory/request
+  digest/slot manifest/receipt and live FIFO lease, then `sameRuntimeOrigin`
+  compares every nominated GUI/placement field to the private initial receipt.
+  Only its previously empty `caller_id` is filled from the independently captured
+  actual action caller; Lua must keep that caller unchanged throughout this
+  activation. `receipt.checkOrigin` then checks that exact app's current session
+  attachment, app kind, connection generation and block/window/layer placement.
+  A mismatch fails before **any preflight reply**, ticket or menu evaluation.
+  No public nomination alone authorizes anything. Output is `{version:1, protocol_min,
   protocol_max, producer_build, features, layout_revision, receipt_hash, relay}`.
   Validate producer features/protocol and retain the exact opaque `relay`
   installation-identity string before issuing a ticket. Its Go-owned numeric
   fields must never pass through Lua number reserialization. The read-only
   `runtime-relay` operation `preflight` is the same finite preflight; it is not
-  a popup or authority probe.
+  a popup or authority probe. This reply supplies compatibility, the initial
+  receipt hash and exact relay identity, not a replacement origin or GUI target.
+  Keep the preflight origin unchanged for `menu` and `bound`; Go repeats the
+  private-receipt equality and live-origin checks on each transition and binds
+  the actual activation caller into the final opaque receipt.
 - After one original-VM evaluation, invoke fixed `runtime-relay` with
   `{operation:"menu", descriptor, anchor, layout_revision:1, consumer, origin,
   relay, configuration:CONFIG_JSON_STRING}`. It writes `menu.json`, waits for
@@ -546,6 +591,22 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
   create/truncate; readers use shared locks. Reopened files recheck ownership,
   private modes, one-link identity and stage. No valid shared local state means
   unsupported cross-host launch **before** reservation, not a remote path guess.
+
+Key/palette launch has **no public nomination or locator**: capture the actual
+app caller from original `ctx`, validate that same app/connection/placement via
+direct APIs, and use it for both `caller_id` and `client_id` in key describe.
+The key's optional `server` intent and returned opaque receipt remain as above.
+Public launch instead keeps its independently captured CLI caller distinct from
+the nominated GUI. Neither path chooses a fresh app after a failed check.
+
+Public-preflight source-review cases (all **UNEXECUTED**):
+
+| Variation | Required boundary outcome |
+| --- | --- |
+| Fresh CLI caller differs from exact explicit GUI nomination | All seven origin strings are available before describe; authenticated matching receipt/live binding permits preflight without requiring caller/app equality. |
+| Missing/malformed nomination, or GUI ID/generation differs from private receipt | Reject before reply/reservation/evaluation; never substitute actual CLI caller, pane owner or another attached app. |
+| Nominated GUI reconnects/detaches, block moves, actual ctx or loaded generation changes across a yield | Reject without adopting a new generation, caller, placement or target; no menu effect, popup or retry. |
+| Locator points at foreign/malformed/unshared state or a dead lease | Go rejects within its bounded ownership/no-follow boundary; Lua never parses files to recover missing authority. |
 
 Small advertisements, locators, preflight and completion are bounded to 64 KiB;
 full Config/receipt/preparation/handoff and slot envelopes to 8 MiB total at each

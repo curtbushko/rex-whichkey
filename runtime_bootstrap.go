@@ -1391,6 +1391,9 @@ func RuntimeRelay(parent context.Context, input io.Reader, output io.Writer) (ou
 	if checkErr := runtimeLeaseAlive(lease); checkErr != nil {
 		return checkErr
 	}
+	// The action's GUI nomination is untrusted. Compare it with the private
+	// receipt before checkOrigin revalidates that exact live app/generation;
+	// neither preflight nor later transitions may choose a replacement target.
 	if !sameRuntimeConsumer(receipt.Consumer, request.Consumer) || !sameRuntimeOrigin(receipt.Origin, request.Origin) {
 		return errRuntimeOrigin
 	}
@@ -1997,9 +2000,14 @@ func publishRuntimeRequest(ctx context.Context, root *os.Root, base runtimeRecei
 	if err != nil {
 		return descriptor, nil, errRuntimeRelay
 	}
+	// Lua needs the retained GUI nomination to enter authenticated preflight.
+	// These are routing hints, not authority or the fresh action's CLI caller;
+	// RuntimeRelay compares them with this receipt before returning any reply.
 	arguments, err := json.Marshal(struct {
-		Runtime string `json:"runtime"`
-	}{string(locator)})
+		Runtime     string `json:"runtime"`
+		ClientID    string `json:"client_id"`
+		ConnectedAt string `json:"connected_at"`
+	}{string(locator), base.Origin.Client, base.Origin.ConnectedAt})
 	if err != nil || len(arguments) > popupMessageLimit {
 		return descriptor, nil, errRuntimeRelay
 	}
