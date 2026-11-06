@@ -16,7 +16,9 @@ in {
       description = ''
         Package providing bin/rex-whichkey and share/rex-whichkey/lua.
         The flake module defaults to this flake's package for the host platform.
-        Rex itself and its CLI must already be available on the server host.
+        Includes normal layout-1 helper/anchor assets and, where published,
+        the licensed execution-host Rex CLI dependency. Installation does not
+        select an endpoint, configure a Rex service or reload the server.
       '';
     };
 

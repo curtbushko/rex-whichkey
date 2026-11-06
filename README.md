@@ -23,13 +23,18 @@ first-frame sizing and status spacers. The later Phase13 correction retains one
 initial rectangle through navigation, superseding live grow/shrink behavior;
 source changes alone do not verify stable runtime bounds. Phase14 historically
 added an app chooser and numbered-tab adapter; both were subsequently removed at
-the user's direction. All app actions now use the launching pane's validated GUI
-owner unless explicitly overridden. New Tab uses the typed source-session
-resource API and exact-ID activation; app dispatch uses explicit `client.perform`.
+the user's direction. Public app routing uses the launching pane's validated GUI
+owner unless explicitly overridden; key/palette launch retains its actual app.
+New Tab uses the typed source-session resource API and exact-ID activation; app dispatch uses explicit `client.perform`.
 These source repairs do not certify every default action or native UI behavior.
 **Hiding native Rex pane/tab/window controls (REQ-026) remains blocked**,
 not waived or fulfilled;
 Phase11/project delivery is partial while that capability is unresolved.
+
+Phase15 adds code-owned discovery and startup with an original-VM compatibility
+bridge. Prior runtime source review/compilation is **not observed runtime verification**;
+this packaging/docs cutover has parse/static evidence only;
+no new installation, callback, remote, reload or rename result is claimed here.
 
 ## Install on the Rex server host
 
@@ -44,19 +49,41 @@ Configured Lua launch additionally uses
 configuration actions and detached process execution.
 
 The flake exports `packages.<system>.rex-whichkey` (also `default`) for
-`x86_64-linux`, `aarch64-linux`, `x86_64-darwin` and `aarch64-darwin`. The package
-layout is:
+`x86_64-linux`, `aarch64-linux`, `x86_64-darwin` and `aarch64-darwin`.
+Normal installation includes:
 
-- `bin/rex-whichkey`
-- `share/rex-whichkey/lua/rex_whichkey.lua` and `rex_whichkey/`
-- `share/doc/rex-whichkey/mapping-format.md`
+```text
+bin/rex-whichkey
+share/rex-whichkey/lua/rex_whichkey.lua
+share/rex-whichkey/lua/rex_whichkey/...
+share/rex-whichkey/lua/rex_whichkey/runtime/anchor.lua
+share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey -> ../../../../../bin/rex-whichkey
+share/rex-whichkey/lua/rex_whichkey/runtime/deps/rex -> licensed Rex package's bin/rex
+share/doc/rex-whichkey/{mapping-format,runtime-bootstrap}.md
+```
 
-Rex itself is not bundled. The executable plus a compatible server-host Rex CLI
-and valid captured session/block suffice to create the basic menu; no graphical
-app selection or custom action registration is required for display/dismissal.
-Executing a selected native action does require an eligible live graphical app.
-Installing the executable does not put optional Lua modules in Rex's search path
-or register a customized menu.
+This is **layout revision 1**, declared by the normal anchor module, not a
+generated runtime configuration. On the two Linux architectures and Apple-silicon
+macOS, the installer packages the official pinned `0.1.0-preview.13` Rex CLI
+dependency described in [runtime bootstrap](docs/runtime-bootstrap.md).
+It preserves the released macOS signature, Linux loader/glibc/PAM paths and
+upstream terminfo/SSH-guard assets. These assets do not enable a service or edit
+SSH/user configuration. Rex is proprietary: applicable upstream terms and Nix's
+unfree-package policy apply. WhichKey's MIT license does **not** relicense Rex or
+authorize redistribution of its binary/cache closure. No Rex bytes are vendored
+in this repository. The pin is an installation source, **not** a minimum tested
+release or a version users must pair with the server.
+
+That upstream source has no Intel macOS artifact. The standalone WhichKey binary
+remains available there with an already installed execution-host CLI; no Intel
+restricted-PATH Lua bootstrap is claimed. The package's optional `rex-cli`
+derivation argument can supply a normally licensed dependency at install time;
+it is not a runtime selector or a required consumer setting.
+
+The basic menu needs no Lua configuration. Optional customization needs the
+normal Lua namespace exposed to Rex; merely installing a package does not
+register a menu. Non-Nix installers must preserve the same relative assets and
+licensed dependency, not embed helper paths in configuration.
 
 ### Home Manager (opt in)
 
@@ -81,14 +108,18 @@ The module is disabled by default. It does **not** manage `init.lua`, user mappi
 files, keybindings, server environment, services or reloads/restarts. Links use
 `force = false`; do not overwrite unmanaged conflicts. If your configuration
 already links the whole Rex directory, reconcile the sibling-module paths in your
-own declarative layout. See the [Home Manager source-review cases](tests/packaging/home-manager/README.md)
-for enabled/disabled behavior, custom locations and removal implications.
+own declarative layout. Enabled/disabled behavior, custom locations, symlink
+updates, conflicts and uninstall preservation are unexecuted source scenarios,
+not Home Manager activation results.
 
-For Lua customization without Home Manager, make the package's Lua entry point
-and module directory available to the server runtime's documented module lookup,
-alongside your user-owned configuration. Both `rex-whichkey` and `rex` must resolve in the server
-process's PATH. A newly installed profile does not change an already-running
-server's environment automatically.
+For Lua customization without Home Manager, expose the complete installed Lua
+entry point and `rex_whichkey/` directory together through Rex's normal module
+lookup beside your user-owned configuration. Use the standard file loader; do not
+copy just the entry point, synthesize an anchor, or mix module trees. The
+file-backed anchor starts its fixed sibling helper even with restricted server
+PATH; Go validates and selects the normal dependency. Home Manager links only
+this namespace, with no runtime-directory injection or per-host discovery.
+Neither installation method edits or reloads `init.lua`.
 
 ## Optional Lua customization
 
@@ -105,21 +136,28 @@ menu.setup() -- built-ins; alternatively menu.setup(inline_options, "my_whichkey
 menu.register_launch("whichkey")
 ```
 
-For app-launched servers without the user profile on PATH, pass an optional
-third argument to `popup.new(defaults, nil, execution)`. Set `execution.helper`
-to the absolute helper executable and `execution.rex_bin_dir` to the directory
-containing the server-host Rex CLI. The CLI directory is passed to both helper
-processes as `REX_BIN_DIR`; neither option changes the selected server endpoint.
+No helper or CLI-directory constructor wiring is needed. Present
+`execution.helper` or `execution.rex_bin_dir` fields fail with migration guidance;
+users remove those obsolete fields from their own configuration.
 
-When developing, `make build run` rebuilds the local launcher, but a registered
-Lua menu still starts its configured **installed helper**. Updating only the local
-binary does not update that popup child. With a locked local Nix flake input,
-refresh `rex-whichkey` in the consuming configuration (`nix flake update
-rex-whichkey`), rebuild/switch that configuration, then reload Rex's configuration.
+### Development and normal upgrades
 
-On macOS, terminal readiness uses `select()` because `poll()` can report the
-controlling `/dev/tty` as disconnected. The PTY regression test covers both
-initial output and an idle menu remaining open until cancellation.
+A direct local build uses the running Go binary for public preparation, controller
+and popup; a registered menu no longer substitutes an installed popup helper.
+The installed helper is only a finite relay for public launch, preserving the
+original VM's custom closures. Key/palette launch instead uses its anchored helper.
+An arbitrary standalone binary outside that layout needs terminal `REX_BIN_DIR`
+or an unambiguous execution-host PATH for initial CLI discovery. This guarantee
+for terminal children is **not** a configuration-action environment guarantee.
+
+Install software/assets through your ordinary installer when upgrading. Do not
+copy store paths or repeatedly refresh a consuming flake to repair normal
+startup. Compatible public/helper/loaded-Lua build IDs may differ: Go negotiates
+real protocols and the **loaded** consumer's features before any popup. Missing
+or unsupported old bridges fail before invoking an old launch action. Installation
+cannot replace already-loaded closures; the user may load the updated integration
+through their normal Rex configuration lifecycle. This tool never edits, reloads
+or restarts configuration and does not ask users to pair component versions.
 
 Register completion once, at configuration load time, in the **same server Lua
 VM** as launch. Completion and launch action names must be distinct and unique
@@ -184,7 +222,8 @@ For actions that invoke app UI, native mode resolves app intent **only after
 executable selection and exact owned-popup/file cleanup**; Escape returns without
 app lookup. **All app actions** use the same pane-owner route below; there is no
 app-selection menu or per-action fallback. This includes session/tab previous
-and next, new session/tab, splits, sidebar, palette, rename and Switch Session.
+and next, new session/tab, splits, sidebar, palette and Switch Session. Default
+rename instead uses its exact captured resource API.
 Configured CLI launch uses that same binding before activating the original Lua
 VM; Lua-invoked menus keep their actual initiating client context.
 
@@ -223,8 +262,8 @@ After popup cleanup, native dispatch renames the captured tab through the Rex CL
 configured dispatch authenticates the name against the original Lua invocation
 and calls `session.set_window_label` with the retained tab ID. Neither route opens
 Rex's rename dialog. Names must be nonblank text without control characters, at
-most 4096 bytes. Custom callbacks or replacement actions at `tr` keep their own
-behavior; only the default empty-argument rename intent opens this input page.
+most 4096 bytes and 128 Unicode characters (Rex's label limit). Custom callbacks
+or replacement actions at `tr` keep their own behavior; only the default empty-argument rename intent opens this input page.
 See [prototype design and scope](docs/tab-rename-input.md).
 
 ### Session switch and rename screens
@@ -241,7 +280,8 @@ with the current session name. Enter confirms; Escape returns to Sessions. After
 cleanup, the parent renames the captured session directly—no native dialog or
 app chooser. The registered Lua defaults use the same input page and authenticated
 `session.set_label` dispatch. Custom callbacks/replacement actions remain unchanged.
-Install the matching helper and Lua modules together and reload Rex configuration.
+The loaded consumer must advertise text/resource-rename support before popup creation;
+unsupported consumers reject rather than opening a native dialog or dropping text.
 See [session UI details](docs/session-owned-ui.md).
 
 ### Native app actions
@@ -289,50 +329,35 @@ uncertain activation is never retried automatically.
 
 ### Linux/macOS endpoints and overrides
 
-Both public launch and Lua preparation use one Go-owned endpoint policy:
+Go first freezes one execution-host CLI: a supplied trusted internal selection,
+otherwise nonempty `REX_BIN_DIR`, a validated applicable layout dependency, or
+an unambiguous absolute PATH candidate. Invalid preferences/broken layouts fail
+without fallback; empty, relative/cwd PATH entries and distinct candidates reject.
+Go retains CLI identity/content and read-only API-schema evidence through endpoint
+discovery, controller, PTY, resource calls and completion.
 
-1. Present explicit override: public `--server`, or Lua's optional constructor
-   argument `popup.new(defaults, endpoint)` for server-side preparation.
-2. Nonempty `REX_SERVER` in that process's execution-host environment.
-3. On Linux/macOS, the installed Rex CLI's native discovery:
-   `rex --autostart=false --timeout 2s whoami --json`.
+Endpoint selection is independent: present public `--server` (or key constructor
+intent) > nonempty `REX_SERVER` > bounded no-autostart Linux/macOS native Rex
+discovery. No socket/home/store/repository guesses, shell wrappers or server
+autostart are used. Accepted endpoints are concrete absolute Unix socket paths/
+URIs or numeric-port `host:port`; opaque Lua `ctx.server` is never an address.
 
-The helper captures and validates the returned concrete endpoint and targets it
-explicitly afterward. Rex owns its platform socket paths and runtime/home/XDG
-rules; rex-whichkey does not guess Linux filenames or macOS home directories,
-scan sockets, create runtime directories or start a server. Discovery needs the
-normal default server already running and reachable on the **execution/server
-host**, not the viewing Mac. Missing/invalid runtime or home context, unavailable
-CLI/server or unsupported identity JSON fails with guidance to fix that host's
-environment or supply an endpoint. Invalid explicit/environment endpoints do not
-fall through to native discovery. Explicit empty overrides are errors; an empty
-`REX_SERVER` permits native discovery.
+`popup.new(defaults, endpoint)` remains optional immutable deployment intent,
+outside mapping options. Key launch uses that precedence. Public Go has already
+selected its endpoint; a present constructor value must canonically agree with
+it and is retained byte-for-byte through all relay calls. Empty, malformed or
+conflicting intent fails before evaluation/authority/popup, never ignored,
+overridden or used to retarget. For a deployment actually using the shared socket,
+`popup.new(defaults, "/run/rex/server.sock")` may agree with public
+`--server /run/rex/server.sock`; this is not a platform default or mandatory setup.
+Explicit client intent remains strict as described above.
 
-For a custom/shared server, use the actual hosting endpoint in the terminal
-caller. On the configured Lua route, server-side preparation must agree too. For example, **only if your
-Rex server uses the documented shared socket** `/run/rex/server.sock`, use
-`rex-whichkey --server /run/rex/server.sock` and construct the menu with
-`popup.new(defaults, "/run/rex/server.sock")`, or supply matching `REX_SERVER`
-environments. A public flag is not forwarded as a Lua constructor override;
-Go's public endpoint and Lua preparation's canonical result must agree. Different
-spellings that normalize to the same endpoint work; different server realms do
-not. Setting an environment variable in a new terminal does not change an
-already-running server's environment.
-
-Accepted endpoints are absolute Unix socket paths (normalized to `unix:///...`),
-strict absolute Unix URIs or `host:port` with a nonzero numeric port (bracket IPv6).
-Socket paths may contain spaces; Unix URIs use percent encoding, including
-Rex's macOS `Application%20Support` path. Controls and mutable host labels are
-rejected. Routing is not runtime authority: opaque `ctx.server`, when supplied,
-is never converted into an address. Rex versions that omit it use the existing
-server-local Lua registry; exact session/block checks remain mandatory. Configured launch and native
-selected-action dispatch additionally validate app identity/generation. This
-refines the earlier explicit-only setup, not its fail-closed safety rationale.
-CLI launch/completion callers are distinct from the retained GUI target; see
-[CLI/GUI delegation](docs/cli-gui-delegation.md). Both updated Go and Lua modules
-must be installed together, followed by a Rex configuration reload.
-See the [launch contract](docs/launch-contract.md) for exact validation, discovery
-bounds, source traces and runtime-unverified limits.
+Public launch and the original VM must share execution-host private files.
+A remote viewing Mac supplies neither Linux paths nor execution authority.
+A remote endpoint alone does not deploy code or make cross-host public launch
+supported. Use the server-host terminal or key action. See the
+[launch contract](docs/launch-contract.md), [runtime bootstrap](docs/runtime-bootstrap.md)
+and [CLI/GUI delegation](docs/cli-gui-delegation.md) for exact boundaries.
 
 ## Your mappings
 
@@ -474,13 +499,16 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
 
 - **Module not found:** check the server's module installation/config directory
   and that the user module has a name other than reserved `rex_whichkey`.
-- **Missing helper/CLI or action metadata:** check the invoking/server host's
-  PATH and compatible installed Rex CLI. Basic startup needs no custom Lua
-  actions. For optional configured launch, also check the server's Lua modules,
-  completion registration, successful `menu.setup()` and `menu.register_launch`
-  (matching an explicit `--action`). `REX_BIN_DIR`, if set, must name an absolute execution-host directory
-  containing the matching `rex`. Raw child diagnostics are suppressed to avoid
-  leaking capability data.
+- **Helper/layout or CLI failure:** install the normal execution-host asset tree
+  and licensed dependency; use the standard unshadowed Lua namespace. A standalone
+  binary may use terminal `REX_BIN_DIR` or valid unambiguous PATH. Do not repair
+  constructor paths or copy viewing-host binaries. Invalid preferences do not
+  fall back. Check compatible read-only CLI/server metadata, not matching release
+  strings; raw child diagnostics/private handoffs are suppressed.
+- **Runtime compatibility failure:** update the integration normally and load it
+  through your own configuration lifecycle if the loaded bridge is unsupported.
+  Compatible unequal build IDs are allowed. Check setup/unique completion and
+  launch registration; do not auto-reload or switch a failed custom menu to native.
 - **Missing/stale origin:** launch inside the original Rex terminal with its real
   full `REX_SESSION`/`REX_BLOCK` and execution endpoint. No focus fallback exists.
 - **Native action-targeting refusal / configured client-selection failure:**
@@ -495,16 +523,17 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   other sessions or this deferred-binding revision.
 - **Discovery/endpoint failure:** check the already-running execution-host server,
   Rex runtime/home settings and CLI compatibility. Fix malformed explicit or
-  `REX_SERVER` values; a custom/shared endpoint may need both a public override and
-  a matching Lua constructor/server environment. A viewing client's socket path
+  `REX_SERVER` values; custom/shared endpoints require canonical agreement with
+  any optional Lua constructor intent. A viewing client's socket path
   or a different server realm is not a substitute. No server is autostarted and
   no alternate endpoint is tried.
 - **Activation failed or uncertain:** verify app Remote Control permission and
-  action compatibility; configured launch also needs its registered action/setup.
+  loaded feature compatibility; configured launch also needs its registered action/setup.
   Metadata, creation, wait, cleanup and dispatch failures have distinct safe
   diagnostics; arbitrary configured-action output is never printed. Configured
-  activation acceptance can precede a later preparation/controller failure. Do
-  not replay an uncertain launch/action or switch execution routes to compensate.
+  success requires finite controller startup acknowledgment, not observed display
+  or later callback completion. Do not replay an uncertain launch/action or
+  switch execution routes to compensate.
 - **Mappings disappear or conflict:** `spec` replaces defaults; duplicate actions,
   action/group prefix conflicts and unsupported key forms are errors. Import,
   evaluation or validation failure is not a successful empty configuration.
@@ -519,7 +548,10 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
 - **Popup remains after failure:** cleanup closes only the returned owned terminal;
   it refuses broad layer/window/session cleanup. Server loss, process termination
   or uncertain creation can prevent cleanup. Never close unrelated resources by
-  label to compensate.
+  label to compensate. Once controller start is possible, lost acknowledgment does
+  not authorize retry, killing an uncertain child or deleting its workspace.
+  Malformed/unauthenticated handoffs may also leave artifacts; expiry revokes
+  authority but does not prove artifact cleanup.
 
 Do not share private handoff/result files, capabilities or captured preparation
 output. Terminal restoration and cleanup are bounded best effort, not guarantees
