@@ -205,9 +205,7 @@ func NormalizeKeys(sequence string) (string, error) {
 // still require valid data, but do not claim active keys or create prefixes.
 func ValidateMappings(mappings []Mapping) error {
 	seen := make(map[string]bool)
-	actions := make(map[string]bool)
-	providers := make(map[string]bool)
-	prefixes := make(map[string]bool)
+	paths := make([]string, len(mappings))
 	for i, mapping := range mappings {
 		keys, err := ParseKeys(mapping.Keys)
 		if err != nil {
@@ -220,41 +218,53 @@ func ValidateMappings(mappings []Mapping) error {
 			continue
 		}
 		var path strings.Builder
-		for j, key := range keys {
+		for _, key := range keys {
 			path.WriteString(keyLiteral(key))
-			if j < len(keys)-1 {
-				prefixes[path.String()] = true
-			}
 		}
 		canonical := path.String()
 		if seen[canonical] {
 			return fmt.Errorf("whichkey: duplicate compiled mapping %q", canonical)
 		}
 		seen[canonical] = true
-		if mapping.Provider != "" {
-			providers[canonical] = true
-		}
-		if mapping.Action != "" || mapping.CallbackRef != "" {
-			actions[canonical] = true
-		}
+		paths[i] = canonical
 	}
-	// Visit source order so diagnostics do not depend on map iteration order.
-	for _, mapping := range mappings {
-		if !mapping.Enabled() {
+	submenus := mappingSubmenus(paths)
+	// Visit source order so diagnostics do not depend on sorted key order.
+	for i, mapping := range mappings {
+		if !submenus[i] {
 			continue
 		}
-		canonical, err := NormalizeKeys(mapping.Keys)
-		if err != nil {
-			return err
+		if mapping.Action != "" || mapping.CallbackRef != "" {
+			return fmt.Errorf("whichkey: mapping %q cannot be both an action and submenu", paths[i])
 		}
-		if actions[canonical] && prefixes[canonical] {
-			return fmt.Errorf("whichkey: mapping %q cannot be both an action and submenu", canonical)
-		}
-		if providers[canonical] && prefixes[canonical] {
-			return fmt.Errorf("whichkey: provider %q reserves its subtree; explicit children are not allowed", canonical)
+		if mapping.Provider != "" {
+			return fmt.Errorf("whichkey: provider %q reserves its subtree; explicit children are not allowed", paths[i])
 		}
 	}
 	return nil
+}
+
+// mappingSubmenus accepts unique canonical paths; empty slots are disabled.
+// Canonical token spellings are prefix-free (including UTF-8, <Space> and <lt>),
+// so a byte prefix is also a token prefix. A path has descendants exactly when
+// its next sorted neighbor starts with it. Sort full paths, not every growing
+// prefix: hashing all prefixes makes even one long key quadratic in its bytes.
+func mappingSubmenus(paths []string) []bool {
+	ordered := make([]int, 0, len(paths))
+	for i, path := range paths {
+		if path != "" {
+			ordered = append(ordered, i)
+		}
+	}
+	slices.SortFunc(ordered, func(a, b int) int {
+		return strings.Compare(paths[a], paths[b])
+	})
+	submenus := make([]bool, len(paths))
+	for i := 1; i < len(ordered); i++ {
+		previous, next := ordered[i-1], ordered[i]
+		submenus[previous] = strings.HasPrefix(paths[next], paths[previous])
+	}
+	return submenus
 }
 
 func (m Mapping) validate() error {

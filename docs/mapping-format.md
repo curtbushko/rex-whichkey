@@ -98,6 +98,15 @@ are errors **even for disabled records**. Providers reserve every descendant
 sequence, including against disabled static children. `session.switch` also
 reserves its subtree because it is a Go sessions-menu intent.
 
+Conflict validation normalizes each full key once per pass, sorts complete
+canonical paths and checks adjacent strict prefixes. It never builds or hashes
+every growing key prefix, so a single long key takes linear key-processing work
+rather than quadratic prefix hashing. The same validator runs from the first
+configuration resolution and for disabled public records and generated children.
+Sorting does not reorder the returned spec or diagnostics: duplicate/invalid
+records and action/provider conflicts are still reported in source order.
+No additional key-length or token-count limit is imposed.
+
 ## Complete public action catalogue
 
 `args` may be omitted, meaning `{}`. Unknown argument members, wrong types and
