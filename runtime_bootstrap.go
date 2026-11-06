@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -825,13 +826,18 @@ func queryRuntimeConsumer(ctx context.Context, selection *rex.CLISelection, orig
 	query, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if checkErr := runtimeAction(query, selection, origin, "whichkey_runtime", input, output); checkErr != nil {
-		return runtimeConsumer{}, errRuntimeCompatibility
+		// runtimeCommand already suppresses child diagnostics; only its safe
+		// cause and the bounded query's cancellation may cross this boundary.
+		return runtimeConsumer{}, fmt.Errorf("whichkey: whichkey_runtime action call failed: %w", errors.Join(errRuntimeCompatibility, checkErr, query.Err()))
 	}
 	var consumer runtimeConsumer
 	if checkErr := decodeRuntime(bytes.TrimSpace(output.buffer.Bytes()), &consumer, popupMessageLimit); checkErr != nil {
-		return consumer, errRuntimeCompatibility
+		return consumer, fmt.Errorf("whichkey: whichkey_runtime reply-schema decode failed: %w", errRuntimeCompatibility)
 	}
-	return consumer, consumer.validate(action, selection)
+	if checkErr := consumer.validate(action, selection); checkErr != nil {
+		return consumer, fmt.Errorf("whichkey: whichkey_runtime consumer validation failed: %w", errors.Join(errRuntimeCompatibility, checkErr))
+	}
+	return consumer, nil
 }
 
 // prepareRuntime is shared by public startup and fixed-helper key preparation.
@@ -1683,7 +1689,13 @@ func launchPublicRuntime(parent context.Context, origin launchOrigin, placement 
 		return errRuntimeRelay
 	}
 	final, err := decodeReceipt(prepared.Receipt, prepared.ReceiptHash)
-	if err != nil || final.checkOrigin(ctx) != nil || !time.Unix(expires, 0).Add(-5*time.Second).After(time.Now()) {
+	if err != nil {
+		return errors.Join(errRuntimeOrigin, err)
+	}
+	if checkErr := final.checkOrigin(ctx); checkErr != nil {
+		return errors.Join(errRuntimeOrigin, checkErr)
+	}
+	if !time.Unix(expires, 0).Add(-5 * time.Second).After(time.Now()) {
 		return errRuntimeOrigin
 	}
 	// Both relay stages and activation are finished. The controller never
@@ -2090,7 +2102,10 @@ func (receipt runtimeReceipt) checkPlacement(block rex.Block) error {
 func (receipt runtimeReceipt) checkLoadedConsumer(ctx context.Context) error {
 	origin := launchOrigin{Server: receipt.Endpoint, SessionID: receipt.Origin.Session, BlockID: receipt.Origin.Block, ClientID: receipt.Origin.Client}
 	consumer, err := queryRuntimeConsumer(ctx, receipt.CLI, origin, receipt.Consumer.Launch)
-	if err != nil || !sameRuntimeConsumer(consumer, receipt.Consumer) {
+	if err != nil {
+		return errors.Join(errRuntimeCompatibility, err)
+	}
+	if !sameRuntimeConsumer(consumer, receipt.Consumer) {
 		return errRuntimeCompatibility
 	}
 	return nil
@@ -2193,7 +2208,7 @@ func verifyPopupImage(ctx context.Context, root *os.Root, directory string) (_ *
 	}
 	selection, err := rex.ResolveCLI(ctx, rex.CLIOptions{Selection: expected.CLI})
 	if err != nil {
-		return nil, errRuntimeCompatibility
+		return nil, errors.Join(errRuntimeCompatibility, err)
 	}
 	if checkErr := checkRuntimeFile(ctx, expected.Component, true); checkErr != nil {
 		return nil, checkErr

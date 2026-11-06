@@ -122,7 +122,7 @@ func LaunchPopup(parent context.Context, options LaunchOptions) (outcome error) 
 		return errors.New("whichkey: launch name is not a server configuration action; choose a registered menu.register_launch action")
 	}
 	if actions["whichkey_runtime"] != "lua" {
-		return errRuntimeCompatibility
+		return errors.Join(errRuntimeCompatibility, errors.New("whichkey: whichkey_runtime action registry requires a Lua action"))
 	}
 	consumer, err := queryRuntimeConsumer(ctx, selection, origin, action)
 	if err != nil {
