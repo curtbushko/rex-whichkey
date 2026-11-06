@@ -1,5 +1,5 @@
-// Package whichkey defines the menu's shared configuration and mapping data.
-// Executable configuration and callbacks remain in the originating Rex Lua runtime.
+// Package whichkey defines menu configuration, rendering and selection data.
+// Public menu files are data-only; legacy callback wire types remain isolated.
 package whichkey
 
 import (
@@ -50,10 +50,9 @@ type ConfigOptions struct {
 	Spec     *[]Mapping `json:"spec,omitempty"`
 }
 
-// Mapping is one evaluated, inherited, full-sequence record, not executable Lua.
-// The Lua compiler coalesces repeated metadata declarations into one record per
-// normalized sequence. Missing prefixes are implicit groups. A nil Group means
-// no explicit group; a pointer to "" is still an explicit group declaration.
+// Mapping is one full-sequence data record. Missing prefixes are implicit
+// groups. A nil Group means no explicit group; a pointer to "" still declares
+// a group. CallbackRef is legacy-only and is rejected by LoadMenuConfig.
 type Mapping struct {
 	Keys        string          `json:"keys"`
 	Desc        string          `json:"desc,omitempty"`
@@ -64,8 +63,8 @@ type Mapping struct {
 	Args        json.RawMessage `json:"args,omitempty"`
 	Hidden      bool            `json:"hidden,omitempty"`
 	Confirm     bool            `json:"confirm,omitempty"`
-	// Provider is absent or "known-hosts": an inventory-only group expanded by
-	// the terminal owner before NewMenu, never an executable target.
+	// Provider names a Go-owned dynamic group, never executable code. The data
+	// loader validates markers; the consumer expands them before NewMenu.
 	Provider string `json:"provider,omitempty"`
 	// Cond is an evaluated boolean, never a function. Nil means absent/enabled.
 	// A Lua condition function returning nil is disabled: encode it as a pointer
@@ -132,9 +131,9 @@ func ResolveConfig(defaults Config, imported, inline *ConfigOptions) (Config, er
 	return config, nil
 }
 
-// Validate rejects invalid resolved values. Loading Lua, executing functions,
-// allocating callback references and checking action-specific args are not Go
-// format validation and must be performed by their owning Rex-runtime consumers.
+// Validate checks the shared resolved shape, including legacy callback records.
+// LoadMenuConfig adds public action/argument and disabled-conflict validation;
+// this compatibility method alone does not validate a public menu file.
 func (c Config) Validate() error {
 	switch c.Position {
 	case "top", "bottom", "left", "right", "center":
@@ -264,11 +263,11 @@ func (m Mapping) validate() error {
 	}
 	actionable := m.Action != "" || m.CallbackRef != ""
 	if m.Provider != "" {
-		if m.Provider != "known-hosts" {
+		if !knownMenuProvider(m.Provider) {
 			return errors.New("unknown mapping provider")
 		}
 		if actionable || m.Group == nil || len(m.Args) != 0 || m.Confirm {
-			return errors.New("known-hosts provider requires a group without action, callback_ref, args or confirm")
+			return errors.New("provider requires a group without action, callback_ref, args or confirm")
 		}
 	}
 	if (m.Action != "" && strings.TrimSpace(m.Action) == "") ||
