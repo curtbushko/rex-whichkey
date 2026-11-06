@@ -4,7 +4,7 @@
 local evaluate = require("rex_whichkey.evaluate")
 local mapping = require("rex_whichkey.mapping")
 local M = {}
-local current, complete_current
+local handlers = {}
 -- Go-owned InvocationLifetimeSeconds / MaxPendingInvocations, not setup options.
 local max_pending, lifetime = 64, 30
 
@@ -159,11 +159,13 @@ local function reference(value)
     end
 end
 
--- Strict raw-JSON consumer of Completion, not a Lua-owned wire format. Do not
--- rex.json.decode first: it erases duplicate keys and null versus missing fields.
--- Bound the transport message (64 KiB), including whitespace, before parsing it.
-local function completion(text)
-    if type(text) ~= "string" or #text > 65536 then
+M.validate_text = reference
+
+-- Strict raw-JSON consumer for Go's fixed records, not a Lua-owned wire format.
+-- Do not rex.json.decode first: it erases duplicates and null versus missing.
+-- Completion/small records are 64 KiB; full opaque preparation is 8 MiB.
+local function decode_record(text, schema, limit)
+    if type(text) ~= "string" or #text > (limit or 65536) then
         fail("invalid completion JSON")
     end
     local position = 1
@@ -197,13 +199,20 @@ local function completion(text)
     local escapes = { ['"'] = '"', ["\\"] = "\\", ["/"] = "/", b = "\b", f = "\f", n = "\n", r = "\r", t = "\t" }
     local function string_value()
         take('"')
-        local parts = {}
+        local parts, run_start = {}, position
+        local function flush()
+            if position > run_start then
+                parts[#parts + 1] = text:sub(run_start, position - 1)
+            end
+        end
         while position <= #text do
             local char = text:sub(position, position)
             if char == '"' then
+                flush()
                 position = position + 1
                 return table.concat(parts)
             elseif char == "\\" then
+                flush()
                 position = position + 1
                 local escape = text:sub(position, position)
                 position = position + 1
@@ -228,12 +237,12 @@ local function completion(text)
                 else
                     invalid()
                 end
+                run_start = position
             else
                 local code, size = codepoint(text, position)
                 if code < 32 then
                     invalid()
                 end
-                parts[#parts + 1] = text:sub(position, position + size - 1)
                 position = position + size
             end
         end
@@ -250,10 +259,20 @@ local function completion(text)
         end
         invalid()
     end
-    local function version_value()
-        take("1") -- Go's integer version 1, not 1.0, 1e0, a string or boolean.
-        return 1
+    local function integer_value()
+        whitespace()
+        local digits = text:sub(position):match("^%d+")
+        if not digits or #digits > 16 or (#digits > 1 and digits:sub(1, 1) == "0") then
+            invalid()
+        end
+        position = position + #digits
+        local value = tonumber(digits)
+        if not value or value > 9007199254740991 then
+            invalid() -- Never round a Go identity through a Lua double.
+        end
+        return value
     end
+    local read
     local function object(readers)
         take("{")
         local fields = {}
@@ -269,7 +288,7 @@ local function completion(text)
                 invalid()
             end
             take(":")
-            fields[key] = reader()
+            fields[key] = read(reader)
             whitespace()
             local char = text:sub(position, position)
             position = position + 1
@@ -280,16 +299,58 @@ local function completion(text)
             end
         end
     end
-    local value = object({
-        version = version_value,
-        capability = string_value,
-        kind = string_value,
-        selection = function()
-            return object({ keys = string_value, callback_ref = string_value, confirmed = boolean_value, text = string_value })
-        end,
-    })
+    read = function(kind)
+        if kind == "string" then
+            return string_value()
+        elseif kind == "boolean" then
+            return boolean_value()
+        elseif kind == "integer" then
+            return integer_value()
+        elseif type(kind) == "table" and kind.array then
+            take("[")
+            local values = {}
+            whitespace()
+            if text:sub(position, position) == "]" then
+                position = position + 1
+                return values
+            end
+            while true do
+                values[#values + 1] = read(kind.array)
+                whitespace()
+                local char = text:sub(position, position)
+                position = position + 1
+                if char == "]" then
+                    return values
+                elseif char ~= "," then
+                    invalid()
+                end
+            end
+        elseif type(kind) == "table" then
+            return object(kind)
+        end
+        invalid()
+    end
+    local value = object(schema)
     whitespace()
-    if position <= #text or value.version ~= 1 or not capability(value.capability) then
+    if position <= #text then
+        invalid()
+    end
+    return value
+end
+
+-- Fixed Go-owned transport records only. Opaque receipt/relay JSON stays a
+-- string; this parser never rebuilds their large numeric file identities.
+M.decode_record = decode_record
+
+local function completion(text)
+    local value = decode_record(text, {
+        version = "integer", capability = "string", receipt_hash = "string", kind = "string",
+        selection = { keys = "string", callback_ref = "string", confirmed = "boolean", text = "string" },
+    })
+    local function invalid()
+        fail("invalid completion JSON")
+    end
+    if value.version ~= 2 or not capability(value.capability) or not capability(value.receipt_hash) then
         invalid()
     end
     if value.kind == "cancel" then
@@ -314,6 +375,14 @@ local function completion(text)
                 invalid()
             end
             reference(selected.text) -- Same strict Unicode/nonblank/control rules as Go.
+            local i, length = 1, 0
+            while i <= #selected.text do
+                local _, size = codepoint(selected.text, i)
+                i, length = i + size, length + 1
+            end
+            if length > 128 then
+                invalid()
+            end
         end
     else
         invalid()
@@ -327,17 +396,16 @@ end
 --   dispatch.register_completion("whichkey_complete")
 --   local registry = dispatch.new(compiled_template)
 -- In the original action: registry.issue(ctx, {client_id=APP, connected_at=TIME}); obtain a fresh
--- capability from Go NewInvocationCapability via the trusted launcher, then
--- registry.bind(ticket, ctx, capability) BEFORE exposing the popup. On launch
--- failure registry.cancel(ticket). Never serialize ticket or put a capability in
--- argv/logs. 04-05 owns that trusted handoff and detached popup lifecycle.
+-- capability from Go via the trusted launcher, then bind its exact preparation
+-- BEFORE exposing the popup. Only unclaimed local failures may cancel a ticket.
+-- Never serialize a ticket or put a capability in argv/logs; Go owns lifecycle.
 --
 -- Return completion through the installed action, not a rex do Lua script VM:
 -- rex --server SERVER --client CLIENT do whichkey_complete --session SESSION
 --     --block BLOCK --args -
 -- stdin is {"message": RAW_COMPLETION_JSON_STRING}, encoded as JSON data. SERVER
--- must explicitly select the captured endpoint, and CLIENT/SESSION/BLOCK must be
--- captured full IDs, never defaults or popup IDs. The wrapper gets the ACTUAL
+-- must explicitly select the captured endpoint, and CLIENT/SESSION/BLOCK are
+-- retained routing IDs, never defaults or popup IDs. The wrapper gets the ACTUAL
 -- fresh CLI action ctx, whose client_id is not APP. Authenticate the capability
 -- and exact server/session/block, then use the independently retained GUI binding
 -- for explicit client.perform calls. No public dispatch(ctx, ...) exists.
@@ -358,20 +426,24 @@ function M.register_completion(name)
                     fail("unexpected completion argument")
                 end
             end
-            local handler = complete_current
-            if not handler then
-                fail("no active invocation registry")
+            local ok, value = pcall(completion, args.message)
+            if not ok then
+                fail("invalid completion JSON")
             end
-            -- Never return arbitrary callback results to a capability-bearing
-            -- transport, nor let the launcher swallow a failure and commit queues.
-            handler(ctx, args.message)
+            -- Lookup without yielding or consuming another menu's entries.
+            for _, handler in pairs(handlers) do
+                if handler(ctx, value) then
+                    return -- Never return a private/user callback result.
+                end
+            end
+            fail("invalid completion authority or invocation state")
         end,
     })
 end
 
 -- One installed configuration generation. Candidate compilation must succeed
 -- before replacement; composition calls invalidate on reload/reuse/teardown.
-function M.new(template)
+function M.new(template, is_current)
     if not plain(template) or type(template.children) ~= "table" then
         fail("a compiled mapping template is required")
     end
@@ -391,6 +463,7 @@ function M.new(template)
                 entry.invocation = nil
             end
             entry.context, entry.activation, entry.origin, entry.snapshot, entry.capability = nil, nil, nil, nil, nil
+            entry.receipt, entry.receipt_hash, entry.metadata = nil, nil, nil
         end
     end
 
@@ -400,9 +473,7 @@ function M.new(template)
             release(ticket)
         end
         template = nil
-        if current == registry then
-            current, complete_current = nil, nil
-        end
+        handlers[registry] = nil
     end
 
     -- Config Lua has no timer API. Lazy expiry bounds retained state even idle.
@@ -432,7 +503,7 @@ function M.new(template)
 
     local function live(ticket, entry, ctx)
         sweep()
-        if entries[ticket] ~= entry then
+        if entries[ticket] ~= entry or (is_current and not is_current()) then
             fail("invalid, expired, cancelled or consumed invocation")
         end
         if not same_origin(ctx, entry.origin) or ctx.client_id ~= entry.activation.client_id then
@@ -448,17 +519,19 @@ function M.new(template)
         if err ~= nil or type(view) ~= "table" or view.session_id ~= expected.session_id then
             fail("origin session is unavailable")
         end
-        local placements, placed_window = 0, nil
+        local placements, placed_window, placed_layer = 0, nil, nil
         for _, window in ipairs(view.windows or {}) do
             for _, layer in ipairs(window.layers or {}) do
                 for _, block in ipairs(layer.blocks or {}) do
                     if block.block_id == expected.block_id then
-                        placements, placed_window = placements + 1, window
+                        placements, placed_window, placed_layer = placements + 1, window, layer.layer_id
+                        if placed_layer == nil then placed_layer = "" end
                     end
                 end
             end
         end
-        if placements ~= 1 or not resource(placed_window.window_id, "window") then
+        if placements ~= 1 or not resource(placed_window.window_id, "window")
+            or placed_window.window_id ~= entry.window_id or placed_layer ~= entry.layer_id then
             fail("origin block is missing, detached or ambiguously placed")
         end
         if
@@ -481,7 +554,8 @@ function M.new(template)
                 matches = matches + 1
                 -- API contract: missing/unknown state is connected; only lost is
                 -- disconnected. connected_at is still mandatory generation data.
-                if client.connection_state == "lost" or not plain(client.info) or client.info.kind ~= "app" then
+                if (client.connection_state ~= nil and type(client.connection_state) ~= "string")
+                    or client.connection_state == "lost" or not plain(client.info) or client.info.kind ~= "app" then
                     fail("origin client connection was lost")
                 end
                 connected_at = client.connected_at
@@ -494,6 +568,14 @@ function M.new(template)
             fail("origin client connection changed")
         end
         entry.connected_at = connected_at
+        local status, status_err = rex.call("server.status", {})
+        live(ticket, entry, ctx)
+        local metadata = entry.metadata
+        if status_err ~= nil or not plain(status) or not plain(status.config)
+            or status.instance_id ~= metadata.server_instance or status.config.hash ~= metadata.config_hash
+            or status.config.generation ~= metadata.config_generation then
+            fail("origin server configuration changed")
+        end
         return placed_window.window_id
     end
 
@@ -501,8 +583,10 @@ function M.new(template)
     -- the trusted launcher. It has no transport representation or bearer spelling.
     function registry.issue(ctx, target)
         local caller = activation(ctx)
-        target = target or { client_id = caller.client_id }
-        if not plain(target) or not resource(target.client_id, "client") then
+        if not plain(target) or not resource(target.client_id, "client")
+            or not resource(target.window_id, "window") or type(target.layer_id) ~= "string"
+            or (target.layer_id ~= "" and not resource(target.layer_id, "layer"))
+            or not plain(target.metadata) or type(target.expires) ~= "number" then
             fail("an exact GUI target is required")
         end
         local bound = {
@@ -516,7 +600,8 @@ function M.new(template)
         local ticket = {}
         local entry = {
             context = ctx, activation = caller, origin = bound, connected_at = target.connected_at,
-            expires = now + lifetime, state = "evaluating",
+            expires = math.min(now + lifetime, target.expires), state = "evaluating",
+            window_id = target.window_id, layer_id = target.layer_id, metadata = target.metadata,
         }
         entries[ticket], count = entry, count + 1
         local ok, records = pcall(function()
@@ -552,7 +637,7 @@ function M.new(template)
     -- Trusted launcher only, still inside the issuing action. Go generates the
     -- random capability; Lua checks its canonical representation, not entropy.
     -- A reservation is not completable until binding finishes successfully.
-    function registry.bind(ticket, ctx, value)
+    function registry.bind(ticket, ctx, prepared)
         sweep()
         local entry = entries[ticket]
         if not entry or entry.state ~= "prepared" or not rawequal(ctx, entry.context) then
@@ -561,10 +646,16 @@ function M.new(template)
         entry.state = "binding"
         local ok = pcall(function()
             live(ticket, entry, ctx)
-            if not capability(value) or capabilities[value] ~= nil then
+            if not plain(prepared) or not capability(prepared.capability)
+                or capabilities[prepared.capability] ~= nil or not capability(prepared.receipt_hash)
+                or type(prepared.receipt) ~= "string" or prepared.receipt == "" or #prepared.receipt > 8388608
+                or type(prepared.expires) ~= "number" then
                 fail("invalid or duplicate invocation capability")
             end
+            entry.expires = math.min(entry.expires, prepared.expires)
             inspect(ticket, entry, ctx)
+            local value = prepared.capability
+            entry.receipt, entry.receipt_hash = prepared.receipt, prepared.receipt_hash
             entry.capability, entry.state, entry.context = value, "open", nil
             capabilities[value] = ticket
         end)
@@ -574,28 +665,28 @@ function M.new(template)
         end
     end
 
-    local function complete(ctx, raw)
-        -- Decode before lookup/claim. Malformed/unknown capabilities and wrong
-        -- origins cannot consume an unrelated reservation. No secrets in errors.
-        local decoded, value = pcall(completion, raw)
-        if not decoded then
-            -- In particular, the shared key parser may include rejected input in
-            -- its error. Never expose raw completion fragments or capabilities.
-            fail("invalid completion JSON")
-        end
-        sweep()
+    local function complete(ctx, value)
         local ticket = capabilities[value.capability]
         local entry = ticket and entries[ticket]
-        if not entry or entry.state ~= "open" or not same_origin(ctx, entry.origin) then
+        if not entry then
+            return false
+        end
+        -- Wrong origin/hash cannot claim an unrelated authentic invocation.
+        if entry.state ~= "open" or not same_origin(ctx, entry.origin)
+            or value.receipt_hash ~= entry.receipt_hash then
             fail("invalid completion authority or invocation state")
         end
         -- Claim BEFORE conditions or Rex calls yield/reenter. Do not remove from
         -- entries until done: in-progress work counts toward the bounded capacity
         -- and remains revocable by expiry/reload/local cancellation.
+        local caller = activation(ctx)
+        sweep()
+        if entries[ticket] ~= entry or (is_current and not is_current()) then
+            fail("invalid completion authority or invocation state")
+        end
         entry.state = "claimed"
-        -- The bearer capability permits this fresh CLI activation, not client
-        -- impersonation. Freeze its real caller for all subsequent yield checks.
-        entry.activation = activation(ctx)
+        -- A fresh CLI caller need not equal either the launch CLI or GUI target.
+        entry.activation = caller
         -- Keep the spelling reserved until release, even though claimed state
         -- revokes its authority now. A concurrent bind cannot reuse a live token.
         local stage = "completion validation failed"
@@ -697,6 +788,7 @@ function M.new(template)
             -- already have happened. Nothing here reopens or retries it.
             fail(stage .. "; invocation consumed, not retried")
         end
+        return true
     end
 
     -- Local launch-failure/dismissal cleanup, requiring the private table ticket.
@@ -704,14 +796,14 @@ function M.new(template)
     function registry.cancel(ticket)
         if not closed then
             sweep()
-            release(ticket)
+            local entry = entries[ticket]
+            if entry and entry.state ~= "claimed" then
+                release(ticket)
+            end
         end
     end
 
-    if current then
-        current.invalidate()
-    end
-    current, complete_current = registry, complete
+    handlers[registry] = complete
     return registry
 end
 

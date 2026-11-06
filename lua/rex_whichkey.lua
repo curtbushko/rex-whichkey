@@ -1,384 +1,462 @@
--- Short server-runtime composition. mapping.go/docs/mapping-format.md own the
--- data; config/mapping/dispatch retain all executable Lua in this original VM.
--- No package.path rewrite, client-local executable, timer or suspended action.
-local config = require("rex_whichkey.config")
-local mapping = require("rex_whichkey.mapping")
-local dispatch = require("rex_whichkey.dispatch")
-local M = {}
-local completion_action
-local launch_names = {}
-
+-- Go owns formats, discovery and startup. This module keeps configuration,
+-- callbacks and invocation authority in the original persistent server VM.
 local function fail(message)
     error("rex_whichkey: " .. message, 0)
 end
 
-local function encode(value)
-    local text, err = rex.json.encode(value)
-    if err ~= nil or type(text) ~= "string" then
-        fail("cannot encode invocation data")
-    end
-    return text
+if ... ~= "rex_whichkey" then
+    fail("helper/layout discovery failed; require the normal rex_whichkey namespace")
 end
 
--- Rex encodes empty Lua tables as objects. Encode the ordered spec explicitly as
--- an array, including [], without changing args' legitimate empty-object shape.
--- Field spelling is consumed from Config; no alternative Lua validator/schema.
-local function configuration(options, records)
-    local values = {}
-    for i, record in ipairs(records) do
-        values[i] = encode(record)
+-- Only the opted-in normal file-loader namespace is supported. A source label
+-- by itself does not authenticate arbitrary code or a hostile same-user loader.
+local source = debug.getinfo(1, "S").source
+local function file_source(label, suffix)
+    if type(label) ~= "string" or #label > 4097 or label:sub(1, 1) ~= "@"
+        or label:find("%c") or label:find("\\") or label:match("^@%a:") then
+        fail("helper/layout discovery failed; install the normal integration assets")
     end
-    local display = encode({
-        position = options.position,
-        title = options.title,
-        icon = options.icon,
-        icons = options.icons,
-    })
-    return display:sub(1, -2) .. ',"spec":[' .. table.concat(values, ",") .. "]}"
+    local path = label:sub(2)
+    for part in path:gmatch("[^/]+") do
+        if part == ".." then
+            fail("helper/layout discovery failed; install the normal integration assets")
+        end
+    end
+    if path ~= suffix and path:sub(-#suffix - 1) ~= "/" .. suffix then
+        fail("helper/layout discovery failed; install the normal integration assets")
+    end
+    return path, path:sub(1, #path - #suffix)
 end
+local _, namespace = file_source(source, "rex_whichkey.lua")
+local file_loader = package.loaders and package.loaders[2]
+local function native_loader(value)
+    if type(value) ~= "function" then return false end
+    local info = debug.getinfo(value, "S")
+    -- Lua's native standard loader, not a user Lua replacement. Some Lua 5.1
+    -- hosts label host-language functions G rather than C; neither is a chunk.
+    return info and (info.what == "C" or info.what == "G")
+end
+if not native_loader(file_loader) or not native_loader(package.loaders[1])
+    or debug.getinfo(2, "f").func ~= require or package.loaded["rex_whichkey.runtime.anchor"] ~= nil then
+    fail("helper/layout discovery failed; use one normal file-backed integration namespace")
+end
+for name in pairs(package.preload) do
+    if type(name) == "string" and (name == "rex_whichkey" or name:match("^rex_whichkey%.")) then
+        fail("helper/layout discovery failed; preload integration modules are unsupported")
+    end
+end
+-- Require must actually be able to use its standard file slot for these
+-- modules. A custom later loader with an @ label for a missing file is not a
+-- supported anchor. Compiled candidates are inspected, never executed here.
+local function file_candidate(name, label)
+    local ok, candidate = pcall(file_loader, name)
+    if not ok or type(candidate) ~= "function" or debug.getinfo(candidate, "S").source ~= label then
+        fail("helper/layout discovery failed; synthetic integration loaders are unsupported")
+    end
+end
+file_candidate("rex_whichkey", source)
+local anchor = require("rex_whichkey.runtime.anchor")
+if type(anchor) ~= "table" or getmetatable(anchor) ~= nil then
+    fail("helper/layout discovery failed; install the normal integration anchor")
+end
+file_candidate("rex_whichkey.runtime.anchor", anchor.source)
+local anchor_path, anchor_namespace = file_source(anchor.source, "rex_whichkey/runtime/anchor.lua")
+if anchor.layout_revision ~= 1 or anchor_namespace ~= namespace then
+    fail("helper/layout discovery failed; use one normal integration asset tree")
+end
+local helper = anchor_path:sub(1, #anchor_path - #"anchor.lua") .. "rex-whichkey"
+local config = require("rex_whichkey.config")
+local mapping = require("rex_whichkey.mapping")
+local dispatch = require("rex_whichkey.dispatch")
+if not pcall(dispatch.validate_text, anchor_path) then
+    fail("helper/layout discovery failed; invalid integration anchor path")
+end
+-- Reject shadowed/pinned modules from a different logical namespace; Go checks
+-- canonical asset ownership/symlinks at each launch. Do not scan for replacements.
+for name, module in pairs(package.loaded) do
+    if type(name) == "string" and name:match("^rex_whichkey%.") and type(module) == "table" then
+        local module_source
+        for _, value in pairs(module) do
+            if type(value) == "function" then
+                local label = debug.getinfo(value, "S").source
+                local _, root = file_source(label, name:gsub("%.", "/") .. ".lua")
+                if root ~= namespace or (module_source and module_source ~= label) then
+                    fail("helper/layout discovery failed; integration modules resolve from different trees")
+                end
+                module_source = label
+            end
+        end
+        if module_source then file_candidate(name, module_source) end
+    end
+end
+
+local M = {}
+local completion_action
+local launch_names = {}
+local generation_serial = 0
+local features = { "original-vm", "separate-caller-target", "single-use", "generation-bound", "retained-menu",
+    "public-file-relay", "completion-receipt-v2", "selection-text-resource-rename" }
+local small_limit, full_limit = 65536, 8388608
+local compatibility = "runtime compatibility failed; update and load the integration through the normal configuration lifecycle; not retried"
+local origin_failure = "origin or configuration changed; relaunch from the original Rex context; not retried"
 
 local function plain(value)
     return type(value) == "table" and getmetatable(value) == nil
 end
-
+local function name_valid(name)
+    return type(name) == "string" and #name <= 256 and name:match("^[a-z0-9_]+$") ~= nil
+end
+local function text_valid(value, limit)
+    return type(value) == "string" and #value <= (limit or 1024) and pcall(dispatch.validate_text, value)
+end
+local function hash(value)
+    return type(value) == "string" and #value == 64 and not value:find("[^0-9a-f]")
+end
+local function integer(value)
+    return type(value) == "number" and value >= 0 and value <= 9007199254740991 and value == math.floor(value)
+end
 local function resource(value, kind)
-    if type(value) ~= "string" then
-        return false
-    end
+    if type(value) ~= "string" then return false end
     local prefix, a, b, c, d, e = value:match("^([a-z]+):(%x+)%-(%x+)%-(%x+)%-(%x+)%-(%x+)$")
     return prefix == kind and #a == 8 and #b == 4 and #c == 4 and #d == 4 and #e == 12
 end
-
-local function valid_generation(value)
-    return type(value) == "string" and #value <= 1024 and value:find("%S") ~= nil and not value:find("%c")
+local function encode(value, limit)
+    local text, err = rex.json.encode(value)
+    if err ~= nil or type(text) ~= "string" or #text > (limit or full_limit) then
+        fail("cannot encode bounded invocation data")
+    end
+    return text
 end
-
--- Consume launch.go's five transport fields, not a mapping schema or ctx. The
--- endpoint's canonical meaning remains Go-owned and is checked against prepare.
-local function launch_expectation(text)
-    if type(text) ~= "string" or #text > 65536 then
-        fail("launch origin must be bounded JSON string data")
+local function decode(text, schema, limit)
+    local value = dispatch.decode_record(text, schema, limit)
+    for key in pairs(schema) do
+        if value[key] == nil then fail(compatibility) end
     end
-    local ok, expected, err = pcall(rex.json.decode, text)
-    if not ok or err ~= nil or not plain(expected) then
-        fail("invalid launch origin JSON")
-    end
-    local fields = { server = true, session_id = true, block_id = true, client_id = true, connected_at = true }
-    local count = 0
-    for key in pairs(expected) do
-        if not fields[key] then
-            fail("unexpected launch origin field")
-        end
-        count = count + 1
-    end
-    if
-        count ~= 5
-        or type(expected.server) ~= "string"
-        or expected.server == ""
-        or expected.server:find("%c")
-        or not resource(expected.session_id, "session")
-        or not resource(expected.block_id, "block")
-        or not resource(expected.client_id, "client")
-        or not valid_generation(expected.connected_at)
-    then
-        fail("launch origin requires endpoint, full session/block/client IDs and connected_at")
-    end
-    return expected
+    return value
 end
-
-local function connection(ctx, target_id)
-    local result, err = rex.session.list_clients({ session_id = ctx.session_id })
-    if err ~= nil or type(result) ~= "table" or type(result.clients) ~= "table" then
-        fail("cannot inspect originating client")
+-- Rex encodes empty tables as objects; spec must remain an ordered JSON array.
+local function configuration(options, records)
+    local values = {}
+    for i, record in ipairs(records) do values[i] = encode(record) end
+    local display = encode({ position = options.position, title = options.title, icon = options.icon, icons = options.icons })
+    local result = display:sub(1, -2) .. ',"spec":[' .. table.concat(values, ",") .. "]}"
+    if #result > 4194304 then fail("configuration exceeds the Go transport bound") end
+    return result
+end
+local function freeze(ctx)
+    if not plain(ctx) or not resource(ctx.session_id, "session") or not resource(ctx.block_id, "block")
+        or not resource(ctx.client_id, "client") then fail(origin_failure) end
+    local kind = type(ctx.server)
+    if (kind ~= "nil" and kind ~= "string" and kind ~= "table" and kind ~= "userdata") or ctx.server == "" then
+        fail(origin_failure)
     end
-    local matches, generation, seen = 0, nil, {}
-    for _, client in ipairs(result.clients) do
-        if not plain(client) or not resource(client.client_id, "client") or seen[client.client_id] then
-            fail("originating session returned malformed or duplicate clients")
-        end
-        seen[client.client_id] = true
-        if client.connection_state ~= nil and type(client.connection_state) ~= "string" then
-            fail("originating session returned a malformed connection state")
-        end
-        if client.connection_state ~= "lost" and not valid_generation(client.connected_at) then
-            fail("originating client has no valid connection generation")
-        end
-        if client.client_id == target_id then
-            if not plain(client.info) or client.info.kind ~= "app" then
-                fail("target client is not a graphical app")
+    return { server = ctx.server, session_id = ctx.session_id, block_id = ctx.block_id, client_id = ctx.client_id }
+end
+local function unchanged(ctx, actual)
+    return plain(ctx) and rawequal(ctx.server, actual.server) and ctx.session_id == actual.session_id
+        and ctx.block_id == actual.block_id and ctx.client_id == actual.client_id
+end
+local function metadata(check)
+    local status, err = rex.call("server.status", {})
+    check()
+    if err ~= nil or not plain(status) or not plain(status.config) or not text_valid(status.instance_id)
+        or not text_valid(status.config.hash) or not integer(status.config.generation) then fail(origin_failure) end
+    return { server_instance = status.instance_id, config_generation = status.config.generation, config_hash = status.config.hash }
+end
+local function same_metadata(a, b)
+    return a.server_instance == b.server_instance and a.config_generation == b.config_generation and a.config_hash == b.config_hash
+end
+local function inspect(ctx, actual, target, connected_at, check)
+    local status = metadata(check)
+    local view, err = rex.session.view({ session_id = actual.session_id })
+    check()
+    if err ~= nil or not plain(view) or view.session_id ~= actual.session_id or not plain(view.windows) then fail(origin_failure) end
+    local count, window_id, layer_id = 0, nil, nil
+    for _, window in ipairs(view.windows) do
+        if not plain(window) or not plain(window.layers) then fail(origin_failure) end
+        for _, layer in ipairs(window.layers) do
+            if not plain(layer) or not plain(layer.blocks) then fail(origin_failure) end
+            for _, block in ipairs(layer.blocks) do
+                if not plain(block) then fail(origin_failure) end
+                if block.block_id == actual.block_id then
+                    count, window_id, layer_id = count + 1, window.window_id, layer.layer_id
+                    if layer_id == nil then layer_id = "" end
+                end
             end
-            matches = matches + 1
-            if client.connection_state == "lost" then
-                fail("originating client connection was lost")
-            end
-            generation = client.connected_at
         end
     end
-    if matches ~= 1 or not valid_generation(generation) then
-        fail("originating client connection is missing or ambiguous")
+    if count ~= 1 or not resource(window_id, "window") or (layer_id ~= "" and not resource(layer_id, "layer")) then
+        fail(origin_failure)
     end
-    return generation
+    local clients, client_err = rex.session.list_clients({ session_id = actual.session_id })
+    check()
+    if client_err ~= nil or not plain(clients) or not plain(clients.clients) then fail(origin_failure) end
+    local matches, generation = 0, nil
+    for _, client in ipairs(clients.clients) do
+        if not plain(client) then fail(origin_failure) end
+        if client.client_id == target then
+            matches, generation = matches + 1, client.connected_at
+            if (client.connection_state ~= nil and type(client.connection_state) ~= "string")
+                or client.connection_state == "lost" or not plain(client.info) or client.info.kind ~= "app" then fail(origin_failure) end
+        end
+    end
+    if matches ~= 1 or not text_valid(generation) or (connected_at ~= nil and generation ~= connected_at) then fail(origin_failure) end
+    return { session_id = actual.session_id, block_id = actual.block_id, window_id = window_id, layer_id = layer_id,
+        caller_id = actual.client_id, client_id = target, connected_at = generation }, status
+end
+local function same_origin(a, b)
+    for key, value in pairs(a) do if b[key] ~= value then return false end end
+    return true
+end
+local function consumer(name, entry, status)
+    if not entry.registry or not completion_action then fail(compatibility) end
+    local advertised = {}
+    for i, feature in ipairs(features) do advertised[i] = feature end
+    return { protocol_min = 1, protocol_max = 1, consumer_build = "rex-whichkey-lua-runtime-1-completion-2",
+        features = advertised, launch_action = name, completion_action = completion_action,
+        menu_generation = entry.generation, layout_revision = 1, server_instance = status.server_instance,
+        config_generation = status.config_generation, config_hash = status.config_hash }
+end
+local function compatible(reply)
+    if not integer(reply.protocol_min) or not integer(reply.protocol_max) or reply.protocol_min < 1
+        or reply.protocol_min > 1 or reply.protocol_max < 1 or reply.layout_revision ~= 1
+        or not text_valid(reply.producer_build) or not plain(reply.features) then fail(compatibility) end
+    local seen = {}
+    for _, feature in ipairs(reply.features) do
+        local known = false
+        for _, expected in ipairs(features) do if feature == expected then known = true end end
+        if not known or seen[feature] then fail(compatibility) end
+        seen[feature] = true
+    end
+    for _, required in ipairs(features) do if not seen[required] then fail(compatibility) end end
+end
+local function command(mode, input, schema, limit)
+    local result, err = rex.exec({ helper, mode }, {
+        stdin = encode(input, mode == "runtime-describe" and small_limit or full_limit), timeout = 3, stderr = false,
+    })
+    if err ~= nil or not plain(result) or result.ok ~= true or result.code ~= 0 or result.timed_out then fail(compatibility) end
+    return decode(result.stdout, schema, limit)
+end
+local prepared_schema = { version = "integer", capability = "string", executable = "string", server = "string",
+    receipt = "string", receipt_hash = "string", workspace = "string", expires = "integer" }
+local function valid_preparation(value)
+    if value.version ~= 1 or not hash(value.capability) or not hash(value.receipt_hash)
+        or not text_valid(value.server) or not text_valid(value.executable, 4096) or value.executable:sub(1, 1) ~= "/"
+        or not text_valid(value.workspace, 4096) or value.workspace:sub(1, 1) ~= "/"
+        or value.executable ~= value.workspace .. "/runtime-image" or value.receipt == "" or #value.receipt > full_limit
+        or not integer(value.expires) then fail(compatibility) end
 end
 
--- Explicit at-load registration in the user-owned init.lua; nothing here writes
--- or reloads it. Use the SAME installed module/VM for launch and completion:
---   local popup = require("rex_whichkey")
---   popup.register_completion("whichkey_complete")
---   local menu = popup.new(defaults)
---   -- Optional second argument: THIS server's immutable endpoint override,
---   -- never ctx.server or a host label. Go resolves execution-host defaults.
---   -- The defaults owner supplies the baseline; setup cannot replace routing.
---   menu.setup(inline_options, optional_user_module_name)
---   menu.register_launch("whichkey") -- CLI, palette and key use the actual ctx
--- The completion action is NOT a script file or a popup-origin action.
 function M.register_completion(name)
-    if completion_action ~= nil then
-        fail("completion action is already registered")
-    end
-    if launch_names[name] then
-        fail("completion and launch actions must have distinct names")
+    if completion_action or not name_valid(name) or launch_names[name] or name == "whichkey_runtime" then
+        fail("completion action is invalid, duplicate or reserved")
     end
     dispatch.register_completion(name)
     completion_action = name
 end
 
--- Defaults are supplied by the defaults owner, not invented named actions here.
--- Setup uses the delivered transactional loader/compiler and only then replaces
--- the installed invocation registry. Failure retains the last working setup.
 function M.new(defaults, server_endpoint, execution)
-    execution = execution or {}
-    if not plain(execution) then
-        fail("execution options must be a table")
+    if execution == nil then execution = {} end
+    if not plain(execution) then fail("execution options must be a table") end
+    if execution.helper ~= nil or execution.rex_bin_dir ~= nil then
+        fail("remove obsolete execution.helper/execution.rex_bin_dir wiring; install and load the normal integration assets")
     end
-    local helper = execution.helper or "rex-whichkey"
-    local rex_bin_dir = execution.rex_bin_dir
-    if type(helper) ~= "string" or helper == "" or helper:find("%z") then
-        fail("a helper executable is required")
-    end
-    if rex_bin_dir ~= nil and (type(rex_bin_dir) ~= "string" or rex_bin_dir:sub(1, 1) ~= "/" or rex_bin_dir:find("%z")) then
-        fail("rex_bin_dir must be an absolute directory")
-    end
+    for _ in pairs(execution) do fail("unsupported execution option") end
     if server_endpoint ~= nil and type(server_endpoint) ~= "string" then
         fail("the optional server-owned endpoint override must be a string")
     end
-    -- Retain the optional immutable constructor binding outside mapping options
-    -- and the actual action ctx. Only Go owns endpoint syntax/default policy;
-    -- even an explicitly empty string is forwarded for fail-closed validation.
-    local loader = config.new(defaults, function(candidate)
-        return mapping.compile(candidate.spec)
-    end)
-    local registry, installed, launch_name
+    local loader = config.new(defaults, function(candidate) return mapping.compile(candidate.spec) end)
+    local entry = {}
     local menu = {}
-
     function menu.setup(inline, module_name)
+        if generation_serial >= 9007199254740991 then fail("menu generation identity space exhausted") end
         local candidate, template = loader.setup(inline, module_name)
-        local replacement = dispatch.new(template)
-        registry, installed = replacement, candidate
+        local replacement
+        replacement = dispatch.new(template, function() return entry.registry == replacement end)
+        local previous = entry.registry
+        generation_serial = generation_serial + 1
+        entry.registry, entry.options, entry.generation = replacement, candidate, "menu:" .. string.format("%.0f", generation_serial)
+        if previous then previous.invalidate() end
     end
-
-    -- At configuration load, install a named action in THIS original server VM.
-    -- CLI origin data constrains session/block and nominates a validated GUI
-    -- target; keys/palette already have an app caller and need no extra data.
     function menu.register_launch(name)
-        if name == nil then
-            name = "whichkey"
+        if name == nil then name = "whichkey" end
+        if not name_valid(name) or entry.name or launch_names[name] or name == completion_action or name == "whichkey_runtime" then
+            fail("launch action is invalid, duplicate or reserved")
         end
-        if type(name) ~= "string" or not name:match("^[a-z0-9_]+$") then
-            fail("a valid launch configuration action name is required")
-        end
-        if launch_name ~= nil or launch_names[name] or name == completion_action then
-            fail("launch action is already registered or conflicts with completion")
-        end
-        rex.action({
-            name = name,
-            title = "Which key",
-            args = { origin = "string?" },
+        rex.action({ name = name, title = "Which key",
+            args = { runtime = "string?", client_id = "string?", connected_at = "string?" },
             run = function(ctx, args)
-                if not plain(args) then
-                    fail("launch arguments must be a table")
-                end
+                -- Public Go emits these exact three fields. The locator is an
+                -- opaque string; never open its files or substitute a GUI here.
+                if not plain(args) then fail(compatibility) end
                 for key in pairs(args) do
-                    if key ~= "origin" then
-                        fail("unexpected launch argument")
-                    end
+                    if key ~= "runtime" and key ~= "client_id" and key ~= "connected_at" then fail(compatibility) end
                 end
-                -- Do not return any controller handle, reservation or secrets.
-                menu.launch(ctx, args.origin)
+                if next(args) == nil then menu.launch(ctx) else menu.launch(ctx, args) end
             end,
         })
-        launch_name, launch_names[name] = name, true
+        entry.name, launch_names[name] = name, entry
     end
-
-    function menu.launch(ctx, origin_json)
-        if completion_action == nil then
-            fail("register the completion configuration action before launching")
-        end
-        if registry == nil then
-            fail("setup must succeed before launching")
-        end
-        -- Rex versions may omit server for local actions. This module and its
-        -- registry already belong to one server VM; never invent an endpoint or
-        -- substitute caller data for a missing opaque identity.
-        local server_kind = plain(ctx) and type(ctx.server)
-        if
-            not plain(ctx)
-            or (server_kind ~= "nil" and server_kind ~= "string" and server_kind ~= "table" and server_kind ~= "userdata")
-            or ctx.server == ""
-            or not resource(ctx.session_id, "session")
-            or not resource(ctx.block_id, "block")
-            or not resource(ctx.client_id, "client")
-        then
-            fail("the original action context with full session/block/client identities is required")
-        end
-        local expected = origin_json ~= nil and launch_expectation(origin_json) or nil
-        -- Capture actual opaque identity without stringifying it or making a
-        -- replacement ctx. Target routing data cannot impersonate this caller.
-        local actual_server, session_id, block_id, request_client_id = ctx.server, ctx.session_id, ctx.block_id, ctx.client_id
-        -- CLI selectors nominate a GUI target; they do not impersonate that
-        -- app's connection. Keys/palette use their actual app client directly.
-        local client_id = expected and expected.client_id or request_client_id
-        local generation, options = registry, installed
-        local started = os.time()
-        if type(started) ~= "number" then
-            fail("wall clock is unavailable")
-        end
-        local function check()
-            local now = os.time()
-            if
-                registry ~= generation
-                or installed ~= options
-                or not plain(ctx)
-                or not rawequal(ctx.server, actual_server)
-                or ctx.session_id ~= session_id
-                or ctx.block_id ~= block_id
-                or ctx.client_id ~= request_client_id
-                or type(now) ~= "number"
-                or now < started
-                or now >= started + 30
-            then
-                fail("origin or configuration changed during launch")
-            end
-            if expected then
-                for _, field in ipairs({ "session_id", "block_id" }) do
-                    if expected[field] ~= ctx[field] then
-                        fail("launch origin " .. field .. " does not match the actual action context")
-                    end
-                end
-            end
-        end
-        local connected_at = expected and expected.connected_at or nil
-        local function check_connection()
-            check()
-            local current = connection(ctx, client_id)
-            check() -- list_clients yields; compare the actual ctx again.
-            if connected_at ~= nil and connected_at ~= current then
-                fail("originating client connection changed during launch")
-            end
-            connected_at = current
-        end
-        -- No reservation or secret exists yet. Preserve fixed, field-specific
-        -- preflight errors instead of hiding them behind the private-handoff
-        -- error boundary. Recheck inside that boundary before issuing a ticket.
-        check_connection()
-        local records, ticket
-        local failure =
-            "popup launch failed; check the exact origin IDs, connection generation and setup; invocation cancelled"
+    function menu.launch(ctx, args)
+        local stage = origin_failure
+        local ticket, prepared, attempted_start
+        local registry, options, menu_generation = entry.registry, entry.options, entry.generation
         local ok = pcall(function()
-            -- Reject a supplied mismatched origin/generation BEFORE reserving or
-            -- evaluating any user mapping. issue/bind retain placement checks.
-            check_connection()
-            records, ticket = generation.issue(ctx, { client_id = client_id, connected_at = connected_at })
-            check_connection()
+            if not registry or not entry.name or not completion_action then fail(compatibility) end
+            local actual = freeze(ctx) -- Actual caller, never the nominated GUI.
+            local started = os.time()
+            if not integer(started) then fail(origin_failure) end
+            local deadline = started + 30
+            local function check()
+                local now = os.time()
+                if entry.registry ~= registry or entry.options ~= options or entry.generation ~= menu_generation
+                    or not unchanged(ctx, actual) or not integer(now) or now < started or now >= deadline then fail(origin_failure) end
+            end
+            local public = args ~= nil
+            -- The integrated public relay cannot carry constructor endpoint
+            -- intent yet. Do not silently discard it or canonicalize it in Lua.
+            if public and server_endpoint ~= nil then
+                stage = "public runtime endpoint intent cannot be validated by this producer; update the integration; no reservation or popup, not retried"
+                fail(stage)
+            end
+            local target, connected_at, expected_hash = actual.client_id, nil, nil
+            if public then
+                if not plain(args) then fail(compatibility) end
+                local count = 0
+                for key in pairs(args) do
+                    if key ~= "runtime" and key ~= "client_id" and key ~= "connected_at" then fail(compatibility) end
+                    count = count + 1
+                end
+                if count ~= 3 or type(args.runtime) ~= "string" or #args.runtime > small_limit
+                    or not resource(args.client_id, "client") or not text_valid(args.connected_at) then fail(compatibility) end
+                -- Validate locator syntax without reading nominated files; keep
+                -- its original bytes for Go's authenticated local preflight.
+                local locator = decode(args.runtime, { version = "integer", workspace = "string",
+                    request_sha256 = "string", receipt_hash = "string" }, small_limit)
+                if locator.version ~= 1 or not hash(locator.request_sha256) or not hash(locator.receipt_hash)
+                    or not text_valid(locator.workspace, 4096) or locator.workspace:sub(1, 1) ~= "/" then fail(compatibility) end
+                encode(args, small_limit)
+                target, connected_at, expected_hash = args.client_id, args.connected_at, locator.receipt_hash
+            end
+            local origin, status = inspect(ctx, actual, target, connected_at, check)
+            local advertisement = consumer(entry.name, entry, status)
+            local function recheck()
+                check()
+                local current_origin, current_status = inspect(ctx, actual, target, origin.connected_at, check)
+                if not same_origin(origin, current_origin) or not same_metadata(status, current_status) then fail(origin_failure) end
+            end
+            local input = { anchor = anchor_path, layout_revision = 1, consumer = advertisement, origin = origin }
+            if public then input.descriptor = args.runtime else input.server = server_endpoint end
+            local schema = { protocol_min = "integer", protocol_max = "integer", producer_build = "string",
+                features = { array = "string" }, layout_revision = "integer", receipt_hash = "string" }
+            if public then schema.version, schema.relay = "integer", "string" else schema.receipt = "string" end
+            stage = "runtime preflight failed; check the execution-host assets, CLI, endpoint and loaded integration; not retried"
+            local described = command("runtime-describe", input, schema, public and small_limit or full_limit)
+            recheck()
+            compatible(described)
+            if not hash(described.receipt_hash) then fail(compatibility) end
+            if public then
+                if described.version ~= 1 or described.receipt_hash ~= expected_hash
+                    or described.relay == "" or #described.relay > small_limit then fail(compatibility) end
+            elseif described.receipt == "" or #described.receipt > full_limit then fail(compatibility) end
+            -- Preflight was certain. Only now may user guards run or a ticket be
+            -- reserved. The original start bounds even slow yielding evaluation.
+            stage = "invocation evaluation failed or origin changed; invocation cancelled, not retried"
+            local records
+            records, ticket = registry.issue(ctx, { client_id = target, connected_at = origin.connected_at,
+                window_id = origin.window_id, layer_id = origin.layer_id, metadata = status, expires = deadline })
+            recheck()
             local resolved = configuration(options, records)
-            -- Resolve the helper on this server, using its configured path when
-            -- an app-launched server has no user profile on PATH.
-            -- Only captured stdout contains the random capability. Never return
-            -- it to the invoking action, print it, or propagate child errors.
-            local prepare_argv = { helper, "prepare" }
-            if server_endpoint ~= nil then
-                prepare_argv[#prepare_argv + 1] = "--server"
-                prepare_argv[#prepare_argv + 1] = server_endpoint
+            stage = "runtime preparation failed; check the original deadline and integration; invocation cancelled, not retried"
+            if public then
+                input.operation, input.relay, input.configuration = "menu", described.relay, resolved
+                prepared = command("runtime-relay", input, prepared_schema, full_limit)
+            else
+                prepared = command("prepare", { version = 1, configuration = resolved,
+                    receipt = described.receipt, receipt_hash = described.receipt_hash }, prepared_schema, full_limit)
             end
-            -- Only fixed guidance crosses the pcall boundary, including when
-            -- exec/decode throws; never forward child output or error objects.
-            failure =
-                "server-side preparation failed; check the execution-host rex-whichkey helper, matching Rex CLI, running server/runtime environment and endpoint override or REX_SERVER; invocation cancelled"
-            local prepared, prepare_err = rex.exec(prepare_argv, {
-                timeout = 3,
-                stdin = resolved,
-                stderr = false,
-                env = { REX_BIN_DIR = rex_bin_dir },
-            })
-            if prepare_err ~= nil or type(prepared) ~= "table" or not prepared.ok then
-                fail("server-side invocation preparation failed")
+            valid_preparation(prepared)
+            deadline = math.min(deadline, prepared.expires) -- Never renew either owner's deadline.
+            recheck()
+            registry.bind(ticket, ctx, prepared)
+            recheck()
+            if os.time() >= deadline - 5 then fail(origin_failure) end
+            if public then
+                input.operation, input.configuration, input.receipt_hash = "bound", nil, prepared.receipt_hash
+                local bound = command("runtime-relay", input, { version = "integer" }, small_limit)
+                if bound.version ~= 1 then fail(compatibility) end
+                recheck()
+            else
+                local handoff = encode({ configuration = resolved, capability = prepared.capability, server = prepared.server,
+                    session_id = origin.session_id, block_id = origin.block_id, client_id = target,
+                    connected_at = origin.connected_at, completion_action = completion_action, expires = prepared.expires,
+                    receipt = prepared.receipt, receipt_hash = prepared.receipt_hash, workspace = prepared.workspace })
+                recheck()
+                if os.time() >= deadline - 5 then fail(origin_failure) end
+                stage = "controller startup failed or uncertain; inspect the original invocation before relaunching; not retried"
+                -- Transfer is irreversible even if the start/wait reply is lost.
+                attempted_start = true
+                local handle, err = rex.exec.start({ prepared.executable, "controller" }, {
+                    stdin = handoff, detach = true, timeout = 35, stderr = false,
+                })
+                check()
+                if err ~= nil or handle == nil then fail(stage) end
+                local result, wait_err = handle:wait(35)
+                check()
+                if wait_err ~= nil or not plain(result) or result.ok ~= true or result.code ~= 0 or result.timed_out then fail(stage) end
+                local accepted = decode(result.stdout, { version = "integer", status = "string" }, small_limit)
+                if accepted.version ~= 1 or accepted.status ~= "accepted" then fail(stage) end
+                recheck()
             end
-            local secret, decode_err = rex.json.decode(prepared.stdout)
-            if
-                decode_err ~= nil
-                or type(secret) ~= "table"
-                or type(secret.capability) ~= "string"
-                or #secret.capability ~= 64
-                or secret.capability:find("[^0-9a-f]")
-                or type(secret.executable) ~= "string"
-                or secret.executable:sub(1, 1) ~= "/"
-                or secret.executable:find("%z")
-                or type(secret.server) ~= "string"
-                or secret.server == ""
-            then
-                fail("invalid server-side invocation preparation")
-            end
-            failure = "popup launch failed; origin, connection or endpoint changed; invocation cancelled"
-            check_connection()
-            if expected and expected.server ~= secret.server then
-                fail("launch endpoint differs from canonical server preparation")
-            end
-            generation.bind(ticket, ctx, secret.capability)
-            check_connection() -- bind also yields; never start from a stale ctx.
-            local handoff = encode({
-                configuration = resolved,
-                capability = secret.capability,
-                server = secret.server,
-                session_id = session_id,
-                block_id = block_id,
-                client_id = client_id,
-                connected_at = connected_at,
-                completion_action = completion_action,
-                -- Consume Go-owned InvocationLifetimeSeconds, not a renewable
-                -- per-redraw timeout. Reservation began no earlier than started.
-                expires = started + 30,
-            })
-            -- No waiting for selection here. stdin is a finite string; Rex closes
-            -- it after writing. detach is the documented action-lifetime escape.
-            -- The bounded Go controller outlives the action and popup terminal;
-            -- it alone owns popup cleanup and the fresh completion activation.
-            check()
-            failure =
-                "detached popup controller launch failed or origin changed; check the execution-host helper and context; invocation cancelled"
-            local handle, launch_err = rex.exec.start({ secret.executable, "controller" }, {
-                stdin = handoff,
-                env = { REX_BIN_DIR = rex_bin_dir },
-                detach = true,
-                timeout = 35,
-                stdout = false,
-                stderr = false,
-            })
-            if launch_err ~= nil or handle == nil then
-                fail("cannot start detached popup controller")
-            end
-            check_connection()
         end)
         if not ok then
-            if ticket ~= nil then
-                generation.cancel(ticket)
+            -- Revoke only local, unclaimed authority. No retry or inference that
+            -- a failed/uncertain launcher reply undid a possibly started child.
+            if ticket and registry then pcall(registry.cancel, ticket) end
+            if prepared and not args and not attempted_start then
+                local released = pcall(function()
+                    local result, err = rex.exec({ helper, "runtime-release" }, {
+                        stdin = encode(prepared), timeout = 3, stdout = false, stderr = false,
+                    })
+                    if err ~= nil or not plain(result) or result.ok ~= true then fail("cleanup failed") end
+                end)
+                if not released then stage = "preparation cleanup failed; inspect owned invocation artifacts; not retried" end
             end
-            -- Neither raw process diagnostics nor arbitrary user-code errors can
-            -- expose a capability-bearing handoff. No fallback or retry.
-            fail(failure)
+            fail(stage) -- Never raw child output, user exceptions or capabilities.
         end
-        -- Never return a ticket, capability, handle or callback to the caller.
+        -- No handle, capability, receipt or arbitrary callback result escapes.
     end
-
     return menu
 end
 
+-- At-load registration advertises only already-retained code/menu state. It
+-- performs read-only metadata checks, not evaluation, reservation or file I/O.
+rex.action({ name = "whichkey_runtime", title = "Describe WhichKey runtime",
+    args = { protocol_min = "integer", protocol_max = "integer", action = "string" },
+    run = function(ctx, args)
+        local ok, result = pcall(function()
+            if not plain(args) then fail(compatibility) end
+            local count = 0
+            for key in pairs(args) do
+                if key ~= "protocol_min" and key ~= "protocol_max" and key ~= "action" then fail(compatibility) end
+                count = count + 1
+            end
+            if count ~= 3 or args.protocol_min ~= 1 or args.protocol_max ~= 1 or not name_valid(args.action) then fail(compatibility) end
+            local entry = launch_names[args.action]
+            if not entry then fail(compatibility) end
+            local registry, generation = entry.registry, entry.generation
+            local actual = freeze(ctx)
+            local function check()
+                if not unchanged(ctx, actual) or entry.registry ~= registry or entry.generation ~= generation then fail(origin_failure) end
+            end
+            encode(args, small_limit)
+            local status = metadata(check)
+            local value = consumer(args.action, entry, status)
+            encode(value, small_limit)
+            return value
+        end)
+        if not ok then fail(compatibility) end
+        return result
+    end,
+})
 return M
