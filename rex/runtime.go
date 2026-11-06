@@ -561,7 +561,7 @@ func unconstrainedAdditional(data json.RawMessage) bool {
 
 func opaqueRequest(path string) bool {
 	switch path {
-	case "client.perform.args", "block.method.args", "session.new_window.layout", "session.create.initial_windows.[]":
+	case "client.perform.args", "block.method.args", "session.new_window.layout", "session.create.initial_windows.[].layout":
 		return true
 	default:
 		return false
@@ -730,7 +730,10 @@ func requiredMethods() []methodContract {
 			"layout.block.options.size.cell_width_px": schemaInteger, "layout.block.options.size.cell_height_px": schemaInteger}, map[string]string{"layer_id": schemaString, "block_ids": schemaArray, "block_ids.[]": schemaString}},
 		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, "args": schemaObject, "timeout_ms": schemaInteger, "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
 		{"session.view", map[string]string{fieldSession: schemaString}, nil},
-		{"session.create", map[string]string{"initial_windows": schemaArray, "initial_windows.[]": schemaObject}, nil},
+		// The initial-window envelope is closed and known; only its layout is
+		// delegated to the CLI. A window label is optional, not guaranteed.
+		{"session.create", map[string]string{"initial_windows": schemaArray, "initial_windows.[]": schemaObject,
+			"initial_windows.[].window_label": schemaString, "initial_windows.[].layout": schemaObject}, nil},
 		{"session.set_label", map[string]string{fieldSession: schemaString, fieldLabel: schemaString}, nil},
 		{"session.destroy", map[string]string{fieldSession: schemaString}, nil},
 		{"session.new_window", map[string]string{fieldSession: schemaString, fieldLayout: schemaObject}, nil},
@@ -891,6 +894,8 @@ func suppliedFields(method methodContract) map[string]string {
 		delete(supplied, fieldBlock)
 	case "block.method":
 		delete(supplied, "args")
+	case "session.create":
+		delete(supplied, "initial_windows.[].window_label")
 	case "session.new_layer":
 		// Unsized creation omits size; sized creation always supplies rows and
 		// columns, but omits zero pixel dimensions. Required is checked at each
