@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-05T20:32:12.140Z'
+dateModified: '2026-11-06T15:12:48.902Z'
 tags:
   - task
 type: task
@@ -115,6 +115,15 @@ ID assigned while processing the explicit user directive, not a claimed exact hi
 - **Verified implementation:** Source checkpoint `30a4439302ade4e08487d176ba6823206ddc326d`; separate metadata checkpoint `664f8fb7e4f0a7f0a7b9eb8b943dd144d92cb742`. Both are in `main` history. No project tests, runtime probes, deployment, user-configuration changes or standards weakening were authorized by this preservation decision.
 - **Rationale:** Phase 15 writers require committed-base isolation while retaining the existing launch, endpoint/PTY, rename, documentation and packaging repairs without guessing their authorship or copying dirty parent files.
 - **Relationship:** Operational prerequisite to Phase 15 execution; does not replace or broaden accepted responsibility correction `REXWHICHKEY-20261104-193124`. Current source delivery remains recorded on the phase/tasks through native mtn evidence.
+
+
+## REXWHICHKEY-20261106-101053 — Open integration lifecycle authorization
+
+- **State:** Open; coordinator request, not user approval.
+- **Requested action:** Deploy current normal integration assets, remove obsolete constructor runtime wiring, and reload Rex configuration without a Rex restart. Restrictions remain until explicit approval.
+- **Evidence:** Actual user-authorized builds/runs pass API admission but candidate10 exits1 at required whichkey_runtime registry check. Read-only installed module lacks advertisement/anchor; init.lua still passes retired helper. No Rex software reinstall/update evidence.
+- **Boundary:** Original VM callbacks/no native or second-VM bypass preserved. Source review may continue; runtime closure is blocked.
+- **Tracking:** Phase15 current-integration-lifecycle-blocker/1; private current-integration-source-diagnosis.json/candidate10 actual-run log.
 
 <!-- mtn:evidence:v1 -->
 
