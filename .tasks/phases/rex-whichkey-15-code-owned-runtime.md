@@ -25,8 +25,8 @@ scope:
       hash: 'sha256:966ef70c264360b4820e5faf510496166e91f0effeae479ab7400a3792de88e9'
 lifecycle:
   state: incomplete
-  sourceEventID: rex-whichkey-p15/cli-only-successor/1
-  changedAt: '2026-11-06T17:04:12.963Z'
+  sourceEventID: rex-whichkey-p15/cli-only-successor-delivered/1
+  changedAt: '2026-11-06T23:03:12.316Z'
 title: 'Phase 15: Code-owned runtime discovery and compatibility'
 mtnCreateRetry:
   key: rex-whichkey-phase15-code-owned-runtime/create/1
@@ -37,7 +37,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-05T00:33:09.738Z'
-dateModified: '2026-11-06T17:04:13.581Z'
+dateModified: '2026-11-06T23:03:12.939Z'
 tags:
   - task
 type: task
@@ -263,4 +263,10 @@ This phase remains open with five planned child tasks linked by native prerequis
 ### 2026-11-06T17:04:12.173Z · historical · unspecified
 
 {"attempt":4,"content":"Successor phases/rex-whichkey-16-cli-only-menu.md replaces mandatory Lua runtime/completion/advertisement control plane. Unapproved deployment request REXWHICHKEY-20261106-101053 is superseded, not config/reload authority. Preserve Phase15 failed-run/blocker/source review history; do not mark startup fixed/completed. No whole Phase15 prerequisite for successor. Reuse integrated Go source, no legacy migration, implementation dispatch or real config action.","eventID":"rex-whichkey-p15/cli-only-successor/1","gateEligible":false,"kind":"historical","provenance":"Explicit user approval of proposal REXWHICHKEY-20261106-114935 and request to plan CLI-only Phase16, hooks future.","recordRef":"phases/rex-whichkey-15-code-owned-runtime.md","schemaVersion":1,"specHash":"sha256:b5c1e48a9775cadb80174c1c476604cce79325f45cf65c33ffc692a9b79efc17"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA2VDIzOjAzOjExLjUyM1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNS9jbGktb25seS1zdWNjZXNzb3ItZGVsaXZlcmVkLzEiLCJpbnRlbnQiOiI5MTdlNmI3YTc4ZTQxNzkxMThlNzlkMWFiYzllNzUxYWM2NmUwODM2MjFiZTkwODFlZmEyNDMzMzExM2Q1NzE0In0 -->
+### 2026-11-06T23:03:11.523Z · historical · unspecified
+
+{"attempt":1,"content":"Phase16 CLI-only successor is delivered in main, with actual normal public menu/dynamic navigation/Escape/cleanup and benign owned inline rename observed. See phases/rex-whichkey-16-cli-only-menu.md milestone/summary and .mtn-tmp/p16/final-main-public-runtime-evidence.json. This replaces the rejected mandatory Lua registry/completion control path; it does not mark Phase15 original bridge startup/integration or reopened task02 complete, install the old bridge, change user config or grant reload/deployment authority. Original failed runs and unreviewed preservation history remain intact.","eventID":"rex-whichkey-p15/cli-only-successor-delivered/1","gateEligible":false,"kind":"historical","provenance":"Accepted successor REXWHICHKEY-20261106-114935, explicit user start-it authority and actual Phase16 public-runtime milestone.","recordRef":"phases/rex-whichkey-15-code-owned-runtime.md","schemaVersion":1,"specHash":"sha256:b5c1e48a9775cadb80174c1c476604cce79325f45cf65c33ffc692a9b79efc17"}
 <!-- mtn:end-entry:v1 -->

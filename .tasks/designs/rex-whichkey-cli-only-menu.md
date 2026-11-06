@@ -28,8 +28,8 @@ scope:
       hash: 'sha256:966ef70c264360b4820e5faf510496166e91f0effeae479ab7400a3792de88e9'
 lifecycle:
   state: approved
-  sourceEventID: rex-whichkey/cli-only-design/approval/1
-  changedAt: '2026-11-06T17:00:35.631Z'
+  sourceEventID: rex-whichkey/cli-only-design/implementation-delivered/1
+  changedAt: '2026-11-06T23:03:08.917Z'
 title: CLI-only Go menu and data configuration
 mtnCreateRetry:
   key: rex-whichkey/cli-only-design/create/1
@@ -40,7 +40,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-06T17:00:31.795Z'
-dateModified: '2026-11-06T17:00:36.242Z'
+dateModified: '2026-11-06T23:03:09.532Z'
 tags:
   - task
 type: task
@@ -116,4 +116,10 @@ prds/rex-whichkey.md; prds/rex-whichkey-usability.md; designs/rex-whichkey-runti
 ### 2026-11-06T17:00:34.928Z · approval · unspecified
 
 {"approvalScope":"CLI-only responsibility boundary, Go-readable data config, no custom Lua runtime/completion registrations, deferred hooks; phase planning/documentation only. Exact config format/path/CLI details remain explicit open implementation choices. No implementation dispatch/config mutation/deploy/reload approval.","approvedBy":"user","attempt":1,"decision":"approved","decisionEvidence":"User explicitly approved proposal then requested: yes, plan out a new phase for this proposal. Use CLI only. hooks are for the future.","decisionID":"REXWHICHKEY-20261106-114935","deferredRequirements":["REQ-005"],"eventID":"rex-whichkey/cli-only-design/approval/1","kind":"approval","recordRef":"designs/rex-whichkey-cli-only-menu.md","requirementInterpretation":"REQ003 Lua mechanism and REQ004 function-valued features superseded/deferred only as explicitly described in this accepted CLI-only target; IDs and prior history preserved.","schemaVersion":1,"specHash":"sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA2VDIzOjAzOjA4LjIyMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2NsaS1vbmx5LWRlc2lnbi9pbXBsZW1lbnRhdGlvbi1kZWxpdmVyZWQvMSIsImludGVudCI6ImZhNGI1Zjg3ODU4N2Y4N2Y4YWY3YzFjZWZjYWRkNjJjYmVkYmIyNWNjYzJlNTgzNTQyYTViYzRiYzQ0Y2YwMWQifQ -->
+### 2026-11-06T23:03:08.221Z · historical · unspecified
+
+{"attempt":1,"content":"The originally planning-only definition now has delivered Phase16 implementation. Go owns data configuration/menu/providers/Rex CLI operations; production Lua is launch-only; mandatory registry/completion/relay plane retired and hooks deferred. Final main normal binary built/run, dynamic navigation/Escape/exact owned cleanup observed; combined reviewed source actual owned inline tab rename observed. See phases/rex-whichkey-16-cli-only-menu.md, milestone rex-whichkey-p16/milestone/1 and .mtn-tmp/p16/final-main-public-runtime-evidence.json. JSONv1/path/catalogue details were routine authorized implementation choices, not retrospectively attributed explicit user format decisions. No user configuration/profile/Rex reload/deployment or physical keybinding test. Original phase15 Lua bridge failure not retroactively fixed.","eventID":"rex-whichkey/cli-only-design/implementation-delivered/1","gateEligible":false,"kind":"historical","provenance":"User start-it execution of accepted CLI-only direction; native Phase16 delivered task summaries/milestone and revision-bound source reviews plus actual public app evidence.","recordRef":"designs/rex-whichkey-cli-only-menu.md","schemaVersion":1,"specHash":"sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b"}
 <!-- mtn:end-entry:v1 -->
