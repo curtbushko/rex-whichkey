@@ -32,6 +32,10 @@ const (
 	schemaMaximum      = "maximum"
 	schemaConst        = "const"
 	schemaEnum         = "enum"
+	schemaAnyOf        = "anyOf"
+	maxRequestDepth    = 32
+	maxRequestNodes    = 1024
+	maxRequestBranches = 64
 )
 
 // CLIOptions are execution-host inputs, never paths supplied by menu text or a
@@ -217,20 +221,47 @@ func outputFailure(data json.RawMessage, required methodContract) string {
 // Request paths describe fixed producers, not invented server properties.
 // Diagnostics use only these app-owned paths and fixed constraint names.
 func requestFailure(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	admission := requestAdmission{remaining: maxRequestNodes}
+	return admission.failure(schema, kind, fields, supplied, path)
+}
+
+// All alternatives and child properties share one work budget. Depth includes
+// composition at the same producer path, not just nested producer fields.
+// Capture and frozen receipt validation both enter through requestFailure.
+type requestAdmission struct {
+	depth, remaining int
+}
+
+func (admission *requestAdmission) failure(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	if admission.depth >= maxRequestDepth {
+		return path + ": schema nesting limit"
+	}
+	if admission.remaining == 0 {
+		return path + ": schema work limit"
+	}
+	admission.remaining--
+	admission.depth++
+	defer func() { admission.depth-- }()
+
 	if constraint := unsupportedRequest(schema, kind, path); constraint != "" {
 		return path + ": " + constraint
 	}
-	if len(schema["type"]) != 0 && !schemaType(schema, kind) {
+	// Request composition is proved below, separately from its sibling type.
+	// Output schemaType must still reject unproved composition semantics.
+	if len(schema["type"]) != 0 && !declaredSchemaType(schema, kind) {
 		return path + ": type"
 	}
 	if constraint := valuesFailure(schema, requestValues(path, kind)); constraint != "" {
 		return path + ": " + constraint
 	}
+	if reason := admission.anyOfFailure(schema, kind, fields, supplied, path); reason != "" {
+		return reason
+	}
 	switch kind {
 	case schemaObject:
-		return requestObjectFailure(schema, fields, supplied, path)
+		return admission.objectFailure(schema, fields, supplied, path)
 	case schemaArray:
-		return requestArrayFailure(schema, fields, supplied, path)
+		return admission.arrayFailure(schema, fields, supplied, path)
 	default:
 		if boundsItems(path) {
 			if constraint := boundsRangeFailure(schema); constraint != "" {
@@ -241,15 +272,37 @@ func requestFailure(schema map[string]json.RawMessage, kind string, fields, supp
 	}
 }
 
+// One alternative must admit the entire fixed producer shape. We do not union
+// partial proofs from different alternatives or waive constraints beside anyOf.
+// Unsupported alternatives cannot prove admission, but do not veto a proved OR.
+func (admission *requestAdmission) anyOfFailure(schema map[string]json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	data, present := schema[schemaAnyOf]
+	if !present {
+		return ""
+	}
+	var branches []json.RawMessage
+	if json.Unmarshal(data, &branches) != nil || len(branches) == 0 || len(branches) > maxRequestBranches {
+		return path + ": anyOf array/limit"
+	}
+	for _, branch := range branches {
+		if reason := admission.propertyFailure(branch, kind, fields, supplied, path); reason == "" {
+			return ""
+		}
+	}
+	return path + ": anyOf no proved branch"
+}
+
 // This is intentionally not a general JSON Schema evaluator. Only bounds have
 // a proved fixed length and numeric range; other ranges/unknown constraints
 // still fail closed. Never include an unknown server keyword in a diagnostic.
 func unsupportedRequest(schema map[string]json.RawMessage, kind, path string) string {
 	for _, keyword := range sortedKeys(schema) {
-		if requestAnnotation(keyword) || keyword == "type" {
+		if requestAnnotation(keyword) {
 			continue
 		}
 		switch keyword {
+		case "type", schemaAnyOf:
+			continue
 		case "properties", "required", "additionalProperties":
 			if kind == schemaObject {
 				continue
@@ -341,7 +394,7 @@ func boundedSchemaNumber(data json.RawMessage) (*big.Rat, bool) {
 	return new(big.Rat).SetString(number)
 }
 
-func requestArrayFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
+func (admission *requestAdmission) arrayFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
 	for _, keyword := range []string{schemaMinItems, schemaMaxItems} {
 		if data, present := schema[keyword]; present {
 			var limit uint64
@@ -356,10 +409,13 @@ func requestArrayFailure(schema map[string]json.RawMessage, fields, supplied map
 		return path + ": items"
 	}
 	itemPath := path + ".[]"
-	return requestPropertyFailure(schema["items"], itemKind, childFields(fields, "[]"), childFields(supplied, "[]"), itemPath)
+	return admission.propertyFailure(schema["items"], itemKind, childFields(fields, "[]"), childFields(supplied, "[]"), itemPath)
 }
 
-func requestPropertyFailure(data json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+func (admission *requestAdmission) propertyFailure(data json.RawMessage, kind string, fields, supplied map[string]string, path string) string {
+	if admission.remaining == 0 {
+		return path + ": schema work limit"
+	}
 	if len(data) == 0 || strings.TrimSpace(string(data)) == "true" {
 		return ""
 	}
@@ -367,7 +423,7 @@ func requestPropertyFailure(data json.RawMessage, kind string, fields, supplied 
 	if err != nil {
 		return path + ": schema"
 	}
-	return requestFailure(schema, kind, fields, supplied, path)
+	return admission.failure(schema, kind, fields, supplied, path)
 }
 
 func requestAnnotation(keyword string) bool {
@@ -440,7 +496,7 @@ func containsValue(allowed []any, value any) bool {
 	return false
 }
 
-func requestObjectFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
+func (admission *requestAdmission) objectFailure(schema map[string]json.RawMessage, fields, supplied map[string]string, path string) string {
 	if reason := requiredFailure(schema["required"], fields, supplied, path); reason != "" {
 		return reason
 	}
@@ -483,7 +539,7 @@ func requestObjectFailure(schema map[string]json.RawMessage, fields, supplied ma
 				return path + "." + name + ": additionalProperties"
 			}
 		}
-		if reason := requestPropertyFailure(property, fields[name], childFields(fields, name), childFields(supplied, name), path+"."+name); reason != "" {
+		if reason := admission.propertyFailure(property, fields[name], childFields(fields, name), childFields(supplied, name), path+"."+name); reason != "" {
 			return reason
 		}
 	}
@@ -598,6 +654,10 @@ func schemaType(schema map[string]json.RawMessage, kind string) bool {
 			return false
 		}
 	}
+	return declaredSchemaType(schema, kind)
+}
+
+func declaredSchemaType(schema map[string]json.RawMessage, kind string) bool {
 	var single string
 	if err := json.Unmarshal(schema["type"], &single); err == nil {
 		return single == kind
