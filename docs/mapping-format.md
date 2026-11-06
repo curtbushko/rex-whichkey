@@ -422,6 +422,35 @@ case-alias fields, nulls, coercions, bad Unicode and trailing data fail. Optiona
 fields are omitted, not null. CLI/API descriptors and version JSON inside the
 Go-owned receipt remain JSON **strings**, preserving their exact bytes.
 
+The Go runtime boundary checks decoded object names before typed decoding. Every
+protocol struct tag uses lowercase ASCII letters, digits and underscores;
+restricting protocol names to that alphabet makes `DisallowUnknownFields` an
+exact-name check, rather than accepting `encoding/json`'s Unicode SimpleFold
+aliases. Exact decoded duplicates (including escaped equivalents) and nulls are
+rejected recursively, including slot payloads and nested CLI/file identities.
+The popup handoff uses this same boundary, not an independent permissive decoder.
+Runtime-carried Config adds the same name/Unicode checks before the existing
+Config decoder, retaining its required fields, types, validation and 4 MiB bound.
+Only `args` and its descendants are arbitrary case-sensitive data maps: mixed
+case, Unicode and empty keys remain allowed there, including distinct keys that
+would fold together as struct fields. String values are not restricted to ASCII.
+Receipt, relay and embedded JSON strings are never normalized or reserialized;
+their consumers check names when decoding their contents. The legacy standalone
+`DecodeConfig` and user Lua mapping semantics are unchanged.
+
+Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
+
+| Input variation, otherwise valid | Required source outcome |
+| --- | --- |
+| Canonical `version:1`, or `ver\u0073ion:1`, with each required field once | Decode the same exact field name; ordinary type/version/authority checks still apply. Canonical `version:2` remains unsupported where protocol 1 is required. |
+| `Version:1` or `ver\u017fion:1`, alone or beside `version:2` in either order | Reject before struct decoding; no alias can replace or conceal the unsupported version. |
+| Repeated `version`, including `version` plus `ver\u0073ion` | Reject the duplicate decoded name, independent of order/value. |
+| Long-s alias in `status`, `workspace`, nested file `size`, or a slot payload's field; ASCII unknown field | Reject across acknowledgment/proceed, preparation/release, describe/relay/locator, receipt/envelope and PTY-image consumers, not just the locator. Lowercase ASCII unknown names still fail typed decoding. |
+| Runtime Config uses `\u017fpec` beside or instead of `spec`, or a Mapping uses `KeyS`/`key\u017f` | Reject protocol aliases before Config/Mapping struct decoding; no exemption outside `args`. |
+| Mapping `args` contains distinct `Version`, `version`, `verſion`, `K`, `k`, `é` and empty keys, including inside nested objects/arrays | Preserve those legitimate distinct map keys and their Unicode values; only an exact decoded duplicate, null or otherwise invalid data fails existing data rules. |
+| A valid Unicode title/label, supplementary surrogate pair, or opaque receipt/relay with integers above 2^53 | Preserve the original values/opaque bytes; no blanket Unicode rejection or Lua numeric round trip. |
+| Invalid UTF-8, unpaired surrogate, null, wrong type, unknown field, trailing value, missing Config marker or oversized record | Existing strict/bounded rejection remains; no startup/dispatch or nominated cleanup authority follows from malformed input. |
+
 **Key/palette consumer handoff**:
 
 1. Run the fixed anchor sibling `runtime-describe` with `{anchor,

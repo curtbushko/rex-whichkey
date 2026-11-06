@@ -27,6 +27,7 @@ import (
 
 const (
 	runtimeProtocol     = 1
+	runtimeArgsField    = "args"
 	runtimeLayout       = 1
 	runtimeLimit        = 8 << 20
 	runtimeImageLimit   = 512 << 20
@@ -215,17 +216,65 @@ func runtimeHash(data []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-// Strict internal messages share Config's duplicate/Unicode check. All decoders
-// require one bounded UTF-8 JSON object and reject unknown fields and nulls.
-func decodeRuntime(data []byte, value any, limit int) error {
+// Runtime field names are lowercase ASCII, not merely Unicode lowercase:
+// encoding/json also matches struct fields through Unicode SimpleFold. Restrict
+// decoded names before typed decoding so DisallowUnknownFields is exact. User
+// args are case-sensitive data maps; opaque JSON strings are never rewritten.
+func checkRuntimeJSON(data []byte, limit int) error {
 	if len(data) == 0 || len(data) > limit || !utf8.Valid(data) || !json.Valid(data) || data[0] != '{' {
 		return errRuntimeCompatibility
 	}
 	if !runtimeUnicode(data) {
 		return errRuntimeCompatibility
 	}
-	if checkErr := checkConfigJSON(json.NewDecoder(bytes.NewReader(data)), false); checkErr != nil {
+	return checkRuntimeValue(json.NewDecoder(bytes.NewReader(data)), false)
+}
+
+func checkRuntimeValue(decoder *json.Decoder, args bool) error {
+	token, err := decoder.Token()
+	if err != nil || token == nil {
 		return errRuntimeCompatibility
+	}
+	delimiter, container := token.(json.Delim)
+	if !container {
+		return nil
+	}
+	seen := make(map[string]bool)
+	for decoder.More() {
+		childArgs := args
+		if delimiter == '{' {
+			name, fieldErr := runtimeJSONField(decoder, seen, args)
+			if fieldErr != nil {
+				return fieldErr
+			}
+			childArgs = args || name == runtimeArgsField
+		}
+		if checkErr := checkRuntimeValue(decoder, childArgs); checkErr != nil {
+			return checkErr
+		}
+	}
+	_, err = decoder.Token()
+	return err
+}
+
+func runtimeJSONField(decoder *json.Decoder, seen map[string]bool, args bool) (string, error) {
+	token, err := decoder.Token()
+	name, ok := token.(string)
+	if err != nil || !ok || seen[name] {
+		return "", errRuntimeCompatibility
+	}
+	if !args && (name == "" || strings.Trim(name, "abcdefghijklmnopqrstuvwxyz0123456789_") != "") {
+		return "", errRuntimeCompatibility
+	}
+	seen[name] = true
+	return name, nil
+}
+
+// All runtime consumers check decoded field identity before struct decoding,
+// including nested receipts, slot payloads, startup messages and PTY receipts.
+func decodeRuntime(data []byte, value any, limit int) error {
+	if checkErr := checkRuntimeJSON(data, limit); checkErr != nil {
+		return checkErr
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -800,8 +849,23 @@ type popupPreparation struct {
 	Expires     int64  `json:"expires"`
 }
 
+// Keep the standalone Config boundary unchanged. Runtime-carried Config adds
+// exact protocol names and scalar Unicode checks, but preserves arbitrary args
+// keys at every depth and delegates all Config presence/type rules to its owner.
+func decodeRuntimeConfig(input io.Reader) (Config, error) {
+	const limit = 4 << 20
+	data, err := io.ReadAll(io.LimitReader(input, limit+1))
+	if err != nil || len(data) > limit {
+		return Config{}, errRuntimeCompatibility
+	}
+	if checkErr := checkRuntimeJSON(bytes.TrimSpace(data), limit); checkErr != nil {
+		return Config{}, checkErr
+	}
+	return DecodeConfig(bytes.NewReader(data))
+}
+
 func validateRuntimeConfig(configuration string, consumer runtimeConsumer) error {
-	config, err := DecodeConfig(strings.NewReader(configuration))
+	config, err := decodeRuntimeConfig(strings.NewReader(configuration))
 	if err != nil {
 		return errRuntimePreparation
 	}

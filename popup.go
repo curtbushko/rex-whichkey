@@ -12,7 +12,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode/utf8"
 
 	"golang.org/x/sys/unix"
 
@@ -59,17 +58,8 @@ type popupRequest struct {
 }
 
 func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
-	data, err := io.ReadAll(io.LimitReader(input, (8<<20)+1))
-	if err != nil || !validPopupHandoff(data) {
-		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup handoff")
-	}
-	if err := checkConfigJSON(json.NewDecoder(bytes.NewReader(data)), false); err != nil {
-		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup handoff")
-	}
 	var request popupRequest
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil {
+	if err := readRuntime(input, &request, runtimeLimit); err != nil {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup handoff")
 	}
 	// Handoffs validate directly, never ResolveEndpoint: missing transport data
@@ -89,15 +79,11 @@ func decodePopupRequest(input io.Reader) (popupRequest, Config, error) {
 		// can authenticate and remove its own expired workspace, never run it.
 		return request, Config{}, errors.New("whichkey: invalid or expired popup lifetime")
 	}
-	config, err := DecodeConfig(strings.NewReader(request.Configuration))
+	config, err := decodeRuntimeConfig(strings.NewReader(request.Configuration))
 	if err != nil {
 		return popupRequest{}, Config{}, errors.New("whichkey: invalid popup configuration")
 	}
 	return request, config, nil
-}
-
-func validPopupHandoff(data []byte) bool {
-	return len(data) <= runtimeLimit && utf8.Valid(data) && json.Valid(data) && runtimeUnicode(data)
 }
 
 func popupResourceID(id, kind string) bool {
@@ -842,7 +828,7 @@ func runPopupTerminal(parent context.Context, directory string, deadline time.Ti
 	if _, statErr := runtimeSlotStat(input, "config.json", false); statErr != nil {
 		return errors.Join(errRuntimeStartup, input.Close())
 	}
-	config, decodeErr := DecodeConfig(input)
+	config, decodeErr := decodeRuntimeConfig(input)
 	if err := errors.Join(decodeErr, input.Close()); err != nil {
 		return err
 	}
