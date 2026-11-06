@@ -29,8 +29,8 @@ scope:
   dependencies: []
 lifecycle:
   state: incomplete
-  sourceEventID: rex-whichkey-p16/planner-release/launched/1
-  changedAt: '2026-11-06T18:48:44.241Z'
+  sourceEventID: rex-whichkey-p16/execution-readiness/1
+  changedAt: '2026-11-06T19:01:27.041Z'
 title: 'Phase 16: CLI-only Go menu and data configuration'
 mtnCreateRetry:
   key: rex-whichkey/phase16-cli-only/create/1
@@ -41,7 +41,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-06T17:00:37.511Z'
-dateModified: '2026-11-06T18:48:44.857Z'
+dateModified: '2026-11-06T19:01:27.667Z'
 tags:
   - task
 type: task
@@ -174,4 +174,10 @@ Choose/document the minimal data format (existing Go JSON form is a candidate, n
 ### 2026-11-06T18:48:43.500Z · release · unspecified
 
 {"attempt":1,"dispatchEventID":"rex-whichkey-p16-planner-a01/runtime/launched","eventID":"rex-whichkey-p16/planner-release/launched/1","evidence":"mtn-rex result returned validated object after zero worker exit; exact planner window/block is absent after automatic closure; clean read-only proposal preserved in .mtn-tmp/p16/planner-result.json. No task/source writes or builds by planner.","kind":"release","outcome":"finished","recordRef":"phases/rex-whichkey-16-cli-only-menu.md","runID":"rex-whichkey-p16-planner-a01","schemaVersion":1,"specHash":"sha256:794f84db12b1642de93d2e72d37902acf5ef3e0076de8b27a7aa3ca1df435d16"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA2VDE5OjAxOjI2LjI5NVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNi9leGVjdXRpb24tcmVhZGluZXNzLzEiLCJpbnRlbnQiOiI1ODY5NTljZTQ2NDUzNWQ5ZDA4YjRjMjM0MGY4YTI1NDE0OGFlZGQ5OTI3NDJlMTAyZTAzZDY3YTZjNDg1YTFmIn0 -->
+### 2026-11-06T19:01:26.295Z · historical · unspecified
+
+{"artifacts":[".mtn-tmp/p16/plan-validation-result.json",".mtn-tmp/p16/native-ready.json",".mtn-tmp/p16/ready-phase-stderr.txt",".mtn-tmp/p16/phase15-task2-reconciled.json",".mtn-tmp/p16/prior-runtime-reconciliation"],"attempt":1,"content":"Current phase/design/task-plan fingerprints and full9-criterion/16-requirement coverage verified; plan_approved true. All three new task identities/UUIDs/ownership/languages/document refs valid, unique orders1..3 and exact native task->phase->project parents. Native ready reports only Phase16 and Task01 dependency-ready, Tasks02/03 require producer completion. Legacy project root has workflowKind fields but no grouped identity; global ready-phase rejects inherited metadata, not new task ownership. No blanket migration or fabricated global readiness pass. New Phase16 uses its current approved CLI-only design as sole typed authority; old PRD histories/prose references retained. Reconciled12 prior Task15.02 finished writers through trusted zero-exit results and launch-specific releases; original failed runtime/incomplete status and failed retained resources unchanged. Actual source implementation begins Task01 under existing coordinator/session, one builder/gate; no public runtime success claimed.","eventID":"rex-whichkey-p16/execution-readiness/1","gateEligible":false,"kind":"historical","provenance":"Coordinator direct native graph, current Phase16 task/design snapshots, workflow guard and collection validation; legacy parent inspected through native API.","recordRef":"phases/rex-whichkey-16-cli-only-menu.md","schemaVersion":1,"specHash":"sha256:794f84db12b1642de93d2e72d37902acf5ef3e0076de8b27a7aa3ca1df435d16"}
 <!-- mtn:end-entry:v1 -->
