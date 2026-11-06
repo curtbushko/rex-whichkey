@@ -44,7 +44,9 @@ func resolveTerminalHostMenu(ctx context.Context, config Config) (Config, error)
 			frozen.selection.Capabilities == nil || frozen.selection.Capabilities.Endpoint != endpoint {
 			return Config{}, errRuntimeCompatibility
 		}
-		selection = frozen.selection
+		// The parent expanded providers before sizing and image handoff.
+		// Never let the child replace the retained executable snapshot.
+		return config, nil
 	}
 	return resolveHostMenu(ctx, config, selection)
 }

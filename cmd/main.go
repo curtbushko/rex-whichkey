@@ -7,111 +7,51 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	whichkey "temp"
 )
 
-// run composes the configured controller, native foreground child and standalone menu.
-// Secret handoff/completion data travels on pipes, never command-line arguments.
-// Configured callbacks stay in the original Rex VM; native defaults use exact
-// captured Rex activation after owned-popup and private-file cleanup.
-func run(ctx context.Context, args []string, input io.Reader, output, diagnostics io.Writer) error {
-	if len(args) == 0 {
-		return runLaunch(ctx, args, output)
-	}
-	switch args[0] {
-	case "runtime-describe", "runtime-relay", "runtime-release":
-		if len(args) != 1 {
-			return errors.New("whichkey: runtime commands accept only their bounded private stdin message")
-		}
-		stage, cancel := context.WithTimeout(ctx, 3*time.Second)
-		defer cancel()
+// run has one public resource path and one private PTY child. The low-level menu
+// command is UI/result-only; it never dispatches a resource operation.
+func run(ctx context.Context, args []string, output, diagnostics io.Writer) error {
+	if len(args) > 0 {
 		switch args[0] {
-		case "runtime-describe":
-			return whichkey.RuntimeDescribe(stage, input, output)
-		case "runtime-relay":
-			return whichkey.RuntimeRelay(stage, input, output)
-		default:
-			return whichkey.RuntimeRelease(stage, input)
+		case "popup":
+			return runPopupChild(ctx, args[1:])
+		case "menu":
+			return runMenuUI(ctx, args[1:], output, diagnostics)
 		}
-	case "prepare":
-		flags := flag.NewFlagSet("rex-whichkey prepare", flag.ContinueOnError)
-		flags.SetOutput(io.Discard)
-		server := flags.String("server", "", "optional execution-host endpoint override")
-		if err := flags.Parse(args[1:]); err != nil {
-			return err
-		}
-		if flags.NArg() != 0 {
-			return errors.New("whichkey: prepare accepts only an optional --server endpoint and private stdin configuration")
-		}
-		var override *string
-		flags.Visit(func(option *flag.Flag) {
-			if option.Name == "server" {
-				override = server // Preserve the distinction between absent and empty.
-			}
-		})
-		return whichkey.PreparePopupWithServer(ctx, input, output, override)
-	case "controller":
-		if len(args) != 1 {
-			return errors.New("whichkey: controller accepts only its private stdin handoff")
-		}
-		return whichkey.RunPopupController(ctx, input, output)
-	case "controller-child":
-		if len(args) != 1 {
-			return errors.New("whichkey: controller child requires its private inherited transport")
-		}
-		stdin, ok := input.(*os.File)
-		if !ok {
-			return errors.New("whichkey: controller child requires its private inherited transport")
-		}
-		return whichkey.RunPopupControllerChild(ctx, stdin, os.NewFile(3, "startup"), os.NewFile(4, "proceed"))
-	case "popup":
-		flags := flag.NewFlagSet("rex-whichkey popup", flag.ContinueOnError)
-		flags.SetOutput(io.Discard)
-		directory := flags.String("directory", "", "invocation-owned private transport directory")
-		deadline := flags.String("deadline", "", "original bounded invocation deadline")
-		native := flags.Bool("native", false, "require a foreground parent's private lifetime pipe instead of a deadline")
-		ascii := flags.Bool("ascii", false, "use ASCII decorations")
-		noColor := flags.Bool("no-color", false, "disable terminal colors")
-		if err := flags.Parse(args[1:]); err != nil {
-			return err
-		}
-		if flags.NArg() != 0 {
-			return errors.New("whichkey: popup does not accept positional arguments")
-		}
-		nativeSet, deadlineSet := false, false
-		flags.Visit(func(option *flag.Flag) {
-			switch option.Name {
-			case "native":
-				nativeSet = true
-			case "deadline":
-				deadlineSet = true
-			}
-		})
-		if nativeSet {
-			if !*native || deadlineSet {
-				return errors.New("whichkey: popup requires either its native lifetime pipe or its original deadline, not both")
-			}
-			return whichkey.RunNativePopupTerminal(ctx, *directory, *noColor, *ascii)
-		}
-		expires, err := time.Parse(time.RFC3339, *deadline)
-		if err != nil {
-			return errors.New("whichkey: popup requires its original deadline")
-		}
-		return whichkey.RunPopupTerminal(ctx, *directory, expires, *noColor, *ascii)
-	case "menu":
-	default:
-		return runLaunch(ctx, args, output)
 	}
+	return runLaunch(ctx, args, output)
+}
+
+func runPopupChild(ctx context.Context, args []string) error {
+	flags := flag.NewFlagSet("rex-whichkey popup", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	directory := flags.String("directory", "", "private popup directory")
+	native := flags.Bool("native", false, "parent lifetime pipe")
+	ascii := flags.Bool("ascii", false, "ASCII decorations")
+	noColor := flags.Bool("no-color", false, "disable colors")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || !*native {
+		return errors.New("whichkey: popup requires its private parent lifetime transport")
+	}
+	return whichkey.RunNativePopupTerminal(ctx, *directory, *noColor, *ascii)
+}
+
+func runMenuUI(ctx context.Context, args []string, output, diagnostics io.Writer) error {
 	flags := flag.NewFlagSet("rex-whichkey menu", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	ascii := flags.Bool("ascii", false, "use ASCII decorations")
-	noColor := flags.Bool("no-color", false, "disable terminal colors")
-	if err := flags.Parse(args[1:]); err != nil {
+	configPath := flags.String("config", "", "version 1 data configuration")
+	ascii := flags.Bool("ascii", false, "ASCII decorations")
+	noColor := flags.Bool("no-color", false, "disable colors")
+	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			if _, writeErr := fmt.Fprintln(diagnostics, "usage: rex-whichkey menu [--ascii] [--no-color] (resolved JSON configuration on stdin)"); writeErr != nil {
-				return fmt.Errorf("write help: %w", writeErr)
+			_, writeErr := fmt.Fprintln(diagnostics, "usage: rex-whichkey menu [--config PATH] [--ascii] [--no-color] (UI/result only)")
+			if writeErr != nil {
+				return writeErr
 			}
 		}
 		return err
@@ -119,13 +59,16 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 	if flags.NArg() != 0 {
 		return errors.New("whichkey: menu does not accept positional arguments")
 	}
-	config, err := whichkey.DecodeConfig(input)
+	var explicit *string
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "config" {
+			explicit = configPath
+		}
+	})
+	config, err := whichkey.LoadMenuConfig(explicit)
 	if err != nil {
 		return err
 	}
-	// RunTerminal performs the real initial/navigation/resize/palette redraws,
-	// consumes RenderMenu placements/Lines and passes frame.Pages to HandleKey.
-	// It returns a selection only after all terminal cleanup has succeeded.
 	event, err := whichkey.RunTerminal(ctx, config, *noColor, *ascii)
 	if err != nil {
 		return err
@@ -135,41 +78,33 @@ func run(ctx context.Context, args []string, input io.Reader, output, diagnostic
 
 const publicHelp = `usage: rex-whichkey [options]
 
-Open the basic floating menu from this Rex terminal, without custom registration.
-A registered default whichkey action instead uses your original-VM Lua menu.
+Open the Go-owned floating menu from the originating Rex terminal.
+No Lua action registration or runtime bridge is used.
 
 Options:
-  --server ENDPOINT  Execution-host socket path, unix URI or host:port override
-  --client FULL_ID   Exact attached client override (otherwise REX_CLIENT or the
-                     launching pane's GUI owner for all app actions)
-  --action NAME      Require this registered Lua launch action (no native fallback)
-  --help, -h         Show help without contacting Rex
+  --config PATH      Version 1 JSON menu data (otherwise environment/user default)
+  --server ENDPOINT  Execution-host endpoint override
+  --client FULL_ID   Exact graphical app intent (otherwise REX_CLIENT/pane owner)
+  --ascii            Use ASCII decorations
+  --no-color         Disable terminal colors
+  --help, -h         Show help without effects
 
-Requires full REX_SESSION/REX_BLOCK from the originating Rex terminal and a
-compatible execution-host Rex CLI. App UI actions additionally require an
-attached graphical app and its Remote Control permission. Native pane/tab/session
-closes and built-in tab/session rename use captured resource IDs without an app
-chooser. Built-in Switch lists sessions in our popup; rename uses text entry. Explicit client selectors remain strict. Lua customization additionally needs installed modules,
-setup, launch/completion registration and the loaded runtime feature bridge.
-Compatible build IDs need not match. Nothing edits/reloads configuration.
-The native caller waits until selection/dismissal, cancellation or origin loss;
-there is no native idle timeout. Configured launch returns after activation and
-finite controller startup acknowledgment, not verified popup display. It retains
-its authenticated 30-second expiry. Failed/uncertain activation or startup is never
-retried or switched to native.
-
-Endpoint: --server > nonempty REX_SERVER > Rex native Linux/macOS default.
-Missing, stale or ambiguous origin context fails; no focused/current-client or
-alternate-server fallback. Activation is not proof that the popup was displayed.
-See docs/launch-contract.md for setup and routing details.
+Requires full REX_SESSION/REX_BLOCK and a compatible execution-host Rex CLI.
+Resource-only operations do not require a GUI. App actions require the retained
+pane owner or explicit app, with a fresh connection and Remote Control permission.
+Endpoint: --server > nonempty REX_SERVER > native execution-host default.
+No focused/current-client fallback, Lua execution, or idle menu expiry.
+Configuration is never edited or reloaded. See docs/mapping-format.md.
 `
 
 func runLaunch(ctx context.Context, args []string, output io.Writer) error {
 	flags := flag.NewFlagSet("rex-whichkey", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	server := flags.String("server", "", "execution-host endpoint override")
-	client := flags.String("client", "", "exact attached client ID")
-	action := flags.String("action", "whichkey", "registered configuration launch action")
+	client := flags.String("client", "", "exact graphical app ID")
+	config := flags.String("config", "", "version 1 data configuration")
+	ascii := flags.Bool("ascii", false, "ASCII decorations")
+	noColor := flags.Bool("no-color", false, "disable colors")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			if _, writeErr := io.WriteString(output, publicHelp); writeErr != nil {
@@ -179,33 +114,26 @@ func runLaunch(ctx context.Context, args []string, output io.Writer) error {
 		return err
 	}
 	if flags.NArg() != 0 {
-		return errors.New("whichkey: expected rex-whichkey [options]; use --help for normal launch and setup")
+		return errors.New("whichkey: expected rex-whichkey [options]; use --help")
 	}
-	if *action == "" {
-		return errors.New("whichkey: --action must name the registered configuration launch action")
-	}
-	options := whichkey.LaunchOptions{}
-	flags.Visit(func(option *flag.Flag) {
-		switch option.Name {
+	options := whichkey.LaunchOptions{ASCII: *ascii, NoColor: *noColor}
+	flags.Visit(func(f *flag.Flag) {
+		switch f.Name {
 		case "server":
 			options.Server = server
 		case "client":
 			options.Client = client
-		case "action":
-			options.Action = *action
+		case "config":
+			options.Config = config
 		}
 	})
-	// Parsing, including help/errors, finishes before any Rex lookup or call.
 	return whichkey.LaunchPopup(ctx, options)
 }
-
 func main() {
-	if err := run(context.Background(), os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
+	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return
 		}
-		// Decoder/I/O failures may contain external text. Quote it instead of
-		// allowing a diagnostic to inject terminal escape sequences.
 		if _, writeErr := fmt.Fprintf(os.Stderr, "rex-whichkey: %q\n", err.Error()); writeErr != nil {
 			os.Exit(1)
 		}

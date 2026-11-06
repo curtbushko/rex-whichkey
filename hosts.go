@@ -40,38 +40,94 @@ func resolveHostMenu(ctx context.Context, config Config, selection *rex.CLISelec
 	}
 	var expanded []Mapping
 	for _, mapping := range config.Spec {
-		if !mapping.Enabled() || mapping.Provider == "" {
+		if !mapping.Enabled() || mapping.Provider != menuProviderHosts {
 			expanded = append(expanded, mapping)
 			continue
 		}
-		var rows []Mapping
-		var err error
-		if readErr == nil {
-			rows, err = HostMenuMappings(mapping.Keys, inventory)
+		rows, expandErr := expandedHostRows(mapping, inventory, readErr)
+		if expandErr != nil {
+			return Config{}, expandErr
 		}
-		if readErr != nil || err != nil {
-			// Child diagnostics may contain server-local paths or arbitrary CLI
-			// text. Show a persistent status, not stderr or a successful empty
-			// inventory. No retry, alternate endpoint or reachability claim.
-			label := "Warning: inventory unavailable (read failed, timed out or invalid); not retried"
-			scope := "Inventory: execution host and its configured Rex home; reachability unknown"
-			rows = []Mapping{mapping,
-				{Keys: mapping.Keys + "i", Group: &scope},
-				{Keys: mapping.Keys + "w", Group: &label},
-			}
-		}
-		// Preserve the explicit marker's label/icon/visibility and source order.
-		// Hidden is display-only: typing its key still opens listing details.
-		root := mapping
-		root.Provider = ""
-		rows[0] = root
 		expanded = append(expanded, rows...)
+		bounded := config
+		bounded.Spec = expanded
+		if err := menuSnapshotBound(bounded); err != nil {
+			return Config{}, err
+		}
 	}
 	config.Spec = expanded
 	if err := config.Validate(); err != nil {
 		return Config{}, fmt.Errorf("whichkey: expanded host menu: %w", err)
 	}
 	return config, nil
+}
+
+func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr error) ([]Mapping, error) {
+	var rows []Mapping
+	if readErr == nil {
+		var formatErr error
+		rows, formatErr = HostMenuMappings(mapping.Keys, inventory)
+		if formatErr != nil {
+			return nil, formatErr
+		}
+	} else {
+		label := "Warning: inventory unavailable (read failed, timed out or invalid); not retried"
+		scope := "Inventory: execution host and its configured Rex home; reachability unknown"
+		rows = []Mapping{mapping, {Keys: mapping.Keys + "i", Group: &scope}, {Keys: mapping.Keys + "w", Group: &label}}
+	}
+	root := mapping
+	root.Provider = ""
+	rows[0] = root
+	for index := 1; index < len(rows); index++ {
+		rows[index].Hidden = mapping.Hidden
+	}
+	if err := ValidateMenuProviderChildren(mapping, rows[1:]); err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// Count pagination and details before constructing growing listing paths.
+func hostMenuRowCount(inventory rex.HostInventory) int {
+	rows := 5 + len(inventory.Home) + (len(inventory.Home)-1)/9
+	if len(inventory.Home) == 0 {
+		rows++
+	}
+	if len(inventory.Warnings) == 0 {
+		rows++
+	}
+	for _, warning := range inventory.Warnings {
+		fields := len(warning)
+		rows += 2 + fields + max(0, (fields-1)/9)
+		if fields == 0 {
+			rows++
+		}
+	}
+	rows += max(0, (len(inventory.Warnings)-1)/9)
+	if len(inventory.Hosts) == 0 {
+		rows++
+	}
+	for _, entry := range inventory.Hosts {
+		rows += 6 + len(entry.Host.Endpoints) + max(0, (len(entry.Host.Endpoints)-1)/9)
+		if len(entry.Host.Endpoints) == 0 {
+			rows++
+		}
+		if entry.Host.HostID != "" {
+			rows++
+		}
+		if entry.Host.Source != "" {
+			rows++
+		}
+		if entry.Host.AddedFrom != "" {
+			rows++
+		}
+		if entry.Host.UpdatedAt != "" {
+			rows++
+		}
+	}
+	rows += max(0, (len(inventory.Hosts)-1)/9)
+
+	return rows
 }
 
 // HostMenuMappings presents one effective rex.Hosts snapshot beneath prefix.
@@ -90,6 +146,10 @@ func HostMenuMappings(prefix string, inventory rex.HostInventory) ([]Mapping, er
 	}
 	if inventory.Home == nil {
 		return nil, errors.New("whichkey: host menu requires effective inventory home data")
+	}
+	rows := hostMenuRowCount(inventory)
+	if rows > 1025 || rows*len(prefix) > menuConfigLimit {
+		return nil, errors.New("whichkey: host provider exceeds row/key bounds; not truncated")
 	}
 
 	var mappings []Mapping

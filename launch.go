@@ -13,19 +13,15 @@ import (
 	"temp/rex"
 )
 
-// LaunchOptions selects execution-host routing and an optional configured action.
-// Nil selectors are absent; present empty selectors are invalid. An empty Action
-// prefers registered whichkey, otherwise the native basic menu. A nonempty Action
-// always requires that configured action; it never requests native fallback.
+// LaunchOptions is public data/endpoint/app intent. Nil selectors are absent;
+// explicitly empty selectors fail rather than acquiring ambient authority.
 type LaunchOptions struct {
-	Server *string
-	Client *string
-	Action string
+	Server  *string
+	Client  *string
+	Config  *string
+	ASCII   bool
+	NoColor bool
 }
-
-// launchOrigin is Go-owned transport context, not a capability or mapping data.
-// Lua compares session/block with the real action ctx and validates the GUI
-// binding independently; ClientID is the target app, not the CLI caller.
 type launchOrigin struct {
 	Server      string `json:"server"`
 	SessionID   string `json:"session_id"`
@@ -41,24 +37,29 @@ func popupConnectionGeneration(value string) bool {
 		strings.IndexFunc(value, unicode.IsControl) < 0
 }
 
-// LaunchPopup opens the basic native popup when the implicit default action is
-// unregistered, or activates a registered original-VM action once. Configured
-// success acknowledges activation and finite startup checks, not popup display;
-// native success follows UI exit/cleanup.
-// Read-only server metadata selects the route before GUI binding or activation.
-// Native display needs no app; configured activation binds its app at launch.
-// An uncertain activation never switches routes or retries.
+// LaunchPopup validates data before any process or resource startup, captures
+// the public image/CLI/endpoint once, and enters the real Go popup directly.
+// Legacy registered actions cannot select, gate or redirect this path.
 func LaunchPopup(parent context.Context, options LaunchOptions) (outcome error) {
 	if parent == nil {
 		return errors.New("whichkey: launch requires a context")
 	}
-	action, err := publicLaunchAction(options)
+	config, err := LoadMenuConfig(options.Config)
 	if err != nil {
 		return err
 	}
+	config, err = canonicalMenuSnapshot(config)
+	if err != nil {
+		return err
+	}
+	if options.Server != nil {
+		if _, endpointErr := rex.CanonicalEndpoint(*options.Server); endpointErr != nil {
+			return endpointErr
+		}
+	}
 	origin := launchOrigin{SessionID: os.Getenv("REX_SESSION"), BlockID: os.Getenv("REX_BLOCK")}
 	if !popupResourceID(origin.SessionID, "session") || !popupResourceID(origin.BlockID, "block") {
-		return errors.New("whichkey: run inside the originating Rex terminal with full REX_SESSION and REX_BLOCK IDs; no focused-block fallback is available")
+		return errors.New("whichkey: run inside the originating Rex terminal with full REX_SESSION and REX_BLOCK IDs; no focused-block fallback")
 	}
 	selector := options.Client
 	if selector == nil {
@@ -66,8 +67,12 @@ func LaunchPopup(parent context.Context, options LaunchOptions) (outcome error) 
 			selector = &value
 		}
 	}
-	if selector != nil && !popupResourceID(*selector, "client") {
-		return errors.New("whichkey: --client or REX_CLIENT must be an exact full client:UUID, not an empty value, label or suffix")
+	requested := ""
+	if selector != nil {
+		if !popupResourceID(*selector, "client") {
+			return errors.New("whichkey: --client or REX_CLIENT must be an exact full client:UUID")
+		}
+		requested = *selector
 	}
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
@@ -81,84 +86,20 @@ func LaunchPopup(parent context.Context, options LaunchOptions) (outcome error) 
 	if err != nil {
 		return err
 	}
-	server, err := rex.ResolveEndpoint(ctx, options.Server, selection)
+	origin.Server, err = rex.ResolveEndpoint(ctx, options.Server, selection)
 	if err != nil {
 		return err
 	}
-	origin.Server = server
-	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: server, Session: origin.SessionID, Timeout: 3 * time.Second})
+	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: origin.Server, Session: origin.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
 		return errors.Join(errRuntimeCompatibility, err)
 	}
-	selection = client.Selection()
-	origin.selection = selection
-	requested := ""
-	if selector != nil {
-		requested = *selector
-	}
-	// Validate server resources before choosing a route, without inspecting GUI
-	// attachments. A requested native selector is intent, not a live binding.
-	request := popupRequest{Server: server, SessionID: origin.SessionID, BlockID: origin.BlockID}
-	placement, err := request.resourceOriginBlock(ctx, client)
-	if err != nil {
-		return err
-	}
-	actions, err := origin.actions(ctx, selection, false)
-	if err != nil {
-		return err
-	}
-	if kind, registered := actions[action]; !registered {
-		if options.Action != "" {
-			return errors.New("whichkey: requested configuration launch action is not registered on the captured server; register it with menu.register_launch or omit --action for the basic menu")
-		}
-		// Native interaction has no idle deadline. Preserve only the optional
-		// selector until an executable retained selection needs an app.
-		terminalEndpoint, endpointErr := rex.ResolveEndpoint(ctx, nil, selection)
-		if endpointErr != nil || terminalEndpoint != server {
-			return errors.New("whichkey: native popup requires the originating execution-host terminal endpoint; run on that host without a conflicting server override")
-		}
-		return launchNativePopup(parent, origin, selection, requested)
-	} else if kind != "lua" {
-		return errors.New("whichkey: launch name is not a server configuration action; choose a registered menu.register_launch action")
-	}
-	if actions["whichkey_runtime"] != "lua" {
-		return errors.Join(errRuntimeCompatibility, errors.New("whichkey: whichkey_runtime action registry requires a Lua action"))
-	}
-	consumer, err := queryRuntimeConsumer(ctx, selection, origin, action)
-	if err != nil {
-		return err
-	}
-	// Configured launch still requires an exact live app and generation before
-	// activation in the original Lua VM; no decoded handoff can defer binding.
-	connection, err := nativePaneAppTarget(ctx, client, origin, placement, requested)
-	if err != nil {
-		return err
-	}
-	origin.ClientID, origin.ConnectedAt = connection.ID, connection.ConnectedAt
-	request.ClientID, request.ConnectedAt = origin.ClientID, origin.ConnectedAt
-	if err := validatePaneAppOrigin(ctx, client, request, placement, requested); err != nil {
-		return err
-	}
-	return launchPublicRuntime(parent, origin, placement, consumer)
+	origin.selection = client.Selection()
+	return launchNativePopup(parent, origin, origin.selection, requested, config, options.NoColor, options.ASCII)
 }
 
-func publicLaunchAction(options LaunchOptions) (string, error) {
-	action := options.Action
-	if action == "" {
-		action = "whichkey"
-	}
-	if strings.Trim(action, "abcdefghijklmnopqrstuvwxyz0123456789_") != "" || len(action) > 256 {
-		return "", errors.New("whichkey: --action must name a registered configuration action (lowercase letters, digits and underscores only)")
-	}
-	if options.Server != nil {
-		if _, err := rex.CanonicalEndpoint(*options.Server); err != nil {
-			return "", err
-		}
-	}
-	return action, nil
-}
-
-// No handoff or arbitrary process diagnostics are retained or displayed.
+// launchOutput is isolated historical diagnostic compatibility for unchanged
+// tests. No supported public launch or Rex execution path constructs it.
 type launchOutput struct {
 	remaining           int
 	legacyMatch         int

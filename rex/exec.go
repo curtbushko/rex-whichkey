@@ -30,6 +30,7 @@ const (
 	fieldBlock       = "block_id"
 	fieldBounds      = "bounds"
 	fieldLabel       = "label"
+	fieldArgs        = "args"
 )
 
 // ExecError deliberately excludes child diagnostics and arguments from Error.

@@ -38,10 +38,10 @@ const (
 	maxRequestBranches = 64
 )
 
-// CLIOptions are execution-host inputs, never paths supplied by menu text or a
-// viewing client. Anchor is the trusted file-loader anchor from the application
-// bootstrap, relative only to its unchanged execution-host working directory.
-// An explicitly present empty executable/anchor is invalid, not absent.
+// CLIOptions are execution-host inputs, never menu/viewing-host paths.
+// Selection freezes discovery. Executable is internal constructor intent.
+// Anchor/LayoutRevision are retired source compatibility, always rejected;
+// public package discovery is relative only to the canonical bin image.
 type CLIOptions struct {
 	Selection      *CLISelection
 	Executable     *string
@@ -109,6 +109,9 @@ func ResolveCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) 
 	}
 	ctx, cancel := context.WithTimeout(ctx, discoveryTimeout)
 	defer cancel()
+	if options.Anchor != nil || options.LayoutRevision != 0 {
+		return nil, errCLILayout
+	}
 	if options.Selection != nil {
 		if options.Executable != nil || options.Anchor != nil || options.LayoutRevision != 0 {
 			return nil, errCLIInput
@@ -143,14 +146,14 @@ func selectCLI(ctx context.Context, options CLIOptions) (*CLISelection, error) {
 	selection := &CLISelection{OS: runtime.GOOS, Arch: runtime.GOARCH}
 	var source string
 	var err error
+	directory, environmentSet := os.LookupEnv("REX_BIN_DIR")
 	switch {
 	case options.Executable != nil:
 		if !validAbsolutePath(*options.Executable) {
 			return nil, errCLIInput
 		}
 		source, selection.Provenance = *options.Executable, "internal-explicit"
-	case os.Getenv("REX_BIN_DIR") != "":
-		directory := os.Getenv("REX_BIN_DIR")
+	case environmentSet:
 		if !validAbsolutePath(directory) {
 			return nil, errCLIInput
 		}
@@ -742,7 +745,7 @@ func requiredMethods() []methodContract {
 			"layout.block.options.shell": schemaString, "layout.block.options.exit": schemaObject, "layout.block.options.exit.on_completion": schemaBoolean,
 			"layout.block.options.size": schemaObject, "layout.block.options.size.columns": schemaInteger, "layout.block.options.size.rows": schemaInteger,
 			"layout.block.options.size.cell_width_px": schemaInteger, "layout.block.options.size.cell_height_px": schemaInteger}, map[string]string{"layer_id": schemaString, "block_ids": schemaArray, "block_ids.[]": schemaString}},
-		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, "args": schemaObject, "timeout_ms": schemaInteger, "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
+		{"client.perform", map[string]string{"client_id": schemaString, "action": schemaString, fieldArgs: schemaObject, "timeout_ms": schemaInteger, "origin": schemaString, fieldSession: schemaString, fieldBlock: schemaString}, nil},
 		{"session.view", map[string]string{fieldSession: schemaString}, nil},
 		// The initial-window envelope is closed and known; only its layout is
 		// delegated to the CLI. A window label is optional, not guaranteed.
@@ -757,7 +760,7 @@ func requiredMethods() []methodContract {
 		{"session.set_window_label", map[string]string{fieldSession: schemaString, fieldWindow: schemaString, fieldLabel: schemaString}, nil},
 		{"session.close_window", map[string]string{fieldSession: schemaString, fieldWindow: schemaString}, nil},
 		{"block.close", map[string]string{fieldSession: schemaString, fieldBlock: schemaString}, nil},
-		{"block.method", map[string]string{fieldSession: schemaString, fieldBlock: schemaString, "method": schemaString, "args": schemaObject}, nil},
+		{"block.method", map[string]string{fieldSession: schemaString, fieldBlock: schemaString, "method": schemaString, fieldArgs: schemaObject}, nil},
 	}
 }
 
@@ -1014,60 +1017,62 @@ func validPath(path string) bool {
 	return true
 }
 
-func runtimeAnchor(options CLIOptions) (*string, error) {
-	if options.Anchor != nil {
-		if options.LayoutRevision != 1 {
-			return nil, errCLILayout
-		}
-		return options.Anchor, nil
-	}
-	if options.LayoutRevision != 0 {
-		return nil, errCLILayout
+// layoutDependency is relative to the canonical PUBLIC image, never a Lua
+// anchor, working directory, wrapper, or a private child's copied image.
+// Children always pass Selection and therefore never enter discovery here.
+func layoutDependency(ctx context.Context, options CLIOptions) (string, []FileIdentity, bool, error) {
+	if options.Anchor != nil || options.LayoutRevision != 0 {
+		return "", nil, false, errCLILayout
 	}
 	self, err := os.Executable()
 	if err != nil {
-		return nil, errCLILayout
+		return "", nil, false, errCLILayout
 	}
-	if !strings.HasSuffix(filepath.ToSlash(self), "/rex_whichkey/runtime/rex-whichkey") {
-		return nil, nil
+	public, err := filepath.EvalSymlinks(self)
+	if err != nil {
+		return "", nil, false, errCLILayout
 	}
-	candidate := filepath.Join(filepath.Dir(self), "anchor.lua")
-	return &candidate, nil
+	if filepath.Base(filepath.Dir(public)) != "bin" {
+		return "", nil, false, nil
+	}
+	source := filepath.Join(filepath.Dir(public), "..", "libexec", "rex-whichkey", "rex")
+	present, sourceErr := packageDependencyPresent(source)
+	if sourceErr != nil {
+		return "", nil, true, errCLILayout
+	}
+	if !present {
+		return "", nil, false, nil
+	}
+	image, err := inspectFile(ctx, self, true)
+	if err != nil {
+		return "", nil, true, errCLILayout
+	}
+	return source, []FileIdentity{image}, true, nil
 }
 
-func layoutDependency(ctx context.Context, options CLIOptions) (string, []FileIdentity, bool, error) {
-	anchor, err := runtimeAnchor(options)
-	if err != nil || anchor == nil {
-		return "", nil, false, err
+// Missing optional directories/leaf permit standalone PATH. A dangling or
+// unreadable applicable parent/link is uncertainty, not a missing dependency.
+func packageDependencyPresent(source string) (bool, error) {
+	paths := []string{filepath.Dir(filepath.Dir(source)), filepath.Dir(source), source}
+	for index, path := range paths {
+		info, err := os.Lstat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		if err != nil {
+			return false, errCLILayout
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			info, err = os.Stat(path)
+			if err != nil {
+				return false, errCLILayout
+			}
+		}
+		if index < len(paths)-1 && !info.IsDir() {
+			return false, errCLILayout
+		}
 	}
-	logical := filepath.ToSlash(*anchor)
-	if !validPath(*anchor) || (logical != "rex_whichkey/runtime/anchor.lua" && !strings.HasSuffix(logical, "/rex_whichkey/runtime/anchor.lua")) {
-		return "", nil, true, errCLILayout
-	}
-	// Abs uses the process's real cwd, never terminal PWD/HOME. The caller may
-	// supply a relative anchor only under the standard-loader unchanged-cwd
-	// contract; Go cannot establish provenance for an arbitrary Lua loader.
-	absolute, err := filepath.Abs(*anchor)
-	if err != nil {
-		return "", nil, true, errCLILayout
-	}
-	anchorFile, err := inspectFile(ctx, absolute, false)
-	if err != nil {
-		return "", nil, true, errCLILayout
-	}
-	helper, err := inspectFile(ctx, filepath.Join(filepath.Dir(absolute), "rex-whichkey"), true)
-	if err != nil {
-		return "", nil, true, errCLILayout
-	}
-	self, err := os.Executable()
-	if err != nil {
-		return "", nil, true, errCLILayout
-	}
-	selfFile, err := inspectFile(ctx, self, true)
-	if err != nil || helper.Device != selfFile.Device || helper.Inode != selfFile.Inode || helper.SHA256 != selfFile.SHA256 {
-		return "", nil, true, errCLILayout
-	}
-	return filepath.Join(filepath.Dir(absolute), "deps", "rex"), []FileIdentity{anchorFile, helper}, true, nil
+	return true, nil
 }
 
 func pathExecutable(ctx context.Context) (string, error) {
@@ -1119,7 +1124,7 @@ func (selection *CLISelection) validate(ctx context.Context) error {
 	}
 	version, err := metadataObject([]byte(selection.VersionJSON))
 	if err != nil || len(version) == 0 || len(selection.VersionJSON) > 64<<10 ||
-		(selection.Provenance == layoutProvenance && len(selection.Layout) != 2) ||
+		(selection.Provenance == layoutProvenance && len(selection.Layout) != 1) ||
 		(selection.Provenance != layoutProvenance && len(selection.Layout) != 0) {
 		return errCLIChanged
 	}
@@ -1142,8 +1147,8 @@ func (selection *CLISelection) checkFiles(ctx context.Context) error {
 	if err := checkFile(ctx, selection.Executable, true); err != nil {
 		return err
 	}
-	for index, file := range selection.Layout {
-		if err := checkFile(ctx, file, index == 1); err != nil {
+	for _, file := range selection.Layout {
+		if err := checkFile(ctx, file, true); err != nil {
 			return err
 		}
 	}

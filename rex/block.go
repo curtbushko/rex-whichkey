@@ -40,6 +40,20 @@ func (s Session) Block(ctx context.Context, id string) (Block, error) {
 	return Block{}, fmt.Errorf("rex: block %q is not placed in session %q", id, s.client.session)
 }
 
+// Blocks returns the exact placed blocks in session/window/layer source order.
+// The bounded CLI output is validated before resource identities are exposed.
+func (s Session) Blocks(ctx context.Context) ([]Block, error) {
+	layers, err := s.placedLayers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	blocks := make([]Block, 0)
+	for _, layer := range layers {
+		blocks = append(blocks, layer.blocks...)
+	}
+	return blocks, nil
+}
+
 // Inspect refreshes placement in the captured session, including after a move.
 func (b Block) Inspect(ctx context.Context) (Block, error) {
 	if err := b.valid(); err != nil {

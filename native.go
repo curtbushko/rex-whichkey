@@ -9,60 +9,13 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
-	"unicode/utf8"
 
 	"temp/rex"
 )
 
-// actions reads metadata only. Server registration must be queried without an
-// inherited client selector: `rex actions` and `rex --client ID actions` expose
-// different registries. See docs/launch-contract.md for the captured contracts.
-func (origin launchOrigin) actions(parent context.Context, selection *rex.CLISelection, client bool) (map[string]string, error) {
-	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
-	defer cancel()
-	argv := []string{runtimeServerFlag, origin.Server, runtimeNoAutostart, runtimeTimeoutFlag, runtimeStageTimeout}
-	stage := "server configuration"
-	if client {
-		argv = append(argv, "--client", origin.ClientID)
-		stage = "selected app native"
-	}
-	argv = append(argv, "actions", runtimeJSONFlag)
-	output := &launchBuffer{remaining: 1 << 20}
-	if err := runtimeCommand(ctx, selection, origin, argv, nil, output); err != nil {
-		return nil, fmt.Errorf("whichkey: cannot read %s action metadata; check the captured endpoint and compatible execution-host Rex CLI (no activation attempted)", stage)
-	}
-	data := output.buffer.Bytes()
-	fields, err := completionObject(data, "actions")
-	if err != nil || !utf8.Valid(data) {
-		return nil, fmt.Errorf("whichkey: invalid %s action metadata; a compatible Rex actions --json response is required", stage)
-	}
-	var entries []struct {
-		Name string `json:"name"`
-		Kind string `json:"kind"`
-	}
-	if raw, present := fields["actions"]; !present || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) ||
-		json.Unmarshal(raw, &entries) != nil || len(entries) > 4096 {
-		return nil, fmt.Errorf("whichkey: invalid %s action list", stage)
-	}
-	actions := make(map[string]string, len(entries))
-	for _, entry := range entries {
-		if strings.TrimSpace(entry.Name) == "" || strings.TrimSpace(entry.Kind) == "" ||
-			validateText(entry.Name) != nil || validateText(entry.Kind) != nil {
-			return nil, fmt.Errorf("whichkey: malformed %s action identity", stage)
-		}
-		if _, duplicate := actions[entry.Name]; duplicate {
-			return nil, fmt.Errorf("whichkey: duplicate %s action identity", stage)
-		}
-		actions[entry.Name] = entry.Kind
-	}
-	return actions, nil
-}
-
-// launchBuffer bounds retained metadata; unlike launchOutput it keeps stdout.
-// It is never used for capability-bearing or arbitrary configured-action output.
+// launchBuffer retains bounded metadata/private result bytes, never diagnostics.
 type launchBuffer struct {
 	buffer    bytes.Buffer
 	remaining int
@@ -76,161 +29,190 @@ func (output *launchBuffer) Write(data []byte) (int, error) {
 	return output.buffer.Write(data)
 }
 
-// launchNativePopup retains requested as syntax-validated Go-owned intent, not
-// a connection generation or child authority. No app is consulted until selection.
-func launchNativePopup(parent context.Context, origin launchOrigin, selection *rex.CLISelection, requested string) error {
-	// Keep signal ownership across interaction, cleanup and metadata/dispatch
-	// gaps. A context owned only by the popup would leave those gaps exposed.
+// launchNativePopup owns interaction and dispatch. PTY output supplies no
+// resource/action authority; only this parent's retained snapshot supplies it.
+func launchNativePopup(parent context.Context, origin launchOrigin, selection *rex.CLISelection, requested string, config Config, noColor, ascii bool) error {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
-	config, err := nativeDefaults()
+	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: origin.Server, Session: origin.SessionID, Timeout: 3 * time.Second})
 	if err != nil {
-		return errors.New("whichkey: invalid built-in menu configuration")
+		return errors.New("whichkey: cannot construct captured endpoint/session client")
 	}
-	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: origin.Server,
-		Session: origin.SessionID, Timeout: 3 * time.Second})
-	if err != nil {
-		return errors.New("whichkey: cannot construct the captured native endpoint/session client")
-	}
-	// Capture resource placement independently of GUI identity. Resource closes
-	// must never resolve a different tab after the user has confirmed the action.
-	inspect, finishInspect := context.WithTimeout(ctx, 3*time.Second)
+	inspect, done := context.WithTimeout(ctx, 3*time.Second)
 	request := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
 	placement, err := request.resourceOriginBlock(inspect, client)
-	finishInspect()
+	done()
 	if err != nil {
 		return err
 	}
-	nameContext, finishName := context.WithTimeout(ctx, 3*time.Second)
-	window, err := placement.Session().Window(nameContext, placement.WindowID)
-	finishName()
-	if err != nil {
-		return errors.New("whichkey: cannot inspect the captured tab name")
+	origin, appErr := captureNativeApp(ctx, client, origin, placement, requested)
+	if appErr != nil && requested != "" {
+		return appErr
 	}
-	config, sessionName, err := nativeSessionMenu(ctx, client, origin, config)
+	config, targets, err := prepareNativeMenu(ctx, client, origin, placement, config)
 	if err != nil {
 		return err
 	}
-	config.textEntry = &textEntrySpec{Initial: window.Label, SessionInitial: sessionName}
-	if len(config.textEntry.Initial) > renameTextLimit {
-		config.textEntry.Initial = "" // Require a new name, never silently truncate.
-	}
-	if len(config.textEntry.SessionInitial) > renameTextLimit {
-		config.textEntry.SessionInitial = ""
-	}
-	message, err := nativePopupSelection(ctx, origin, selection, config)
-	// Copying and all popup cleanup are finished. Retire the last finite
-	// source handle before any selected effect; uncertain closes are not retried.
+	message, err := nativePopupSelection(ctx, origin, selection, config, placement, noColor, ascii)
+	// No effects until terminal, owned popup, focus, pipe, files and captured
+	// source image retirement have succeeded. Uncertain cleanup is not retried.
 	err = errors.Join(err, origin.image.retire())
 	if err != nil {
 		return err
 	}
-	if message.Kind == CompletionCancel {
+	if message.Dismissed {
 		return nil
 	}
+	mapping, err := retainedNativeMapping(message, config)
+	if err != nil {
+		return err
+	}
+	return dispatchNativeSelection(ctx, client, origin, placement, requested, mapping, message, targets, appErr)
+}
+
+// App eligibility never gates resource-only display. A successful binding is
+// frozen now, not resolved from whoever owns/focuses the pane after interaction.
+func captureNativeApp(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string) (launchOrigin, error) {
+	connection, err := nativePaneAppTarget(ctx, client, origin, placement, requested)
+	if err != nil {
+		return origin, err
+	}
+	origin.ClientID, origin.ConnectedAt = connection.ID, connection.ConnectedAt
+	bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
+		ClientID: connection.ID, ConnectedAt: connection.ConnectedAt}
+	if originErr := validatePaneAppOrigin(ctx, client, bound, placement, requested); originErr != nil {
+		return origin, originErr
+	}
+	return origin, nil
+}
+
+func prepareNativeMenu(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, config Config) (Config, map[string]providerTarget, error) {
+	config, targets, err := nativeSessionMenu(ctx, client, origin, config)
+	if err != nil {
+		return Config{}, nil, err
+	}
+	nameCtx, done := context.WithTimeout(ctx, 3*time.Second)
+	defer done()
+	session, err := client.Session(nameCtx, origin.SessionID)
+	if err != nil {
+		return Config{}, nil, errors.New("whichkey: cannot inspect captured session label")
+	}
+	window, err := session.Window(nameCtx, placement.WindowID)
+	if err != nil {
+		return Config{}, nil, errors.New("whichkey: cannot inspect captured tab label")
+	}
+	config.textEntry = &textEntrySpec{Initial: window.Label, SessionInitial: session.Label}
+	if len(config.textEntry.Initial) > renameTextLimit || validateText(config.textEntry.Initial) != nil {
+		config.textEntry.Initial = ""
+	}
+	if len(config.textEntry.SessionInitial) > renameTextLimit || validateText(config.textEntry.SessionInitial) != nil {
+		config.textEntry.SessionInitial = ""
+	}
+	return config, targets, nil
+}
+
+func retainedNativeMapping(message MenuEvent, config Config) (Mapping, error) {
+	if message.Selection == nil || message.Dismissed {
+		return Mapping{}, errors.New("whichkey: invalid retained selection")
+	}
+	selected := message.Selection
+	if _, err := retainedNativeEvent(config, selected.mapping.Keys, selected.confirmed, selected.textInput); err != nil {
+		return Mapping{}, err
+	}
 	for _, mapping := range config.Spec {
-		if mapping.Keys != message.Selection.Keys {
+		if mapping.Keys != selected.mapping.Keys {
 			continue
 		}
 		if mapping.CallbackRef != "" || mapping.Action == "" || !mapping.Enabled() {
-			return errors.New("whichkey: native selection is not a retained native action")
+			return Mapping{}, errors.New("whichkey: selection is not a retained Go action")
 		}
-		if nativeRenameMapping(mapping) {
-			if err := message.ValidateSelection(config.Spec); err != nil || message.textInput == nil || config.textEntry == nil {
-				return errors.New("whichkey: rename requires validated native text input")
-			}
-			return nativeResourceRename(ctx, client, origin, placement, requested, mapping, *message.textInput)
-		}
-		// These operations already have an exact server resource target. They
-		// need confirmation, not a GUI app or its native action registration.
-		if mapping.Action == "pane.close" || mapping.Action == "client.tab.close" || mapping.Action == "session.close" {
-			if err := message.ValidateSelection(config.Spec); err != nil {
-				return errors.New("whichkey: invalid native retained close selection")
-			}
-			return nativeResourceClose(ctx, client, origin, placement, requested, mapping)
-		}
-		// Every app action uses the same pane-owner binding. Do not reintroduce
-		// per-action exceptions that fall back to a session-wide app chooser.
-		// The original UI/files/lease are already gone before this lookup.
-		connection, err := nativePaneAppTarget(ctx, client, origin, placement, requested)
-		if err != nil {
-			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
-		}
-		// User interaction is over and the popup lifecycle has returned
-		// successfully. Start a fresh short budget, still signal-cancellable.
-		dispatch, done := context.WithTimeout(ctx, 3*time.Second)
-		defer done()
-		if err := message.ValidateSelection(config.Spec); err != nil {
-			return errors.New("whichkey: invalid native retained selection after target choice")
-		}
-		target := origin
-		target.ClientID, target.ConnectedAt = connection.ID, connection.ConnectedAt
-		actions, err := target.actions(dispatch, selection, true)
-		if err != nil {
-			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: %w", err)
-		}
-		dispatchAction := mapping.Action
-		if mapping.Action == "client.tab.new" {
-			// Compile only retained tab intent; the child cannot supply this
-			// action or its exact session/window arguments.
-			dispatchAction = "session.select"
-		}
-		if actions[dispatchAction] != "client" {
-			// Check the actual action being sent, not the translated intent's
-			// name or unrelated defaults on the selected app.
-			return fmt.Errorf("whichkey: native action targeting refused after popup cleanup: selected app does not provide native action %s", dispatchAction)
-		}
-		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-			ClientID: target.ClientID, ConnectedAt: target.ConnectedAt}
-		if mapping.Action == "client.tab.new" {
-			return nativeNewTab(dispatch, client, bound, placement, requested, selection, mapping)
-		}
-		args := mapping.Args
-		if len(args) == 0 {
-			args = json.RawMessage(`{}`)
-		}
-		// Keep the transport unscoped so context is explicit in the request,
-		// never injected by the adapter or taken from ambient CLI context.
-		performClient, err := rex.NewContext(dispatch, rex.Options{Selection: selection, Server: target.Server,
-			Timeout: 3 * time.Second})
-		if err != nil {
-			return errors.New("whichkey: native action targeting refused: cannot construct the captured endpoint client")
-		}
-		if mapping.Action == "session.select" {
-			if err := validateSessionChoice(dispatch, client, mapping); err != nil {
-				return err
-			}
-		}
-		request := map[string]any{
-			"client_id": target.ClientID, "action": mapping.Action, "args": args,
-			"origin": "cli", "timeout_ms": 3000,
-		}
-		if mapping.Action != "pane.split" && mapping.Action != "session.select" {
-			// Splits use app focus; session selection uses the exact retained
-			// destination in args. Origin authorizes those actions, not their
-			// destination. Other actions retain explicit origin context.
-			request["session_id"], request["block_id"] = origin.SessionID, origin.BlockID
-		}
-		// Recheck the exact captured generation and origin immediately before
-		// one dispatch. A reconnect never renews or silently selects another app.
-		if err := validatePaneAppOrigin(dispatch, client, bound, placement, requested); err != nil {
-			return err
-		}
-		// Discard only a validated JSON result. Errors can follow a successful
-		// mutation, so neither an uncertain reply nor a timeout permits retry.
-		if err := performClient.Call(dispatch, "client.perform", request, nil); err != nil {
-			return errors.New("whichkey: native action failed or is uncertain; check app Remote Control and action compatibility; not retried")
-		}
-		return nil
+		return mapping, nil
 	}
-	return errors.New("whichkey: native selection is missing from the retained snapshot")
+	return Mapping{}, errors.New("whichkey: selection missing from retained snapshot")
 }
 
-// nativeNewTab compiles only Go-owned tn intent after popup cleanup and the
+func dispatchNativeSelection(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping, message MenuEvent, targets map[string]providerTarget, appErr error) error {
+	if inlineRenameMapping(mapping) {
+		if message.Selection.textInput == nil {
+			return errors.New("whichkey: rename requires private validated text")
+		}
+		return nativeResourceRename(ctx, client, origin, placement, requested, mapping, *message.Selection.textInput)
+	}
+	switch mapping.Action {
+	case menuPaneClose, menuTabClose, menuSessionClose:
+		return nativeResourceClose(ctx, client, origin, placement, requested, mapping)
+	case menuPaneFocus:
+		target, exists := targets[mapping.Keys]
+		if !exists {
+			return errors.New("whichkey: missing retained pane target")
+		}
+		dispatch, done := context.WithTimeout(ctx, 3*time.Second)
+		defer done()
+		if _, _, err := nativeResourceOrigin(dispatch, client, origin, placement, requested); err != nil {
+			return err
+		}
+		block, err := validatePaneChoice(dispatch, target)
+		if err != nil {
+			return err
+		}
+		return block.Focus(dispatch)
+	default:
+		if appErr != nil {
+			return fmt.Errorf("whichkey: app action refused after cleanup: %w", appErr)
+		}
+		return dispatchNativeApp(ctx, client, origin, placement, requested, mapping)
+	}
+}
+
+func dispatchNativeApp(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping) error {
+	ctx, done := context.WithTimeout(parent, 3*time.Second)
+	defer done()
+	bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID, ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}
+	actions, err := client.Actions(ctx, origin.ClientID)
+	if err != nil {
+		return errors.New("whichkey: cannot read retained app built-in actions after cleanup")
+	}
+	action := mapping.Action
+	if action == menuTabNew {
+		action = menuSessionSelect
+	}
+	if actions[action] != "client" {
+		return fmt.Errorf("whichkey: retained app does not provide built-in client action %s", action)
+	}
+	if mapping.Action == menuTabNew {
+		return nativeNewTab(ctx, client, bound, placement, requested, origin.selection, mapping)
+	}
+	perform, err := rex.NewContext(ctx, rex.Options{Selection: origin.selection, Server: origin.Server, Timeout: 3 * time.Second})
+	if err != nil {
+		return err
+	}
+	if mapping.Action == menuSessionSelect {
+		if choiceErr := validateSessionChoice(ctx, client, mapping); choiceErr != nil {
+			return choiceErr
+		}
+	}
+	if originErr := validatePaneAppOrigin(ctx, client, bound, placement, requested); originErr != nil {
+		return originErr
+	}
+	args := mapping.Args
+	if len(args) == 0 {
+		args = json.RawMessage(`{}`)
+	}
+	sessionID, blockID := origin.SessionID, origin.BlockID
+	if mapping.Action == menuPaneSplit || mapping.Action == menuSessionSelect {
+		sessionID, blockID = "", ""
+	}
+	if performErr := perform.Perform(ctx, origin.ClientID, mapping.Action, args, sessionID, blockID); performErr != nil {
+		return errors.New("whichkey: native action failed or is uncertain; check app Remote Control/action compatibility; not retried")
+	}
+	return nil
+}
+
+// nativeNewTab compiles only Go-owned new-tab intent after popup cleanup and the
 // caller's session.select registration check. Creation and app activation are
 // distinct effects, never a retryable transaction.
 func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested string, selection *rex.CLISelection, mapping Mapping) error {
-	if mapping.Action != "client.tab.new" || mapping.Keys != "tn" {
+	if mapping.Action != menuTabNew {
 		return errors.New("whichkey: native new tab refused: invalid retained new-tab intent")
 	}
 	if len(mapping.Args) != 0 {
@@ -247,8 +229,8 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 	if err != nil {
 		return errors.New("whichkey: native new tab refused: cannot inspect the captured origin session")
 	}
-	if err := validatePaneAppOrigin(ctx, client, bound, placement, requested); err != nil {
-		return err
+	if originErr := validatePaneAppOrigin(ctx, client, bound, placement, requested); originErr != nil {
+		return originErr
 	}
 	// Exactly one default-terminal creation in the captured source session.
 	// NewWindow can retain a validated ID even when later response checks fail.
@@ -261,13 +243,11 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 	}
 	// Freeze this exact returned ID. Never create again, close it on failure,
 	// resolve a position, or fall back to the original client.tab.new action.
-	target := launchOrigin{Server: bound.Server, SessionID: bound.SessionID,
-		BlockID: bound.BlockID, ClientID: bound.ClientID}
-	actions, err := target.actions(ctx, selection, true)
+	actions, err := client.Actions(ctx, bound.ClientID)
 	if err != nil || actions["session.select"] != "client" {
 		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation refused because session.select registration could not be verified; select that tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
-	if _, err := window.Inspect(ctx); err != nil {
+	if _, inspectErr := window.Inspect(ctx); inspectErr != nil {
 		return fmt.Errorf("whichkey: native new tab %s created in session %s; membership could not be verified before activation; inspect that exact tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
 	// Creation can legitimately change GUI ownership. Keep the already-bound
@@ -278,11 +258,8 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 	}
 	// Only parent-derived destination args select the new tab. No outer
 	// session/block override can redirect the chosen app away from that ID.
-	if err := unscoped.Call(ctx, "client.perform", map[string]any{
-		"client_id": bound.ClientID, "action": "session.select",
-		"args":   map[string]string{"session_id": bound.SessionID, "window_id": window.ID},
-		"origin": "cli", "timeout_ms": 3000,
-	}, nil); err != nil {
+	if performErr := unscoped.Perform(ctx, bound.ClientID, menuSessionSelect,
+		map[string]string{menuSessionID: bound.SessionID, menuWindowID: window.ID}, "", ""); performErr != nil {
 		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation failed or is uncertain; check app Remote Control/action compatibility and select that tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
 	return nil
@@ -291,30 +268,32 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 // nativePopupSelection only captures finish's validated result. No app lookup,
 // action, or second interactive UI can run inside finish's short operation context.
 // Returning success also requires the lifecycle's deferred cleanup to succeed.
-func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config) (Completion, error) {
+func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config, placement rex.Block, noColor, ascii bool) (MenuEvent, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
-		return Completion{}, errors.New("whichkey: cannot encode native menu configuration")
+		return MenuEvent{}, errors.New("whichkey: cannot encode native menu configuration")
 	}
-	capability, err := NewInvocationCapability()
-	if err != nil {
-		return Completion{}, err
-	}
-	request := popupRequest{Configuration: string(data), Capability: capability,
-		Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID, image: origin.image}
-	var retained Completion
-	err = runPopupWithLifetime(ctx, request, config, selection, popupNative, func(_ context.Context, message Completion) error {
-		if err := message.ValidateSelection(config.Spec); err != nil {
-			return errors.New("whichkey: invalid native retained selection")
+	request := popupRequest{Configuration: string(data), Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
+		image: origin.image, placement: &placement, noColor: noColor, ascii: ascii}
+	var retained MenuEvent
+	lifecycleErr := runPopupLifecycle(ctx, request, config, selection, func(_ context.Context, message MenuEvent) error {
+		if !message.Dismissed {
+			if _, selectionErr := retainedNativeMapping(message, config); selectionErr != nil {
+				return selectionErr
+			}
+		} else if message.Selection != nil {
+			return errors.New("whichkey: ambiguous popup dismissal")
 		}
 		retained = message
 		return nil
 	})
-	if err != nil {
-		return Completion{}, err
+	if lifecycleErr != nil {
+		return MenuEvent{}, lifecycleErr
 	}
-	if err := retained.ValidateSelection(config.Spec); err != nil {
-		return Completion{}, errors.New("whichkey: native popup returned no valid retained result")
+	if !retained.Dismissed {
+		if _, selectionErr := retainedNativeMapping(retained, config); selectionErr != nil {
+			return MenuEvent{}, selectionErr
+		}
 	}
 	return retained, nil
 }
