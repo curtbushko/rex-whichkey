@@ -52,6 +52,7 @@ var (
 	errRuntimeLayout        = errors.New("whichkey: helper/layout discovery failed; install the normal execution-host integration assets through the installer; not retried")
 	errRuntimeCompatibility = errors.New("whichkey: runtime compatibility failed; update and load the integration through the normal configuration lifecycle; no activation, retry or native fallback")
 	errRuntimeOrigin        = errors.New("whichkey: runtime origin or generation changed; relaunch from the original Rex terminal; not retried")
+	errRuntimeEndpoint      = errors.New("whichkey: constructor endpoint intent is invalid or conflicts with the retained public endpoint; use matching constructor and public launch endpoints; not retried")
 	errRuntimeRelay         = errors.New("whichkey: private rendezvous failed; run on the server execution host with shared private files and current integration software; no retry or native fallback")
 	errRuntimePreparation   = errors.New("whichkey: runtime preparation failed; check the execution-host integration and original invocation deadline; not retried")
 	errRuntimeStartup       = errors.New("whichkey: controller/child startup failed or uncertain; inspect the original invocation before relaunching; not retried")
@@ -719,10 +720,7 @@ func RuntimeDescribe(ctx context.Context, input io.Reader, output io.Writer) (ou
 		return checkErr
 	}
 	if request.Descriptor != "" {
-		if request.Server != nil {
-			return errRuntimeCompatibility
-		}
-		data, err := json.Marshal(runtimeRelayRequest{Operation: runtimePreflight, Descriptor: request.Descriptor, Anchor: request.Anchor, LayoutRevision: request.LayoutRevision, Consumer: request.Consumer, Origin: request.Origin})
+		data, err := json.Marshal(runtimeRelayRequest{Operation: runtimePreflight, Descriptor: request.Descriptor, Anchor: request.Anchor, LayoutRevision: request.LayoutRevision, Consumer: request.Consumer, Origin: request.Origin, Server: request.Server})
 		if err != nil {
 			return errRuntimeCompatibility
 		}
@@ -1024,6 +1022,7 @@ type runtimeMenu struct {
 	Consumer      runtimeConsumer     `json:"consumer"`
 	Origin        runtimeOrigin       `json:"origin"`
 	Relay         runtimeInstallation `json:"relay"`
+	Server        *string             `json:"server,omitempty"`
 }
 
 type runtimeBinding struct {
@@ -1259,9 +1258,29 @@ type runtimeRelayRequest struct {
 	LayoutRevision int             `json:"layout_revision"`
 	Consumer       runtimeConsumer `json:"consumer"`
 	Origin         runtimeOrigin   `json:"origin"`
+	Server         *string         `json:"server,omitempty"`
 	Relay          string          `json:"relay,omitempty"`
 	Configuration  string          `json:"configuration,omitempty"`
 	ReceiptHash    string          `json:"receipt_hash,omitempty"`
+}
+
+// The opaque preflight identity freezes both the installed relay and the exact
+// constructor intent, including absence. Lua returns these bytes unchanged;
+// only Go canonicalizes the intent to compare with the public receipt endpoint.
+type runtimeRelayIdentity struct {
+	Installation runtimeInstallation `json:"installation"`
+	Server       *string             `json:"server,omitempty"`
+}
+
+func checkRuntimeEndpointIntent(endpoint string, intent *string) error {
+	if intent == nil {
+		return nil
+	}
+	canonical, err := rex.CanonicalEndpoint(*intent)
+	if err != nil || canonical != endpoint {
+		return errRuntimeEndpoint
+	}
+	return nil
 }
 
 func readRuntimeDescriptor(ctx context.Context, root *os.Root, locator runtimeLocator) (runtimeDescriptor, runtimeReceipt, error) {
@@ -1336,6 +1355,9 @@ func validateRelayMenu(ctx context.Context, base runtimeReceipt, menu runtimeMen
 	if !sameRuntimeConsumer(base.Consumer, menu.Consumer) || !sameRuntimeOrigin(base.Origin, menu.Origin) {
 		return errRuntimeOrigin
 	}
+	if checkErr := checkRuntimeEndpointIntent(base.Endpoint, menu.Server); checkErr != nil {
+		return checkErr
+	}
 	if checkErr := validateRuntimeConfig(menu.Configuration, menu.Consumer); checkErr != nil {
 		return checkErr
 	}
@@ -1397,6 +1419,9 @@ func RuntimeRelay(parent context.Context, input io.Reader, output io.Writer) (ou
 	if !sameRuntimeConsumer(receipt.Consumer, request.Consumer) || !sameRuntimeOrigin(receipt.Origin, request.Origin) {
 		return errRuntimeOrigin
 	}
+	if checkErr := checkRuntimeEndpointIntent(receipt.Endpoint, request.Server); checkErr != nil {
+		return checkErr
+	}
 	image, err := captureSelf(stage)
 	if err != nil {
 		return err
@@ -1423,10 +1448,11 @@ func checkRuntimeRelayInstallation(request runtimeRelayRequest, installation *ru
 	if request.Operation == runtimePreflight {
 		return nil
 	}
-	var retained runtimeInstallation
-	encoded, err := json.Marshal(installation)
+	var retained runtimeRelayIdentity
+	expected := runtimeRelayIdentity{*installation, request.Server}
+	encoded, err := json.Marshal(expected)
 	if err != nil || decodeRuntime([]byte(request.Relay), &retained, popupMessageLimit) != nil ||
-		request.Relay != string(encoded) || !reflect.DeepEqual(retained, *installation) {
+		request.Relay != string(encoded) || !reflect.DeepEqual(retained, expected) {
 		return errRuntimeCompatibility
 	}
 	return nil
@@ -1453,7 +1479,7 @@ func performRuntimeRelay(stage context.Context, root *os.Root, lease *os.File, d
 		if request.Configuration != "" || request.ReceiptHash != "" || request.Relay != "" || runtimeSlotsEmpty(stage, root, descriptor.Slots, runtimeMenuFile, runtimePreparedFile, runtimeBoundFile) != nil {
 			return errRuntimeRelay
 		}
-		relay, err := json.Marshal(installation)
+		relay, err := json.Marshal(runtimeRelayIdentity{installation, request.Server})
 		if err != nil || len(relay) > popupMessageLimit {
 			return errRuntimeCompatibility
 		}
@@ -1480,7 +1506,7 @@ func relayRuntimeMenu(ctx context.Context, root *os.Root, lease *os.File, descri
 	if request.ReceiptHash != "" || runtimeSlotsEmpty(ctx, root, descriptor.Slots, runtimeMenuFile, runtimePreparedFile, runtimeBoundFile) != nil {
 		return errRuntimeRelay
 	}
-	menu := runtimeMenu{request.Configuration, request.Consumer, request.Origin, installation}
+	menu := runtimeMenu{request.Configuration, request.Consumer, request.Origin, installation, request.Server}
 	if checkErr := validateRelayMenu(ctx, receipt, menu); checkErr != nil {
 		return checkErr
 	}
@@ -1513,7 +1539,9 @@ func relayRuntimeBound(ctx context.Context, root *os.Root, lease *os.File, descr
 	if checkErr := waitRuntimeSlot(ctx, root, runtimeMenuFile, descriptor.ReceiptHash, descriptor.Slots, lease, &menu); checkErr != nil {
 		return checkErr
 	}
-	if checkErr := validateRelayMenu(ctx, receipt, menu); checkErr != nil || !reflect.DeepEqual(menu.Relay, installation) || menu.Origin != request.Origin {
+	retained := runtimeRelayIdentity{menu.Relay, menu.Server}
+	expected := runtimeRelayIdentity{installation, request.Server}
+	if checkErr := validateRelayMenu(ctx, receipt, menu); checkErr != nil || !reflect.DeepEqual(retained, expected) || menu.Origin != request.Origin {
 		return errRuntimeRelay
 	}
 	if checkErr := waitRuntimeSlot(ctx, root, runtimePreparedFile, descriptor.ReceiptHash, descriptor.Slots, lease, &prepared); checkErr != nil {

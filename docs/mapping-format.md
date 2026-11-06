@@ -247,11 +247,13 @@ After one-time module/PATH/setup/registration and client Remote Control setup,
 `rex-whichkey` in the originating Rex terminal activates the real floating popup;
 standalone `menu` remains low-level resolved-JSON UI. The optional constructor
 endpoint `popup.new(defaults, endpoint)` is immutable routing data outside mapping
-options. Public `--server`/constructor override > nonempty execution-host
+options. Key describe uses constructor override > nonempty execution-host
 `REX_SERVER` > bounded no-autostart native Rex Linux/macOS discovery; Rex owns the
-platform paths. Public and preparation endpoints must agree for custom/shared
-servers. Never convert opaque `ctx.server` into an address or select a focused/
-current client to compensate for missing/stale origin. See the
+platform paths. Public Go has already selected its endpoint with public `--server`
+precedence before activation. A present constructor endpoint must canonically
+agree with that retained endpoint; it cannot override or rediscover public
+transport. Public and preparation endpoints must agree for custom/shared servers.
+Never convert opaque `ctx.server` into an address or select a focused/current client to compensate for missing/stale origin. See the
 [launch contract](launch-contract.md) for endpoint validation, exact origin/client
 selection, action-name overrides and actionable prerequisite failures.
 
@@ -536,11 +538,12 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
   the app. The locator stays opaque: Lua never opens `request.json`, follows an
   arbitrary locator path, or executes a caller-nominated helper.
 - Before issue/evaluation, the original action runs only its fixed anchored
-  helper's `runtime-describe` with exactly `{anchor, layout_revision:1, consumer,
-  origin, descriptor:LOCATOR_JSON_STRING}`, omitting `server`. This path reuses
-  the public frozen CLI; it does not choose another CLI/helper. Go strictly
-  decodes the complete origin, authenticates the owned private directory/request
-  digest/slot manifest/receipt and live FIFO lease, then `sameRuntimeOrigin`
+  helper's `runtime-describe` with `{anchor, layout_revision:1, consumer,
+  origin, descriptor:LOCATOR_JSON_STRING}` and optional `server` as specified
+  below. This path reuses the public frozen CLI; it does not choose another
+  CLI/helper. Go strictly decodes the complete origin, authenticates the owned
+  private directory/request digest/slot manifest/receipt and live FIFO lease,
+  then `sameRuntimeOrigin`
   compares every nominated GUI/placement field to the private initial receipt.
   Only its previously empty `caller_id` is filled from the independently captured
   actual action caller; Lua must keep that caller unchanged throughout this
@@ -550,9 +553,9 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
   No public nomination alone authorizes anything. Output is `{version:1, protocol_min,
   protocol_max, producer_build, features, layout_revision, receipt_hash, relay}`.
   Validate producer features/protocol and retain the exact opaque `relay`
-  installation-identity string before issuing a ticket. Its Go-owned numeric
-  fields must never pass through Lua number reserialization. The read-only
-  `runtime-relay` operation `preflight` is the same finite preflight; it is not
+  installation/constructor-intent identity string before issuing a ticket. Its
+  Go-owned numeric fields must never pass through Lua number reserialization.
+  The read-only `runtime-relay` operation `preflight` is the same finite preflight; it is not
   a popup or authority probe. This reply supplies compatibility, the initial
   receipt hash and exact relay identity, not a replacement origin or GUI target.
   Keep the preflight origin unchanged for `menu` and `bound`; Go repeats the
@@ -560,15 +563,16 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
   the actual activation caller into the final opaque receipt.
 - After one original-VM evaluation, invoke fixed `runtime-relay` with
   `{operation:"menu", descriptor, anchor, layout_revision:1, consumer, origin,
-  relay, configuration:CONFIG_JSON_STRING}`. It writes `menu.json`, waits for
-  Go-owned public preparation, and returns the same preparation shape as the key
-  path. Bind the ticket to those final receipt bytes/hash. Do **not** start the
+  relay, configuration:CONFIG_JSON_STRING}` and the same optional `server`.
+  It writes `menu.json`, waits for Go-owned public preparation, and returns the
+  same preparation shape as the key path. Bind the ticket to those final
+  receipt bytes/hash. Do **not** start the
   returned executable from Lua for this entry path.
 - Then invoke fixed `runtime-relay` with `{operation:"bound", descriptor, anchor,
   layout_revision:1, consumer, origin, relay, receipt_hash:FINAL_HASH}` (omit
-  configuration). It publishes binding and returns `{version:1}`. The action
-  returns no secret/handle/result. Only after matching bound state **and certain
-  activation success** does public Go retire its finite rendezvous root/FIFO
+  configuration), again with the same optional `server`. It publishes binding
+  and returns `{version:1}`. The action returns no secret/handle/result. Only
+  after matching bound state **and certain activation success** does public Go retire its finite rendezvous root/FIFO
   handles and captured source handle, then start its selected controller. A
   retirement failure prevents startup and takes owned cleanup/cancellation;
   uncertain closes are never repeated. The controller uses its verified private
@@ -592,6 +596,59 @@ Source-review cases for this boundary (all **UNEXECUTED**, not parser fixtures):
   private modes, one-link identity and stage. No valid shared local state means
   unsupported cross-host launch **before** reservation, not a remote path guess.
 
+**Immutable constructor endpoint intent (both entry paths):**
+
+- `M.new(defaults, server_endpoint, execution)` retains `server_endpoint` in its
+  constructor closure, outside setup/mapping options. It is absent (`nil`) or a
+  string. Wrong Lua types fail at construction; do not stringify a table or the
+  original opaque `ctx.server`. Empty/malformed strings must not become absence.
+- The exact optional JSON field is `server`, type **string**, on key describe,
+  public describe (with `descriptor`), and public `runtime-relay` operations
+  `preflight`, `menu` and `bound`. Omit it on **every** call only when the
+  constructor argument is absent. A present value is the exact same unmodified
+  constructor string on every call, including after evaluation/binding yields;
+  do not normalize it, use an action argument, reread environment or adopt an
+  endpoint from a reply. `null`, aliases, duplicates and nonstrings fail strict
+  Go decoding. Public action arguments remain exactly the three fields above;
+  there is no added public CLI/configuration field or Rex API.
+- Public describe forwards that optional field to authenticated preflight. After
+  authenticating the private request/receipt/live lease and exact origin, Go
+  uses only pure `rex.CanonicalEndpoint` on a present string and compares it with
+  the **already retained** `receipt.Endpoint`. Its frozen CLI capability receipt
+  already binds that endpoint. Absence is normal and does not trigger discovery.
+  A valid equivalent absolute socket path/escaped URI follows that existing
+  canonicalizer; no extra URI/path policy, DNS lookup, CLI selection, alternate
+  endpoint or retargeting is introduced. Invalid/empty/conflicting intent returns
+  a fixed bounded endpoint diagnostic before a reply, ticket, user evaluation,
+  capability, popup or selected effect. Public caller `--server` intent wins
+  selection; constructor disagreement is rejection, never silent override.
+- The opaque `relay` string now encodes Go's `{installation, server?}` identity.
+  Its optional `server` preserves exact original bytes and presence, not the
+  canonicalized comparison result. Lua must **not** decode/re-encode it. Go
+  compares the whole exact retained string and decoded identity with the current
+  installation plus request intent in `menu`/`bound`, rejecting changed presence
+  or spelling even when the changed spelling would be canonically equivalent.
+  `menu.json` also retains optional `server`; public preparation independently
+  checks its canonical agreement, and `bound` compares its presence/value with
+  that immutable menu record. Every relay call rechecks receipt/lease/origin and
+  endpoint agreement. The final opaque receipt/hash schema and exact-byte binding
+  remain unchanged; its endpoint still comes solely from public Go.
+- Key describe retains its existing `rex.ResolveEndpoint` constructor precedence.
+  Its frozen receipt carries the canonical endpoint through prepare/controller;
+  optional prepare `--server`, if used, must agree. No public `server` relay field
+  belongs in key prepare's JSON or in controller startup/completion messages.
+
+Task04 source continuation from frozen `55f6f764cb83e50ae865801f631d61f5a864128b`:
+remove its deliberate public-present-endpoint blocker; put
+`input.server = server_endpoint` into the common describe input for **both**
+branches, adding only `descriptor` for public. Reuse that input unchanged for
+public `menu` and `bound` (only their documented operation/configuration/hash
+fields change). Do not parse the changed opaque relay identity or alter the
+strict response schemas. Thus absent, valid equivalent, invalid/conflicting and
+changed-context paths are all expressible using supported producer fields, not
+just a sampled successful branch. This is source compatibility analysis, not
+Lua implementation or runtime verification.
+
 Key/palette launch has **no public nomination or locator**: capture the actual
 app caller from original `ctx`, validate that same app/connection/placement via
 direct APIs, and use it for both `caller_id` and `client_id` in key describe.
@@ -607,6 +664,10 @@ Public-preflight source-review cases (all **UNEXECUTED**):
 | Missing/malformed nomination, or GUI ID/generation differs from private receipt | Reject before reply/reservation/evaluation; never substitute actual CLI caller, pane owner or another attached app. |
 | Nominated GUI reconnects/detaches, block moves, actual ctx or loaded generation changes across a yield | Reject without adopting a new generation, caller, placement or target; no menu effect, popup or retry. |
 | Locator points at foreign/malformed/unshared state or a dead lease | Go rejects within its bounded ownership/no-follow boundary; Lua never parses files to recover missing authority. |
+| Constructor endpoint absent | Preflight/menu/bound omit `server`; public frozen endpoint is unchanged, with no new discovery. |
+| Constructor endpoint is valid and canonically equivalent to the retained public endpoint | Go permits endpoint agreement only after private/origin authentication; preserve exact intent and opaque relay across phases. |
+| Constructor endpoint is empty, invalid or conflicts with public `--server`/retained transport | Fixed bounded failure before preflight reply, reservation/evaluation, capability, popup or effects; no retargeting or fallback. |
+| Constructor intent presence/spelling changes after preflight, or context/config/GUI changes across a yield | Exact relay/menu intent and original context checks reject; do not adopt changed intent, identity or expiry, even for equivalent endpoint spellings. |
 
 Small advertisements, locators, preflight and completion are bounded to 64 KiB;
 full Config/receipt/preparation/handoff and slot envelopes to 8 MiB total at each
