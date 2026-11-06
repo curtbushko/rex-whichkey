@@ -132,20 +132,23 @@ func decodeVersion(data []byte) (CLIVersion, error) {
 	if err != nil {
 		return CLIVersion{}, compatibilityFailure("server.version", "object")
 	}
-	var version CLIVersion
-	if json.Unmarshal(data, &version) != nil {
-		return CLIVersion{}, compatibilityFailure("server.version", "known field types")
-	}
-	if !metadataText(version.Version) {
-		return CLIVersion{}, compatibilityFailure("server.version", "rex_version text")
-	}
-	if version.APIMinRevision > version.APIRevision {
-		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision exceeds api_revision")
-	}
 	for _, field := range []string{"rex_version", "api_revision", "api_min_revision"} {
 		if value, present := object[field]; present && bytes.Equal(bytes.TrimSpace(value), []byte(schemaNull)) {
 			return CLIVersion{}, compatibilityFailure("server.version", field+" null")
 		}
+	}
+	var version CLIVersion
+	if json.Unmarshal(object["rex_version"], &version.Version) != nil || !metadataText(version.Version) {
+		return CLIVersion{}, compatibilityFailure("server.version", "rex_version text")
+	}
+	if value, present := object["api_revision"]; present && json.Unmarshal(value, &version.APIRevision) != nil {
+		return CLIVersion{}, compatibilityFailure("server.version", "api_revision unsigned integer/range")
+	}
+	if value, present := object["api_min_revision"]; present && json.Unmarshal(value, &version.APIMinRevision) != nil {
+		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision unsigned integer/range")
+	}
+	if version.APIMinRevision > version.APIRevision {
+		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision exceeds api_revision")
 	}
 	return version, nil
 }

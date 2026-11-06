@@ -452,7 +452,10 @@ func requestObjectFailure(schema map[string]json.RawMessage, fields, supplied ma
 			return path + ": properties"
 		}
 	}
-	additional := schema["additionalProperties"]
+	additional, present := schema["additionalProperties"]
+	if present && !validAdditional(additional) {
+		return path + ": additionalProperties"
+	}
 	if opaqueRequest(path) {
 		// CLI/user-owned children are not absent. Require all possible names
 		// and values to remain unconstrained, not merely optional.
@@ -485,6 +488,15 @@ func requestObjectFailure(schema map[string]json.RawMessage, fields, supplied ma
 		}
 	}
 	return ""
+}
+
+func validAdditional(data json.RawMessage) bool {
+	var boolean bool
+	if json.Unmarshal(data, &boolean) == nil && strings.TrimSpace(string(data)) != schemaNull {
+		return true
+	}
+	_, err := metadataObject(data)
+	return err == nil
 }
 
 func unconstrainedAdditional(data json.RawMessage) bool {
