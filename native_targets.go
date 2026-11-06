@@ -22,7 +22,7 @@ func popupAppConnections(ctx context.Context, client *rex.Client, sessionID stri
 	var result struct {
 		Clients json.RawMessage `json:"clients"`
 	}
-	if err := client.Call(ctx, "session.list_clients", map[string]string{"session_id": sessionID}, &result); err != nil {
+	if err := client.Call(ctx, "session.list_clients", map[string]string{menuSessionID: sessionID}, &result); err != nil {
 		return nil, errors.New("whichkey: cannot inspect origin session clients; check the endpoint and captured REX_SESSION")
 	}
 	var connections []struct {

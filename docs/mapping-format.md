@@ -7,11 +7,13 @@ contract in the flat Go package. It reads files and returns an independent,
 validated configuration; it never invokes Rex, queries inventories, evaluates
 Lua, writes configuration or expands providers.
 
-Public entrypoint wiring, provider expansion and Go-owned dispatch are the next
-Phase 16 task. This loader alone does **not** fix the old public startup's Lua
-registry dependency or demonstrate a running menu. Legacy `DecodeConfig`,
-`Completion` and `CallbackRef` types remain for unchanged tests and the
-transitional caller. They are not an alternative public file format.
+The public entrypoint uses this loader, expands enabled providers once before
+popup sizing/PTY handoff, and dispatches retained selections through Go's Rex CLI
+resources after cleanup. It never queries Lua runtime/launch registrations.
+Source wiring and static builds do not by themselves demonstrate a running menu;
+coordinator observation of the public candidate is still required. Legacy
+`DecodeConfig`, callback wire validation and `launchOutput` remain isolated for
+unchanged source tests, not as an alternative public configuration/control path.
 
 ## File selection
 
@@ -158,12 +160,15 @@ All four are opt-in. The only existing default dynamic intent is `ws`, adapted
 by the consumer from `session.switch` to the sessions list. The loader leaves the
 current built-in record intact. It adds no other default provider row.
 
-Task 2 must expand enabled markers once before sizing/PTY handoff, inherit
-appropriate display flags, retain full resource IDs outside the PTY, and reject
-stale/moved resources rather than retargeting by label, focus or list position.
-Generated keys identify retained choices, not resource authority. Labels and
-short IDs are display-only. Known-host details remain non-executable, including
-when inventory is unavailable; remote connect/management is not implied.
+The Go parent expands enabled markers once before sizing/PTY handoff, preserving
+source order and hidden display flags. Sessions use one bounded session snapshot;
+windows/panes list the origin Session's resources. Each resource provider rejects
+more than 512 resources, without truncation; all batches and the combined transport
+remain bounded and validated. Full IDs stay in retained targets and displayed rows.
+Stale/moved resources fail rather than retargeting by label, focus or position.
+Generated keys identify retained choices, not resource authority. Known-host
+details remain non-executable, including when inventory is unavailable; remote
+connect/management is not implied.
 
 `ValidateMenuProviderChildren(marker, children)` is the structural batch contract:
 
@@ -179,8 +184,11 @@ internal action dispatch. Public file actions still use the closed catalogue;
 Go-only generated pane intents are not public action names. The consumer must
 also validate the combined expanded menu for cross-batch collisions, retain
 resource-specific action data itself, and perform freshness/confirmation checks.
-No provider query, expansion, pagination or new dispatch implementation is
-claimed by the loader task.
+Provider queries, expansion, pagination and dispatch belong to the Go launch
+consumer, not the file loader. Supported notation is canonicalized in one retained
+snapshot before expansion, so case-insensitive key notation cannot break dispatch.
+Inline rename follows retained action intent at any configured key, with optional
+confirmation and validated private text; it never opens a native rename dialog.
 
 ## Built-ins and migration
 

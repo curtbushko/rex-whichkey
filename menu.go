@@ -3,6 +3,7 @@ package whichkey
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // MenuEntry is renderer-independent display data. Key is one literal input token;
@@ -30,10 +31,11 @@ type MenuEvent struct {
 // with NewMenu; a zero Menu is inactive. Once selected or dismissed it is closed
 // and emits no further selections, even if more input is queued.
 type Menu struct {
-	current *menuNode
-	pending *menuNode
-	page    int
-	done    bool
+	current     *menuNode
+	pending     *menuNode
+	pendingText *string
+	page        int
+	done        bool
 
 	textSpec *textEntrySpec
 	entry    *menuTextEntry
@@ -64,15 +66,24 @@ func NewMenu(mappings []Mapping) (*Menu, error) {
 		if err != nil {
 			return nil, fmt.Errorf("whichkey: create menu: %w", err)
 		}
-		node := root
+		// One immutable canonical path backs every newly-created prefix. Slicing
+		// only at token boundaries avoids cumulative full-prefix allocation.
+		var path strings.Builder
 		for _, key := range keys {
+			path.WriteString(keyLiteral(key))
+		}
+		canonical := path.String()
+		node := root
+		boundary := 0
+		for _, key := range keys {
+			boundary += len(keyLiteral(key))
 			child := node.lookup[key]
 			if child == nil {
 				child = &menuNode{
 					parent: node,
 					lookup: make(map[string]*menuNode),
 					key:    key,
-					keys:   node.keys + keyLiteral(key),
+					keys:   canonical[:boundary],
 				}
 				node.lookup[key] = child
 				node.children = append(node.children, child)
@@ -165,10 +176,13 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 	}
 	if m.pending != nil {
 		target := m.pending
-		m.pending = nil
+		text := m.pendingText
+		m.pending, m.pendingText = nil, nil
 		m.page = 0
 		if key == "y" {
-			return m.selectNode(target, true)
+			event := m.selectNode(target, true)
+			event.Selection.textInput = text
+			return event
 		}
 		return MenuEvent{}
 	}
@@ -201,7 +215,7 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 		m.page = 0
 		return MenuEvent{}
 	}
-	if m.textSpec != nil && nativeRenameMapping(target.mapping) {
+	if m.textSpec != nil && inlineRenameMapping(target.mapping) {
 		m.openTextEntry(target)
 		return MenuEvent{}
 	}

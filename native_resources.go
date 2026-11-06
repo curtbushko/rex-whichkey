@@ -56,6 +56,9 @@ func nativeResourceOrigin(ctx context.Context, client *rex.Client, origin launch
 		if err != nil {
 			return rex.Block{}, rex.Window{}, errors.New("whichkey: resource action refused: explicit app binding is unavailable")
 		}
+		if id != origin.ClientID || generation != origin.ConnectedAt {
+			return rex.Block{}, rex.Window{}, errors.New("whichkey: explicit app connection changed; not retargeted")
+		}
 		bound.ClientID, bound.ConnectedAt = id, generation
 	}
 	window, err := placement.Window(ctx)
@@ -77,7 +80,7 @@ func nativeResourceOrigin(ctx context.Context, client *rex.Client, origin launch
 // nativeResourceRename receives name data after complete popup cleanup. The
 // parent retains both tab/session identities and the action; none come from text.
 func nativeResourceRename(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping, name string) error {
-	if !nativeRenameMapping(mapping) {
+	if !inlineRenameMapping(mapping) {
 		return errors.New("whichkey: invalid retained rename intent")
 	}
 	if err := validateRenameText(name); err != nil {

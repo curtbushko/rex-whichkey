@@ -3,6 +3,7 @@ package whichkey
 import (
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/rivo/uniseg"
 )
@@ -16,15 +17,20 @@ type textEntrySpec struct {
 	SessionInitial string `json:"session_initial"`
 }
 
+// nativeRenameMapping preserves the historical Completion test contract. The
+// supported Go menu uses action-based inlineRenameMapping, not legacy keys.
 func nativeRenameMapping(mapping Mapping) bool {
+	return (mapping.Keys == "tr" || mapping.Keys == "wr") && !mapping.Confirm && inlineRenameMapping(mapping)
+}
+
+func inlineRenameMapping(mapping Mapping) bool {
 	if len(mapping.Args) != 0 {
 		if _, err := completionObject(mapping.Args); err != nil {
 			return false // Custom retained arguments keep their ordinary action behavior.
 		}
 	}
-	return mapping.CallbackRef == "" && !mapping.Confirm &&
-		(mapping.Keys == "tr" && mapping.Action == "client.tab.rename" ||
-			mapping.Keys == "wr" && mapping.Action == "session.rename")
+	return mapping.CallbackRef == "" &&
+		(mapping.Action == menuTabRename || mapping.Action == menuSessionRename)
 }
 
 type menuTextEntry struct {
@@ -42,6 +48,9 @@ func validateRenameText(value string) error {
 	if err := validateText(value); err != nil {
 		return errors.New("Name must be valid text without control characters")
 	}
+	if utf8.RuneCountInString(value) > 128 {
+		return errors.New("name exceeds Rex's 128-character limit")
+	}
 	if strings.TrimSpace(value) == "" {
 		return errors.New("Name cannot be empty")
 	}
@@ -50,7 +59,7 @@ func validateRenameText(value string) error {
 
 func (m *Menu) openTextEntry(node *menuNode) {
 	value := m.textSpec.Initial
-	if node.mapping.Keys == "wr" {
+	if node.mapping.Action == menuSessionRename {
 		value = m.textSpec.SessionInitial
 	}
 	problem := ""
@@ -62,7 +71,7 @@ func (m *Menu) openTextEntry(node *menuNode) {
 }
 
 func (e *menuTextEntry) title() string {
-	if e.node.mapping.Keys == "wr" {
+	if e.node.mapping.Action == menuSessionRename {
 		return "Rename session"
 	}
 	return "Rename tab"
@@ -75,14 +84,7 @@ func (m *Menu) handleTextKey(key string) MenuEvent {
 		m.entry = nil // Keep the Tabs node and its page; no result is committed.
 		return MenuEvent{}
 	case "\r", "\n":
-		if err := validateRenameText(e.value); err != nil {
-			e.problem = err.Error()
-			return MenuEvent{}
-		}
-		event := m.selectNode(e.node, false)
-		value := e.value
-		event.Selection.textInput = &value
-		return event
+		return m.submitTextEntry(e)
 	case "\x15": // Ctrl-U
 		e.value, e.cursor, e.selected, e.problem = "", 0, false, ""
 	case "\x1b[H":
@@ -124,6 +126,22 @@ func (m *Menu) handleTextKey(key string) MenuEvent {
 		}
 	}
 	return MenuEvent{}
+}
+
+func (m *Menu) submitTextEntry(entry *menuTextEntry) MenuEvent {
+	if err := validateRenameText(entry.value); err != nil {
+		entry.problem = err.Error()
+		return MenuEvent{}
+	}
+	value := entry.value
+	if entry.node.mapping.Confirm {
+		m.pending, m.pendingText, m.entry = entry.node, &value, nil
+		m.page = 0
+		return MenuEvent{}
+	}
+	event := m.selectNode(entry.node, false)
+	event.Selection.textInput = &value
+	return event
 }
 
 // insertText is also the paste boundary. Pasted Enter/Escape/control bytes are

@@ -8,7 +8,7 @@ import (
 	"temp/rex"
 )
 
-// nativePaneAppTarget binds all app actions and configured CLI launches to an
+// nativePaneAppTarget binds all Go-owned app actions to an
 // explicit app or the launching pane's documented GUI owner. It never prompts
 // for an app. Ownership is routing context, not extra permission; attachment,
 // kind, generation and Rex Remote Control checks still apply.
@@ -43,7 +43,7 @@ func nativePaneAppOwner(ctx context.Context, client *rex.Client, origin launchOr
 		} `json:"block"`
 	}
 	if err := client.Call(ctx, "session.describe_block", map[string]string{
-		"session_id": origin.SessionID, "block_id": origin.BlockID,
+		menuSessionID: origin.SessionID, "block_id": origin.BlockID,
 	}, &result); err != nil {
 		return "", errors.New("whichkey: pane app routing refused: cannot inspect the launching pane's owner")
 	}
