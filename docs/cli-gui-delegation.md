@@ -67,8 +67,11 @@ the uncertain child or deleting its workspace. Malformed/unauthenticated handoff
 may also retain artifacts; expiry revokes authority without proving file removal.
 
 Only exact owned popup/files/handles are cleaned, before selected dispatch;
-uncertain close/focus/cleanup suppresses effects. Default tab/session rename uses
-validated text and retained resource APIs after cleanup, never a native dialog,
+uncertain close/focus/cleanup suppresses effects. See the source-linked
+[fixed owned inventory](launch-contract.md#fixed-owned-cleanup-inventory) for
+popup and rendezvous/preparation files and the original-Lua release boundary.
+Default tab/session rename uses validated text and retained resource APIs after
+cleanup, never a native dialog,
 discarded name or success inferred from a generic action acknowledgment. The
 original 30-second configured lifetime is never renewed (64 pending entries,
 five-second teardown reserve); native interaction retains its lifetime pipe and

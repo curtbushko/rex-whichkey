@@ -37,14 +37,29 @@ unique, distinct and not reserved `whichkey_runtime`. Keys/palette and direct
 modules live outside reserved `rex_whichkey`. Setup, callbacks, args, conditions
 and confirmation follow the [mapping standard](mapping-format.md).
 
-Normal layout revision 1 ships `rex_whichkey/runtime/anchor.lua`, its fixed sibling
-`rex-whichkey` linked to the installed application and `deps/rex` linked to the
-licensed execution-host CLI. Go validates canonical file/content/link identity,
-ownership and modes. Home Manager exposes only the ordinary namespace (symlinks
-supported), not runtime directories/per-host selectors. The installer preserves
-upstream license, signature, loader/libraries and assets. The approved source
-supplies x86_64/aarch64 Linux and Apple-silicon macOS, **not** Intel macOS;
-standalone Intel CLI operation remains, but restricted-PATH keys are not claimed.
+Normal layout revision 1 ships `rex_whichkey/runtime/anchor.lua`, the real
+application executable at its fixed sibling `rex-whichkey`, and `deps/rex` linked
+to the licensed execution-host CLI. The public `bin/rex-whichkey` symlink points
+into that layout, not the reverse: Go's implicit executable-relative dependency
+selection and Lua's explicit anchor reach the same installed image. Go validates
+canonical file/content/link identity, ownership and modes. Home Manager exposes
+only the ordinary namespace (symlinks supported), not runtime directories/per-host
+selectors. The installer preserves upstream license, signature, loader/libraries
+and assets. The pinned source supplies x86_64/aarch64 Linux and Apple-silicon
+macOS, **not** Intel macOS. This is installation/source analysis, not a runtime
+or Nix build result.
+
+The default Intel macOS package omits `deps/rex`. Both configured public and
+key/palette routes therefore fail the anchored installation check before popup,
+even if public Go already selected a valid CLI or `REX_BIN_DIR`/PATH is usable.
+Neither PATH repair nor native fallback repairs that partial Lua layout. The
+existing installation override `rex-cli` can supply a legitimately available,
+licensed execution-host package exporting `bin/rex` to complete it; no upstream
+Intel artifact is invented. See [installation](../README.md#install-on-the-rex-server-host).
+Standalone native use outside the layout retains terminal `REX_BIN_DIR`/valid
+unambiguous PATH operation when the implicit default action is absent. Packaged
+native use can select a valid `REX_BIN_DIR` preference; without it the incomplete
+implicit layout rejects before PATH. Neither bypass enables configured launch.
 
 Standard file-loader absolute anchors work; relative anchors require unchanged
 server cwd. Synthetic/preloaded/custom-loader anchors, shadowed/mixed trees and
@@ -204,7 +219,8 @@ menu/theme, bypassing `HandleKey`, so submenu/page/confirmation survive. Fragmen
 CSI and OSC-interleaved input retain framing; focus-out (`CSI O`) and other reports
 cannot select or cancel. Existing Escape, mouse and paste protection is unchanged.
 There is no unconditional repaint timer, tab-return replacement layer or
-focus-stealing callback. A separate later action-target prompt is described below.
+focus-stealing callback. Later action targeting uses the retained explicit selector
+or pane owner without another prompt or interactive stage.
 Focus reporting is a terminal protocol, not a claim of native-app layer persistence;
 apps that do not emit it will not trigger this repaint.
 
@@ -238,7 +254,8 @@ After successful child exit (which follows terminal restoration), the controller
 closes only its returned owned terminal, confirms its layer vanished, restores
 exact origin focus and removes fixed owned config/result, rename presentation,
 private runtime receipt/image and native lifetime-pipe files and their empty directory **before**
-selected dispatch or any native app lookup. The parent's lifetime-pipe writer is closed in that cleanup
+selected dispatch or any native app lookup (see the complete
+[fixed inventory](#fixed-owned-cleanup-inventory)). The parent's lifetime-pipe writer is closed in that cleanup
 path too; close failure prevents dispatch. Native owned close inspects the exact
 returned terminal in the captured session and can clean it even if the origin
 block/app disappeared;
@@ -544,12 +561,38 @@ bounds. Native display remains app-independent, parent/FIFO-bound and free of an
 idle deadline. Configured original-VM binding and authenticated 30-second expiry/
 five-second teardown reserve remain unchanged.
 
-Cleanup unlinks exactly `config.json`, `result.json` and native `lifetime` when
-present through the private root, then removes the empty directory. It does not
-follow child symlinks, recursively delete unexpected contents or scavenge by label.
-File/cleanup failure prevents selected dispatch. Strict retained selection,
-confirmation, exact targeting and cleanup-before-action remain unchanged; no
-mapping schema, public flag, daemon or renewed authority is added.
+### Fixed owned cleanup inventory
+
+The inventories belong to the actual cleanup functions, not a second transport
+schema or permission to delete caller-nominated paths:
+
+- [`removePopupFiles`](../popup.go) removes only `config.json`, `result.json`,
+  `lifetime` (native only), `native-input.json` (rename presentation),
+  `runtime-image` and `runtime.json` when present in its authenticated private
+  popup root, then the empty directory. The two symbolic names come from
+  [`nativeTextFile`](../native_text_entry.go) and
+  [`runtimeImageName`](../runtime_bootstrap.go).
+- [`removeRuntimeWorkspace`](../runtime_bootstrap.go) removes only `request.json`,
+  `menu.json`, `prepared.json`, `bound.json`, `lease` and `runtime-image` when
+  present in its authenticated private rendezvous/preparation root, then the
+  empty directory. Key preparation need not contain the public relay slots.
+- [Original Lua](../lua/rex_whichkey.lua) cancels unclaimed local registry tickets
+  on failure. Only before an attempted key controller start may it ask Go's
+  authenticated `runtime-release` to remove that preparation workspace. Lua
+  does not recursively remove files or scavenge expired workspaces. Original-VM
+  expiry revokes authority/references; it does not prove artifact removal.
+
+Root-scoped removal does not follow child symlinks or recursively delete
+unexpected contents; unexpected entries prevent empty-directory removal.
+Only exact known owned popup resources are closed, never a broad layer/window/
+session search or a retired prompt resource. Retire owned source/transport/startup
+handles as required by their lifecycle. File/handle/close/focus uncertainty
+suppresses selected dispatch; cleanup completes before effects and uncertain
+closes are never repeated. A possible controller start leaves workspace ownership
+with that child even after a failed/lost acknowledgment. Unauthenticated input
+cannot authorize nominated cleanup and may retain artifacts. No retry, renewed
+expiry or stronger cleanup guarantee is implied. Strict retained selection,
+confirmation and exact targeting remain unchanged.
 
 Historical measured growth/shrinkage is not fixed-navigation evidence. Fresh
 frozen review, coordinator compilation and exact first/root/submenu/paging/back/
@@ -722,8 +765,11 @@ completion. Inspect/focus/effect remains non-atomic against external races.
 
 ## Cutover source scenarios (all UNEXECUTED)
 
-Normal layout/install and optional HM exposure; standalone public rebuild versus
-unequal compatible installed/loaded builds; restricted-PATH original-VM keys;
+Normal public symlink/real-image layout and dependency selection without
+`REX_BIN_DIR`; explicit Lua anchoring and optional HM exposure; default incomplete
+Intel macOS configured/key rejection, licensed dependency override and retained
+standalone native use; standalone public rebuild versus unequal compatible
+installed/loaded builds; restricted-PATH original-VM keys with a complete layout;
 broken/mixed/synthetic modules; old/missing/text-incapable bridges; valid/equivalent/
 invalid/conflicting endpoints and explicit client intent; custom callbacks/args/
 conditions/confirmation; retained-resource rename; namespace symlink upgrades;

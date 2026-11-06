@@ -51,6 +51,8 @@ Successful terminal restoration precedes result commit. The controller validates
 keys/confirmation/text against its snapshot, closes only the exact owned popup,
 restores only a valid origin and retires private transport/source handles **before**
 dispatch. Any uncertain close, focus or file/handle cleanup suppresses the effect.
+The complete source-linked [fixed owned inventory](launch-contract.md#fixed-owned-cleanup-inventory)
+includes the rename presentation and private image/receipt, not only config/result.
 Native Go then revalidates retained placement and invokes typed `Window.Rename`
 or `Session.Rename` once; default resource rename needs no app lookup. Explicit
 client intent still receives its strict checks.

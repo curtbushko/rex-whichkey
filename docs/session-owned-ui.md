@@ -54,7 +54,9 @@ Failure after claim consumes authority, even if the API acknowledgment is lost.
 No uncertain retry, alternate target, fallback dialog or renewed expiry is
 allowed. Cleanup uncertainty suppresses effects. Possible controller start keeps
 workspace ownership with the child; lost acknowledgment or unauthenticated input
-can retain artifacts and does not authorize broad deletion.
+can retain artifacts and does not authorize broad deletion. The source-linked
+[fixed owned cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
+covers popup and rendezvous/preparation files plus the original-Lua release boundary.
 
 See [rename input](tab-rename-input.md), [runtime bootstrap](runtime-bootstrap.md)
 and the authoritative [mapping standard](mapping-format.md) for shared semantics.

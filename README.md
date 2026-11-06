@@ -53,17 +53,23 @@ The flake exports `packages.<system>.rex-whichkey` (also `default`) for
 Normal installation includes:
 
 ```text
-bin/rex-whichkey
+bin/rex-whichkey -> ../share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey
 share/rex-whichkey/lua/rex_whichkey.lua
 share/rex-whichkey/lua/rex_whichkey/...
 share/rex-whichkey/lua/rex_whichkey/runtime/anchor.lua
-share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey -> ../../../../../bin/rex-whichkey
+share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey (real executable)
 share/rex-whichkey/lua/rex_whichkey/runtime/deps/rex -> licensed Rex package's bin/rex
 share/doc/rex-whichkey/{mapping-format,runtime-bootstrap}.md
 ```
 
 This is **layout revision 1**, declared by the normal anchor module, not a
-generated runtime configuration. On the two Linux architectures and Apple-silicon
+generated runtime configuration. The real executable lives beside the anchor;
+the public `bin` entry links to it, not the reverse. Go's implicit layout uses
+that executable location to reach `deps/rex` when `REX_BIN_DIR` is absent. Lua
+uses its explicit file-loader anchor to reach the same image and dependency.
+No wrapper, generated runtime path or constructor wiring implements discovery.
+This topology is source evidence, not an installed public/key launch result.
+On the two Linux architectures and Apple-silicon
 macOS, the installer packages the official pinned `0.1.0-preview.13` Rex CLI
 dependency described in [runtime bootstrap](docs/runtime-bootstrap.md).
 It preserves the released macOS signature, Linux loader/glibc/PAM paths and
@@ -74,11 +80,25 @@ authorize redistribution of its binary/cache closure. No Rex bytes are vendored
 in this repository. The pin is an installation source, **not** a minimum tested
 release or a version users must pair with the server.
 
-That upstream source has no Intel macOS artifact. The standalone WhichKey binary
-remains available there with an already installed execution-host CLI; no Intel
-restricted-PATH Lua bootstrap is claimed. The package's optional `rex-cli`
-derivation argument can supply a normally licensed dependency at install time;
-it is not a runtime selector or a required consumer setting.
+**Intel macOS:** that pinned upstream source has no artifact, so the default
+package omits `runtime/deps/rex` and has an incomplete layout. Both configured
+public launch and key/palette launch reject that installation before popup,
+even with a valid `REX_BIN_DIR` or PATH CLI: the anchored layout check always
+requires the dependency. PATH repair cannot complete it, and configured failure
+never becomes native fallback. The existing package override
+`rex-whichkey.override { rex-cli = licensedHostRexPackage; }` can install a
+legitimately available execution-host dependency exporting `bin/rex`; the name
+here is a user-supplied derivation, not a claimed upstream Intel package. Home
+Manager can select that result with `programs.rex-whichkey.package`. This is
+ordinary dependency installation, not runtime selection or a required constructor
+setting; no new artifact, platform or licensing entitlement is asserted.
+
+Standalone native operation on Intel macOS is retained: a direct/local binary
+outside the layout may use an already installed execution-host CLI via terminal
+`REX_BIN_DIR` or valid unambiguous PATH, when the implicit default action is truly
+absent. The default packaged native route can use a valid `REX_BIN_DIR` preference;
+without it, its applicable but incomplete implicit layout fails rather than trying
+PATH. Neither native case enables the incomplete configured integration.
 
 The basic menu needs no Lua configuration. Optional customization needs the
 normal Lua namespace exposed to Rex; merely installing a package does not
@@ -117,7 +137,8 @@ entry point and `rex_whichkey/` directory together through Rex's normal module
 lookup beside your user-owned configuration. Use the standard file loader; do not
 copy just the entry point, synthesize an anchor, or mix module trees. The
 file-backed anchor starts its fixed sibling helper even with restricted server
-PATH; Go validates and selects the normal dependency. Home Manager links only
+PATH when the complete host dependency layout above is installed; Go validates
+and selects the normal dependency. Home Manager links only
 this namespace, with no runtime-directory injection or per-host discovery.
 Neither installation method edits or reloads `init.lua`.
 
@@ -551,7 +572,9 @@ selection/null; it is not the normal Lua launch or an action executor. `prepare`
   label to compensate. Once controller start is possible, lost acknowledgment does
   not authorize retry, killing an uncertain child or deleting its workspace.
   Malformed/unauthenticated handoffs may also leave artifacts; expiry revokes
-  authority but does not prove artifact cleanup.
+  authority but does not prove artifact cleanup. See the source-linked
+  [fixed owned cleanup inventory](docs/launch-contract.md#fixed-owned-cleanup-inventory);
+  retired prompt resources are not part of cleanup.
 
 Do not share private handoff/result files, capabilities or captured preparation
 output. Terminal restoration and cleanup are bounded best effort, not guarantees

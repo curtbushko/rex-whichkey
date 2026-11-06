@@ -46,12 +46,27 @@ never scans for a newer replacement. Installer/user-owned components must have
 no untrusted writers. This is not hostile-same-account isolation or a portable
 atomic execute-by-file-descriptor guarantee.
 
-The package includes the normal anchor/helper and official pinned proprietary CLI
-on x86_64/aarch64 Linux and aarch64 macOS, preserving upstream loader/libraries/
-signature/assets. Upstream has no Intel macOS artifact in that source: standalone
-terminal/PATH use is retained, but Intel restricted-PATH key bootstrap is not
-claimed. Applicable license/unfree-policy constraints remain; no redistribution
-right or minimum tested Rex release follows from the pin. See [installation](../README.md#install-on-the-rex-server-host).
+The package puts the real executable beside the normal anchor, with the public
+`bin/rex-whichkey` symlink pointing into that layout. Go's implicit layout can
+therefore reach the same dependency as explicit Lua anchoring when `REX_BIN_DIR`
+is absent; this is source analysis, not an installed launch result. The official
+pinned proprietary CLI covers x86_64/aarch64 Linux and aarch64 macOS, preserving
+upstream loader/libraries/signature/assets.
+
+That source has no Intel macOS artifact. Its default package lacks `deps/rex`:
+both configured public and key/palette routes reject before popup, regardless
+of a valid PATH/`REX_BIN_DIR` CLI or public Go's already frozen CLI. The anchored
+installation check always requires that asset. PATH repair is not a solution,
+and configured failure cannot select native fallback. The existing `rex-cli`
+package override can complete the layout with a legitimately available licensed
+execution-host dependency exporting `bin/rex`; no upstream Intel package is
+asserted. Standalone native operation outside the layout retains terminal
+`REX_BIN_DIR` or valid unambiguous PATH use when the implicit default is absent.
+Packaged native use can select valid `REX_BIN_DIR`; absent that preference, the
+incomplete implicit layout rejects rather than trying PATH. Neither case enables
+the incomplete configured routes. Applicable license/unfree-policy constraints
+remain; no redistribution right or minimum tested Rex release follows from the
+pin. See [installation](../README.md#install-on-the-rex-server-host).
 
 ## One frozen CLI and endpoint
 
@@ -144,7 +159,10 @@ cleaned; never cascade to a layer/window/session or search by label. Restore onl
 a still-valid captured origin. Cleanup and source-handle retirement finish before
 selected dispatch, including actions that close their origin. Unknown creation
 identity or uncertain close/focus/file removal suppresses effects and may leave
-resources. Never retry an uncertain close or selected mutation.
+resources. The complete [fixed owned cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
+links the actual Go functions and original-Lua release boundary; there is no
+expired-workspace scavenger or retired prompt cleanup. Never retry an uncertain
+close or selected mutation.
 
 Original Lua rechecks receipt, generation, original expiry, GUI connection,
 placement, retained keys/ref/confirmation/text and guards. Dotted client actions
@@ -183,7 +201,9 @@ normal configuration lifecycle. No auto reload/restart or manual version pairing
 No minimum runtime-tested Rex version, remote deployment certification, hostile
 same-account protection, atomic resource transaction or guaranteed cleanup after
 SIGKILL/server loss is claimed. Compatible unequal builds, source-only public use,
-restricted-PATH keys, HM symlink upgrade, explicit endpoints, custom callbacks,
+public implicit-layout dependency selection, complete-layout restricted-PATH keys,
+default Intel configured/key rejection and dependency override, HM symlink upgrade,
+explicit endpoints, custom callbacks,
 rename, moved origins, disconnect/expiry/replay and uncertain starts/effects are
 source scenarios only. Source owners are `runtime_bootstrap.go`, `launch.go`,
 `popup.go`, `rex/runtime.go`, `rex/endpoint.go` and the normal Lua integration;

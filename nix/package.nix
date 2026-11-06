@@ -79,8 +79,9 @@
           mainProgram = "rex";
         };
       }
-    # Upstream publishes no Intel macOS artifact in this pinned source. Keep the
-    # standalone binary available there; do not invent a restricted-PATH asset.
+    # No Intel macOS artifact is published in this pinned source. Without an
+    # override the layout is incomplete: neither configured route can use it.
+    # Native use still needs a valid execution-host CLI; never invent an asset.
     else null;
 in
   buildGoModule {
@@ -110,11 +111,12 @@ in
 
     postInstall =
       ''
-        mv "$out/bin/cmd" "$out/bin/rex-whichkey"
         mkdir -p "$out/share/rex-whichkey/lua"
         cp -R lua/. "$out/share/rex-whichkey/lua/"
-        # Layout revision 1 is declared by the shipped anchor, not generated Lua.
-        ln -s ../../../../../bin/rex-whichkey "$out/share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey"
+        # Keep the real image in Go's implicit layout, also used by Lua's anchor.
+        # The public entry is an ordinary symlink, not a runtime-selecting wrapper.
+        mv "$out/bin/cmd" "$out/share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey"
+        ln -s ../share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey "$out/bin/rex-whichkey"
         install -Dm644 docs/mapping-format.md "$out/share/doc/rex-whichkey/mapping-format.md"
         install -Dm644 docs/runtime-bootstrap.md "$out/share/doc/rex-whichkey/runtime-bootstrap.md"
         install -Dm644 LICENSE "$out/share/licenses/rex-whichkey/LICENSE"
