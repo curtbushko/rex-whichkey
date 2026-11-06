@@ -1,5 +1,5 @@
 {
-  description = "Rex which-key menu and server-side Lua integration";
+  description = "Go-owned Rex CLI menu, JSON configuration and launch-only Lua integration";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 

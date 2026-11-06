@@ -1,85 +1,64 @@
 # Tab and session rename input
 
-## Accepted flow
+## Current Go-owned flow
 
-**REXWHICHKEY-20261103-085109 — Accepted.** Rename is a text-entry state in the
-existing WhichKey popup, not another popup or Rex's native rename dialog.
-Both the Go native menu and registered Lua defaults use it for **Tabs → Rename**
-(`tr`) and **Sessions → Rename** (`wr`). The captured resource's current label
-prefills the field, initially selected so typing replaces it.
+Accepted text-entry direction: `REXWHICHKEY-20261103-085109`.
+Both built-in and JSON-configured `client.tab.rename` / `session.rename`
+use a text-entry state in the existing WhichKey popup, not a native dialog,
+second popup or special hardcoded `tr/wr` dispatch path.
+Built-in keys remain Tabs → Rename (`tr`) and Sessions → Rename (`wr`).
 
+The exact captured Window/Session label prefills the field, initially selected:
+
+- Typing replaces the selection; arrows/Home/End edit.
+- Backspace/Delete remove grapheme clusters; Ctrl-U clears.
+- Bounded bracketed paste is text data, never submission or mapping keys.
 - Enter validates/confirms; Escape discards edits and returns to the existing
-  submenu/page.
-- Arrows/Home/End edit; Backspace/Delete remove whole grapheme clusters; Ctrl-U
-  clears. Bounded bracketed paste is text data, not submission or mapping keys.
+  submenu/page. A mapping's optional confirmation is still required.
 - Names must be nonblank, control-free UTF-8, at most **4096 bytes and 128 Unicode
-  characters** (Rex's documented resource-label limit). The larger transport bound
-  does not relax the API limit. An initial label beyond the presentation byte
-  bound or containing invalid text is cleared, not silently truncated/submitted;
-  the user must supply a valid replacement.
+  characters**. An invalid/oversized initial presentation value is cleared,
+  never silently truncated/submitted.
 
-The same layer, fixed rectangle, theme, status spacing and focus/resize redraw
-remain. A software caret and horizontal scrolling handle long text. No native
-controls, global GUI setting, extra pane/header or app chooser is changed.
+The same fixed rectangle, theme, status spacing, caret/scrolling and focus/resize
+redraw apply. No app chooser or native control/font setting is changed.
 
-## Compatibility before popup
+## Retained resource and cleanup
 
-Go validates rename presentation/resource support and the loaded consumer's
-`selection-text-resource-rename` feature **before** popup creation, then rechecks
-loaded-menu/origin state after yields. Protocol/layout 1 and configured completion
-2 are Go-owned; completion 1 alone is not text-feature evidence. Compatible helper,
-public and loaded-Lua build IDs may differ. Unsupported consumers fail before
-popup rather than opening a native dialog, dropping text or reporting false
-success. See [runtime bootstrap](runtime-bootstrap.md) and the authoritative
-[mapping/completion standard](mapping-format.md) for exact formats.
+[prepareNativeMenu](../native.go) captures labels before popup creation;
+`native-input.json` is private presentation data, not public menu schema or
+replacement identity. [text_entry.go](../text_entry.go) handles input;
+[native_text_entry.go](../native_text_entry.go) validates private text/results.
 
-The private presentation asset is `native-input.json` for both routes (`initial`
-and `session_initial`). It supplies labels, not authority or replacement IDs.
-No user mapping field or constructor path is introduced.
+The Go parent retains endpoint/session/block/window/layer, canonical menu mapping
+and confirmation. The terminal returns keys and authorized bounded text; it
+cannot supply an action, callback, replacement ID or app generation.
+After terminal restoration, exact popup close, valid origin-focus restoration,
+pipe/private-file removal and image-handle retirement, the parent rechecks
+original placement and calls typed `Window.Rename` or `Session.Rename` once.
+Text is one label argument, never shell code. See
+[cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory).
 
-## Exact retained-resource ownership
+Resource rename does not need an implicit GUI app. Explicit client intent remains
+strict and is revalidated, including its connection generation.
+Missing/moved origin, invalid text, uncertain cleanup or changed explicit app
+suppresses the effect. Lost acknowledgment/uncertain rename is not retried,
+rolled back, redirected or reported as successful. Checks/mutation are not atomic.
 
-The parent freezes server/session/block and unique window/layer placement before
-presentation. Lua retains its exact original window/session resources, mapping
-snapshot, callback/args/guards/confirmation and ticket in the original VM. Default
-inline rename applies only to retained `tr`/`client.tab.rename` or
-`wr`/`session.rename` with no callback, nonempty args or confirmation override.
-Custom callbacks, replacement actions, conditions, args and confirmation keep
-ordinary mapping semantics; incoming text cannot turn them into default rename.
+## Migration and evidence
 
-Successful terminal restoration precedes result commit. The controller validates
-keys/confirmation/text against its snapshot, closes only the exact owned popup,
-restores only a valid origin and retires private transport/source handles **before**
-dispatch. Any uncertain close, focus or file/handle cleanup suppresses the effect.
-The complete source-linked [fixed owned inventory](launch-contract.md#fixed-owned-cleanup-inventory)
-includes the rename presentation and private image/receipt, not only config/result.
-Native Go then revalidates retained placement and invokes typed `Window.Rename`
-or `Session.Rename` once; default resource rename needs no app lookup. Explicit
-client intent still receives its strict checks.
+There is no loaded-Lua consumer feature, completion version, original-VM ticket,
+callback registry or expiry negotiation in this path.
+Configured rename takes empty args and follows action intent at any valid key.
+Functions/callbacks/custom Lua actions are deferred, not silently converted into
+rename. See [data catalogue](mapping-format.md).
 
-Configured completion authenticates capability, exact opaque receipt/hash,
-actual fresh caller/server/session/block, original expiry and generation before
-single-use claim. It claims before yielding guards/API work and rechecks retained
-GUI connection/placement and state. Original Lua calls `session.set_window_label`
-with its retained window/session or `session.set_label` with its retained session,
-once. Text is only the validated label; a moved origin cannot redirect rename.
-The callback VM is never reconstructed and Go identities are never reserialized
-through Lua 5.1 numbers. The original expiry is never renewed.
+Task2's coordinator observed menu/navigation/dismissal/cleanup on Darwin arm64,
+**not rename**. Final combined runtime may exercise a benign inline rename only
+on an explicitly coordinator-owned disposable resource; that result is pending,
+not supplied by this source guide. No tests, probes, physical key/reload,
+user-resource rename or deployment were performed by this leaf.
 
-A failed/uncertain rename or lost acknowledgment consumes claimed authority;
-there is no retry, replacement target, dialog fallback or rollback inferred from
-an error. Read-only checks and mutation are not atomic against external changes.
-Possible controller start also transfers workspace ownership irreversibly;
-uncertain startup or malformed unauthenticated handoff may leave artifacts, not
-permission for broad deletion. See [launch contract](launch-contract.md).
-
-## Evidence boundary
-
-These are source-reviewed/compiled implementation intentions, **not observed
-runtime rename verification**. Default tab/session text, label limits, custom
-callbacks/args/confirmation, moved origins, missing features, unequal compatible
-builds, expiry/replay, cleanup failure and uncertain mutation remain **UNEXECUTED
-source scenarios** for this cutover. No tests, Lua harnesses, live rename/API/menu
-probes, configuration reloads or settings changes were performed. Earlier native
-prototype observations do not verify this combined revision. Session switching
-has its separate [session UI contract](session-owned-ui.md).
+The old bridge-specific rename contract remains historical at
+`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/tab-rename-input.md`.
+[Acceptance](acceptance.md) preserves prior evidence without treating it as a
+current combined rename result.

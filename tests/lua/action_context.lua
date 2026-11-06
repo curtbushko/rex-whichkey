@@ -1,4 +1,4 @@
-package.path = "lua/?.lua;lua/?/init.lua;" .. package.path
+package.path = "tests/fixtures/phase15-lua/?.lua;tests/fixtures/phase15-lua/?/init.lua;" .. package.path
 
 local session = "session:11111111-1111-1111-1111-111111111111"
 local block = "block:22222222-2222-2222-2222-222222222222"

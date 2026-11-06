@@ -10,8 +10,11 @@ Lua, writes configuration or expands providers.
 The public entrypoint uses this loader, expands enabled providers once before
 popup sizing/PTY handoff, and dispatches retained selections through Go's Rex CLI
 resources after cleanup. It never queries Lua runtime/launch registrations.
-Source wiring and static builds do not by themselves demonstrate a running menu;
-coordinator observation of the public candidate is still required. Legacy
+The coordinator observed Task2's default public menu/navigation/dismissal and
+owned cleanup on Darwin arm64 at `7bdbda2b1e1e9d55ced9d26cc03204d61f505c00`.
+That does not validate arbitrary JSON files, every action/provider, the minimal
+keybinding or the final combined package revision. See [acceptance](acceptance.md).
+Legacy
 `DecodeConfig`, callback wire validation and `launchOutput` remain isolated for
 unchanged source tests, not as an alternative public configuration/control path.
 
@@ -205,6 +208,7 @@ To retain built-ins, omit `spec` rather than copying partial overrides.
 Migrate old `M.new`/`setup`/`register_launch` menu data by flattening literal key
 sequences into this JSON object. Do not copy Lua source, function-valued
 conditions/labels, callbacks or callback references. Those require a future
-separately designed hook feature, not this schema. The minimal keybinding and
-package migration belong to later Phase 16 work; no user configuration has been
-rewritten or reloaded by implementing this contract.
+separately designed hook feature, not this schema. See the [minimal function keybinding](../examples/rex-whichkey-keybinding.lua)
+and [migration guide](../examples/README.md). Preserve old files and account for
+unsupported data before replacing wiring; there is no automatic executable-Lua
+conversion. No user configuration is rewritten or reloaded by this implementation.

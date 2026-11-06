@@ -1,3 +1,88 @@
+# Current Go menu actions
+
+## Active defaults
+
+Both ordinary public invocation and the launch-only keybinding use Go-loaded
+built-ins plus optional JSON data. There are 16 default intents; `ws` expands
+into a Go-owned submenu, not an immediate mutation.
+
+| Keys | Intent and implementation |
+| --- | --- |
+| `wn/wh/wl` | Session new/previous/next on the retained app through built-in client.perform |
+| `ws` | Go sessions inventory, retained exact session.select choice |
+| `wr` | Inline Session label entry, then typed Session.Rename |
+| `wx` | Confirmed typed close of the retained origin Session |
+| `tn` | One typed source Session.NewWindow, then exact-ID session.select activation |
+| `th/tl` | Previous/next tab through the retained app |
+| `tr` | Inline Window label entry, then typed Window.Rename |
+| `tx` | Confirmed typed close of the retained origin Window |
+| `v/s` | Split right/down through the retained app |
+| `x` | Confirmed typed close of the retained origin Block |
+| `e/c` | Sidebar / command palette through the retained app |
+
+There is no default Zoom, directional focus, numbered tabs, app chooser or hosts
+row. The closed [JSON action catalogue](mapping-format.md#complete-public-action-catalogue)
+also permits exact `session.select`; arbitrary Lua/Rex action names are not a
+public escape hatch. Functions/hooks/callbacks are deferred.
+
+## Configured actions and providers
+
+JSON uses flat full keys, literal labels/icons, boolean conditions, hidden active
+bindings and explicit confirmation. Unknown fields/actions/args, executable forms
+and conflicting keys fail before effects. Destructive resource actions require
+`confirm:true`; the terminal and parent both preserve confirmation.
+See [mapping format](mapping-format.md).
+
+Enabled `sessions/windows/panes/known-hosts` providers expand once before popup
+sizing. Full target IDs are retained in Go, not supplied by result text.
+Windows/panes list the origin Session. Resource inventories have a 512-resource
+no-truncation bound; empty/failure rows are explicit and non-executable.
+Hosts remain opt-in execution-host/home inventory listing only, never connect/SSH.
+The `panes` provider's exact Block focus intent is internal Go data, not a public
+`pane.focus` action schema or a restored directional-focus default.
+
+## Dispatch and uncertainty
+
+All Rex operations use the frozen concrete Go CLI client/argument arrays.
+Display/resource-only effects need no implicit GUI app. App actions require the
+captured pane owner or explicit exact app, its live connection generation,
+unchanged placement/owner and current built-in `kind=client` metadata.
+Explicit app intent remains strict even for resource effects.
+There is no custom Lua action fallback or chooser/current-focus substitution.
+
+Terminal restoration and exact popup/origin-focus/pipe/private-file/image cleanup
+precede every selected effect. Rename follows action intent at configured keys,
+not hardcoded tr/wr; text supplies a label, never resource authority.
+Selected sessions/windows and panes are revalidated before dispatch.
+Split/session.select omit outer origin context; other app actions retain it.
+
+New Tab creates exactly one source-session Window and activates its exact returned
+ID. Creation may change owner, so activation rechecks the retained app generation
+and placement rather than selecting a new app. Failed activation preserves the
+created tab and reports its ID. Uncertain effects/cleanup are not retried or
+rolled back. See [launch](launch-contract.md), [rename](tab-rename-input.md),
+[session UI](session-owned-ui.md) and [CLI/GUI](cli-gui-delegation.md).
+
+## Current evidence
+
+Task2 coordinator evidence at `7bdbda2b1e1e9d55ced9d26cc03204d61f505c00`
+shows normal public root/Sessions/Switch display, dynamic full IDs/current marker,
+Backspace/Escape, exit0, terminal restoration and exact owned cleanup on Darwin
+arm64. It does not show a selected action effect or rename.
+Final combined source review/public observation and one benign owned dynamic
+selection or inline rename remain coordinator gates. Physical-key/config reload,
+all-action/platform/remote certification and Nix activation are not claimed.
+
+## Historical action evidence
+
+The following original audit is preserved verbatim for its revision-bound
+evidence and user corrections. Its old Lua routes, prior counts, native dialogs,
+numbered tabs and testing status are **not current instructions or current
+CLI-only verification**. The active sections above take precedence.
+
+<details>
+<summary>Historical pre-Phase16 action audit and corrections</summary>
+
 # Native default action audit
 
 ## Current menu and user confirmation
@@ -376,3 +461,5 @@ no user/coordinator/worker resources, settings, fonts or configuration were chan
 No general/unit/race/TDD suite, leaf build/native experiment, configured callback
 trial or remote-OS certification is claimed. Source review and compilation cannot
 certify the remaining interaction outcomes.
+
+</details>

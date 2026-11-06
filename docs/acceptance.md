@@ -1,3 +1,107 @@
+# Release evidence: CLI-only Phase16
+
+## Current scope and status
+
+Accepted direction `REXWHICHKEY-20261106-114935`: Go reads data, expands
+providers, owns menu/lifecycle and performs Rex CLI operations; Lua only starts
+the binary. Functions/callbacks/hooks are deferred, not implemented or credited
+as REQ-005 completion. Historical Lua registration/bridge requirements are not
+startup prerequisites.
+
+Task1 delivered strict version-1 JSON loading/defaults/action/provider contracts.
+Task2 delivered the real public Go menu and was actually observed by the
+coordinator. Task3 reduces Lua, retires obsolete production modules, supplies
+ordinary package/HM assets and updates migration/active docs.
+**Task3 source readiness is not task/phase completion.** Independent combined
+source review, integration build and final coordinator-observed public runtime
+remain pending at this documentation revision.
+
+## Observed delivered prerequisite: Task2
+
+- Summary: `rex-whichkey-p16-t02/summary/2`.
+- Reviewed source: `eaec24a`; integrated observed candidate:
+  `7bdbda2b1e1e9d55ced9d26cc03204d61f505c00`.
+- Binary SHA256:
+  `7e2dd251be2f5847d45e772b6e4be01e59ed71b21aecf5655d44238fd28b4a62`.
+- Evidence: `.mtn-tmp/p16/task2-public-runtime-evidence.json` in the coordinator
+  checkout; preserved binary `.mtn-tmp/p16/task2-observed-rex-whichkey`.
+- Entry: normal `task run`, no public args, Darwin arm64, explicitly
+  coordinator-owned validation terminal/window in the existing Rex session.
+- Observed: default root, Sessions, Go Switch session choices with full IDs,
+  current marker and two-session inventory; Backspace to root; ordinary Escape.
+- Observed cleanup: exit0, parent primary terminal, exact owned popup Layer/Block
+  removed, origin focus restored, invocation-private directory removed.
+  Coordinator subsequently closed only its owned validation window.
+- Not exercised: selected action effect/rename, custom JSON/provider matrix,
+  physical key, user config reload, Linux/remote or Nix/HM installation.
+  This is prerequisite evidence, **not** this final combined candidate's run.
+
+Task2's original build-path worktree was removed after delivery; the preserved
+binary/evidence identify what was actually observed. Historical tests were not
+run. Optional full lint retained inherited diagnostics, not a global green claim.
+
+## Task3 source and validation inventory
+
+| Surface | Source intent / evidence boundary |
+| --- | --- |
+| `lua/rex_whichkey.lua` | Documented detached argument-array start only; exact context env with missing IDs removed; immediate error, handled true; start handle is not display proof |
+| Example keybinding | Function rex.bind, example key only, no user's key installed/reloaded |
+| Retired Lua config/evaluate/mapping/dispatch/defaults/anchor | Exact original tree archived under tests/fixtures/phase15-lua, excluded from package and unreachable from launcher |
+| Three tests/lua scripts | Only package.path plumbing redirected; every old assertion/body preserved; no harness execution or current-launch coverage claim |
+| All Go tests/standards/Taskfile/hooks | Unchanged; no tests, skips, suppression or suite execution |
+| Ordinary Nix package | Real bin image, optional libexec Rex symlink, minimal launcher/examples/docs; pins/platform/native assets retained; no runtime policy/wrapper/helper layout |
+| Home Manager | Opt-in package plus one conflict-safe file link, no recursive namespace/init/data/config-directory ownership |
+| Migration | Manual literal-data conversion with explicit unsupported functions/hooks; no silent user-data discard or automatic Lua execution/conversion |
+
+Allowed leaf gates are whitespace, Nix parse-only, alejandra check and normal
+Go compilation via `task build`, with exact commands/results in the builder's
+revision-bound build payload. This prose does not claim an unrecorded gate pass,
+source review approval, Nix evaluation/build/activation or deployed package result.
+
+## Pending final combined coordinator gate
+
+After source review and normal build, the coordinator must run the actual public
+candidate in its explicitly owned Rex origin, record binary/revision/resource IDs,
+observe a real menu and navigation/dynamic display, dismiss normally, and verify
+exit, terminal restoration, exact owned popup/terminal/private cleanup.
+One benign Go-owned dynamic selection or inline rename may use **only** an
+explicitly coordinator-owned disposable resource within actual-run authority.
+Never rename/close a real user's resource merely for evidence.
+
+Record exactly which entrypoint/actions were exercised and failures/limitations.
+A zero exit, detached start handle, compile, private child or old run is not
+substitute display evidence. Physical keybinding remains source-documented only
+unless separately authorized/observed; do not require a user reload for direct
+public validation. Failed runtime leaves completion pending.
+
+## Residual limits and authoritative guides
+
+No tests/TDD/race/Lua/parser/FIFO harnesses, benchmarks, broad remote experiments,
+Nix evaluation/build/check, activation, pin/dependency update, user-config mutation,
+Rex reload/restart, deployment or push is part of this leaf delivery.
+No all-action/platform/remote/physical-key or guaranteed post-crash cleanup claim.
+
+Native Rex control hiding (REQ-026) remains unresolved; Phase15's failed bridge
+history and unrelated phase statuses are not fixed or completed by this work.
+Read-only checks and effects are not atomic, and uncertain effects are not retried.
+
+Current contracts: [data/actions/providers](mapping-format.md),
+[launch/cleanup](launch-contract.md), [discovery/package](runtime-bootstrap.md),
+[CLI/GUI](cli-gui-delegation.md), [remote limits](remote-compatibility.md),
+[appearance](appearance.md), [rename](tab-rename-input.md),
+[session UI](session-owned-ui.md), [migration examples](../examples/README.md).
+
+## Historical delivery records
+
+The original inventory below is preserved verbatim. All claims are scoped to
+their recorded revisions. Old bridge setup, callback contracts, removed menus,
+test runners and outstanding-cutover statements are historical, not active
+Phase16 prerequisites or current verification. Current sections above take
+precedence; the historical PRD and .tasks history are unchanged.
+
+<details>
+<summary>Historical pre-Phase16 delivery inventory and evidence</summary>
+
 # Release delivery inventory and limitations
 
 ## Latest user correction
@@ -824,3 +928,5 @@ Published Rex references used by the implementation/documentation:
 [Lua scripts](https://www.superlogical.com/rex/docs/automate/lua-scripts).
 These contract references are not live-server observations or new verification
 claims.
+
+</details>

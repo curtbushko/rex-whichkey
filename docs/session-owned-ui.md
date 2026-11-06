@@ -1,71 +1,60 @@
-# Session switch and rename screens
+# Go-owned session switch and rename screens
 
-The built-in native menu uses the existing fixed WhichKey popup for both screens.
-No extra Rex pane, header, app chooser or navigation resize is created. Registered
-Lua defaults also use WhichKey's rename text page; configured **Switch Session**
-retains its named-action/custom-menu semantics, not the native Go inventory adapter.
+The direct public binary and minimal function keybinding use the same Go menu.
+JSON configuration can place the supported intents at any valid full key.
+There is no native session picker, app chooser, extra pane or navigation resize.
 
-## Sessions → Switch (native)
+## Sessions → Switch
 
-Each invocation reads `session.list` through the frozen execution-host Rex client.
-The parent expands `ws` into an ordinary canonical submenu:
+The default `ws` / `session.switch` is a Go sessions-provider adapter.
+Enabled `sessions` markers use the same expansion. One bounded invocation snapshot
+is read through the frozen Rex CLI before sizing/PTY handoff:
 
-- Rows show identifying IDs before labels and mark the origin `[current]`.
-  Short-ID collisions use full IDs; labels are presentation only.
-- Keys 1–9 select rows; `n` opens More groups. Normal Tab paging, Escape/Backspace,
-  focus redraw and fixed bounds apply.
-- The menu-opening snapshot is not refreshed during redraw. Unavailable/empty
-  inventory is explicit; more than 512 sessions is unavailable, not truncated.
+- Full typed IDs lead labels; the origin is marked `[current]`.
+- Keys 1–9 select rows; `n` opens More groups. Ordinary Tab paging,
+  Escape/Backspace and focus redraw retain fixed bounds.
+- Empty inventory has a non-executable message; read failure has an explicit
+  warning, not a successful empty inventory or picker fallback.
+- More than 512 resources is an error, not truncation. Expansion batches and
+  combined transport have further validated bounds.
+- Redraw does not refresh inventory. Reopen to obtain a new snapshot.
 
-Full destination IDs remain in parent-retained Mapping args. The terminal returns
-canonical keys, not a replacement destination. After exact popup/transport/source
-cleanup, the parent revalidates destination, origin placement and pane-owner or
-explicit app binding, including its connection generation. It sends one unscoped
-`client.perform session.select` with the retained destination in args and no outer
-origin session/block override. This uses Rex's resource-selected action, not its
-native picker. Removed sessions, changed bindings and uncertain effects refuse
-without retry or fallback. A remote viewer does not change the execution host.
+Destination IDs remain in the parent's retained mapping, not child-supplied
+authority. After exact cleanup, Go checks destination membership, original
+placement and retained app/connection/owner and sends one unscoped
+`client.perform session.select` with exact destination args. No outer origin
+session/block override substitutes for the destination. A removed session,
+reconnected app or uncertain effect refuses without retry or label/index fallback.
 
-## Sessions → Rename (both routes)
+Optional `windows` lists origin-session Windows with exact session/window
+selection; `panes` lists origin-session Blocks and focuses the retained Block
+only after placement revalidation. Neither is a default menu row.
+`known-hosts` remains listing-only. See [providers](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
 
-`wr` opens **Rename session**, prefilled from the captured session label. Typing
-replaces the selected value; arrows/Home/End, grapheme deletion, Ctrl-U and bounded
-paste edit. Enter validates/confirms; Escape returns without mutation. Text must
-be nonblank control-free UTF-8, at most 4096 bytes **and 128 Unicode characters**.
+## Sessions → Rename
 
-Go validates resource/text support before popup. Configured Lua must advertise
-`selection-text-resource-rename` with its real loaded menu generation; completion
-1 alone is insufficient. The negotiated configured completion is 2, binding the
-exact opaque Go receipt/hash without a Lua numeric reserialization. Compatible
-build IDs need not match. Missing support rejects before popup, never opens a
-native dialog, discards the label or treats generic action acceptance as rename.
+Default `wr` / `session.rename` opens the existing popup's text-entry page,
+prefilled from the captured Session label. It follows the same Go resource/text
+flow as tab rename, including custom keys, optional confirmation and strict
+nonblank UTF-8/4096-byte/128-character validation.
+Escape returns without mutation; Enter validates. After complete cleanup, Go
+revalidates retained placement and calls `Session.Rename` once.
+No implicit GUI is needed; explicit app intent remains strict.
 
-After terminal restoration and exact owned-popup/file/handle cleanup, native Go
-revalidates frozen placement and calls typed `Session.Rename` once. Default
-resource rename needs no GUI app binding; explicit client intent remains strict.
-Configured completion authenticates and claims the original-VM invocation before
-yielding checks, validates the retained selection/guards/connection/generation
-and original expiry, then invokes `session.set_label` for the retained session.
-Tab rename similarly uses `session.set_window_label` for its retained window.
-Text supplies no resource ID. Moved origins cannot retarget the operation.
-Custom callbacks, args, conditions and confirmation are not intercepted.
+There is no original-Lua completion/receipt/callback route, custom executable
+configuration, refreshed expiry or native-dialog fallback.
+[Rename details](tab-rename-input.md) and the
+[owned cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
+apply to both session and tab rename.
 
-Failure after claim consumes authority, even if the API acknowledgment is lost.
-No uncertain retry, alternate target, fallback dialog or renewed expiry is
-allowed. Cleanup uncertainty suppresses effects. Possible controller start keeps
-workspace ownership with the child; lost acknowledgment or unauthenticated input
-can retain artifacts and does not authorize broad deletion. The source-linked
-[fixed owned cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
-covers popup and rendezvous/preparation files plus the original-Lua release boundary.
+## Evidence and history
 
-See [rename input](tab-rename-input.md), [runtime bootstrap](runtime-bootstrap.md)
-and the authoritative [mapping standard](mapping-format.md) for shared semantics.
+The coordinator actually observed Task2 root → Sessions → Switch with full IDs
+and current marker, Backspace to root, Escape, exit0 and exact cleanup at
+`7bdbda2` on Darwin arm64. It did **not** select a session or rename a resource.
+Final combined reviewed runtime and any benign owned selected effect remain
+pending; physical keybinding and config reload are not established.
 
-## Evidence boundary
-
-Source-reviewed/compiled intent is not observed runtime verification. Native
-inventory selection, configured/native rename, label limits, callbacks, moved
-origins, compatibility, disconnect/expiry/replay and uncertain cleanup/mutation
-are **UNEXECUTED source scenarios** here. No tests, live CLI/API/menu/rename probes,
-reloads, activation or settings changes were performed for this cutover; earlier
-native-only evidence does not certify this combined revision.
+Historical bridge-era session guidance is preserved in Git at
+`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/session-owned-ui.md`.
+It is not an active prerequisite. See [acceptance](acceptance.md) for exact scope.

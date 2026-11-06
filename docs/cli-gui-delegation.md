@@ -1,91 +1,68 @@
 # CLI callers and GUI targets
 
-Decision: **REXWHICHKEY-20261104-172117 — Accepted**. Separating CLI activation
-identity from GUI routing refines the old caller/app equality rule, not capability,
-origin, connection, configuration or lifetime checks. See the
-[decision register](../.tasks/designs/rex-whichkey-decision-register.md).
+## Active CLI-only boundary
 
-## Actual caller is not a nominated app
+An execution-host process identity and a graphical app identity are distinct.
+The accepted caller/app separation correction
+`REXWHICHKEY-20261104-172117` remains relevant to routing; its old bridge mechanics
+are historical. Current CLI-only direction is `REXWHICHKEY-20261106-114935`.
 
-`rex --client APP do whichkey` selects APP for routing; it does not impersonate
-its connection. The launch action and later completion can each have a fresh CLI
-`ctx.client_id`. Neither must equal APP or the earlier CLI caller. Freeze the
-real opaque `ctx.server`, session/block and actual caller for each activation;
-never rewrite that context to match nomination data. Key/palette launch has no
-public nomination: its actual app supplies both caller and GUI target.
+The public binary requires full origin `REX_SESSION/REX_BLOCK`. Present
+`--client` overrides present `REX_CLIENT`; either must be an exact full
+`client:UUID`, never empty, a label or a transient CLI chosen as an app.
+The minimal keybinding passes exact `ctx.client_id` as intent and clears
+REX_CLIENT when absent. Go independently verifies it. There is no
+`rex --client APP do whichkey` custom-action route or caller impersonation.
 
-Public Go selects an explicit full `--client`/present `REX_CLIENT`, or the
-originating pane's documented GUI owner. Lua receives that exact app ID and
-`connected_at` separately from the public runtime locator. It constructs the
-complete origin from actual context and direct session APIs, checking unique
-window/layer/block placement and the nominated app's exact attachment, `app`
-kind, nonlost state and connection generation. No sole/first/focused app fallback,
-label lookup or new app after failure is permitted. Recheck after every yield.
+Without explicit app intent, Go inspects the original pane's documented owner
+and validates that exact live attached graphical `app` connection and
+`connected_at`. No sole/first/focused-app fallback, remembered choice, app
+chooser or list-order selection occurs. Pane ownership is routing context, not
+proof of which device pressed a key or additional authentication.
 
-The private Go preflight authenticates local state, live lease, receipt, consumer
-and that complete origin **before** returning compatibility data, reserving a
-ticket or evaluating user mappings. Public nomination alone is not authority.
-Constructor endpoint intent is immutable and must agree with the already frozen
-public endpoint; it cannot retarget transport or replace the actual caller.
+## Display versus selected effects
 
-## Original VM and single-use completion
+Display, ordinary dismissal and origin focus require valid resource placement,
+not an eligible implicit GUI app. Resource rename/close and generated pane focus
+also work without implicit app eligibility. A supplied explicit app selector
+remains strict, including for these operations.
 
-- Read-only `whichkey_runtime` advertises the loaded menu/config generation and
-  features before popup creation. Go protocol/layout 1 and negotiated completion
-  2 are internal formats, not Rex APIs. Build IDs need not match. Missing/old
-  bridges reject before activating an old menu, never fall back or hot-reload.
-- Closures, original args, guards, confirmation and immutable mapping/resource
-  snapshots stay with table tickets in the original configuration VM. Go supplies
-  a random capability; no callback is serialized or evaluated in another VM.
-- Go-owned receipt and relay identities remain opaque byte-exact strings across
-  Lua 5.1. Their timestamps/device/inode integers may exceed 2^53; parsing and
-  reserializing them would change authority. Completion binds the exact final
-  receipt hash, not a reconstructed Lua object. See the authoritative
-  [mapping/transport standard](mapping-format.md), not a second schema here.
-- Fresh completion strictly decodes and authenticates capability, exact receipt,
-  server/session/block, retained state and original expiry before claiming.
-  Claim occurs **before** yielding guards/APIs/callbacks. Wrong/malformed/foreign
-  input cannot consume an unrelated entry; a claimed failure is consumed forever.
-- Revalidate exact GUI connection, placement, menu/config generations, retained
-  keys/ref/confirmation/text and guards. Focus only a still-valid captured origin.
-  Dotted client actions use explicit `client.perform` with retained app/context/
-  args; configuration actions use `rex.invoke` in the original VM. No ambient
-  queue on a transient CLI replaces this targeting.
-- Callbacks receive logical routing context: `client_id` is the retained GUI,
-  `request_client_id` the actual completion caller. That table does not fabricate
-  a Rex activation. Explicit callback GUI effects should target the retained app.
-  Custom args/conditions/confirmation and rename-key callbacks remain unchanged.
+For app actions, Go retains the binding before interaction and rechecks exact
+connection generation, origin Window/Layer placement and (for implicit routing)
+unchanged pane owner. Missing or changed identity refuses, never retargets.
+Built-in action metadata must have `kind=client`; dispatch uses one explicit
+`client.perform` through the same frozen CLI and endpoint. There is no
+custom Lua fallback. Rex authentication and app Remote Control still apply.
 
-## Startup, cleanup and limitations
+Session/window selection validates exact destination membership and omits outer
+origin session/block overrides; splits omit them too. Other app actions carry
+captured origin context. New Tab creates one typed source-session Window then
+activates that returned ID on the same bound app. Creation can change pane
+ownership, so activation rechecks retained connection/placement, not a replacement
+owner. Failed activation preserves the created tab for manual inspection.
 
-Public Go prepares and starts its own selected component; the installed helper is
-only a finite file relay. Key launch uses its normal anchored helper. Both use
-finite private handoffs and Go's accepted/EOF, then positive proceed/EOF startup
-barriers. Acceptance is not observed popup display or callback completion. Once
-start may have succeeded, no failed/lost acknowledgment authorizes retry, killing
-the uncertain child or deleting its workspace. Malformed/unauthenticated handoffs
-may also retain artifacts; expiry revokes authority without proving file removal.
+## Lifecycle and uncertainty
 
-Only exact owned popup/files/handles are cleaned, before selected dispatch;
-uncertain close/focus/cleanup suppresses effects. See the source-linked
-[fixed owned inventory](launch-contract.md#fixed-owned-cleanup-inventory) for
-popup and rendezvous/preparation files and the original-Lua release boundary.
-Default tab/session rename uses validated text and retained resource APIs after
-cleanup, never a native dialog,
-discarded name or success inferred from a generic action acknowledgment. The
-original 30-second configured lifetime is never renewed (64 pending entries,
-five-second teardown reserve); native interaction retains its lifetime pipe and
-no idle deadline. See [runtime bootstrap](runtime-bootstrap.md) and
-[launch contract](launch-contract.md).
+The same Go parent owns both direct and keybinding startup, retained menu/action
+snapshot, popup lifecycle and exact cleanup before effects.
+Lua neither queries/captures connection generations nor owns a registry, completion
+action, ticket or callback VM. Its detached start handle is not display evidence.
+There is no menu idle expiry, even though individual operations/cleanup are bounded.
 
-App IDs select routing, not authentication or proof of a physical keypress.
-Rex transport authentication and app Remote Control remain in force. Read-only
-checks/focus/effects are not atomic; external moves, setup and disconnects can
-race the last check. No retry repairs that uncertainty. Execution-host files are
-required; a remote viewing app or endpoint does not supply them.
+Moved origins, reconnects, missing permissions, uncertain cleanup/effects or
+changed CLI/server identity fail safely. Inspection and mutation are separate APIs,
+not atomic. No retry, label/focus substitute, alternate server or rollback repairs
+an uncertain effect. [Launch cleanup](launch-contract.md#fixed-owned-cleanup-inventory)
+and [remote limits](remote-compatibility.md) apply.
 
-This describes source-reviewed/compiled intent, not observed runtime verification.
-Caller/app separation, compatible unequal builds, endpoint disagreement, custom
-callbacks, rename, reconnect/expiry, lost acknowledgment and cleanup-failure cases
-are **UNEXECUTED source scenarios** here. No live CLI/API/menu probes, tests,
-reloads, configuration changes or deployment were performed for this cutover.
+## Evidence and historical boundary
+
+Task2's coordinator observed public default menu/navigation/dismissal/cleanup,
+not every selected app action, CLI-vs-GUI case or physical key.
+Final combined candidate observation remains pending; no config reload/deploy is
+needed or authorized by this source guide.
+
+The former original-VM/preflight/receipt/completion contract is preserved in Git at
+`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/cli-gui-delegation.md`.
+It is not an active prerequisite. Functions/hooks/callbacks remain deferred.
+See [acceptance](acceptance.md) and [data/action catalogue](mapping-format.md).

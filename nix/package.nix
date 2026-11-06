@@ -79,9 +79,8 @@
           mainProgram = "rex";
         };
       }
-    # No Intel macOS artifact is published in this pinned source. Keep the
-    # standalone public image outside the incomplete integration layout there.
-    # Configured launch still requires a licensed dependency; never invent one.
+    # No Intel macOS CLI artifact is published in this pinned source.
+    # The ordinary binary still supports a legitimate execution-host PATH CLI.
     else null;
 in
   buildGoModule {
@@ -94,11 +93,20 @@ in
       filter = path: type: let
         relative = lib.removePrefix (toString ../. + "/") (toString path);
       in
-        (type == "directory" && builtins.elem relative ["cmd" "rex" "lua" "docs"])
+        (type == "directory" && builtins.elem relative ["cmd" "rex" "lua" "docs" "examples"])
         || lib.hasPrefix "cmd/" relative
         || lib.hasPrefix "rex/" relative
-        || lib.hasPrefix "lua/" relative
-        || builtins.elem relative ["go.mod" "go.sum" "LICENSE" "docs/mapping-format.md" "docs/runtime-bootstrap.md"]
+        || builtins.elem relative [
+          "go.mod"
+          "go.sum"
+          "LICENSE"
+          "README.md"
+          "lua/rex_whichkey.lua"
+          "examples/README.md"
+          "examples/my_whichkey.json"
+          "examples/rex-whichkey-keybinding.lua"
+        ]
+        || (lib.hasPrefix "docs/" relative && lib.hasSuffix ".md" relative && !(lib.hasInfix "/" (lib.removePrefix "docs/" relative)))
         || (!lib.hasInfix "/" relative && lib.hasSuffix ".go" relative);
     };
 
@@ -111,31 +119,26 @@ in
 
     postInstall =
       ''
-        mkdir -p "$out/share/rex-whichkey/lua"
-        cp -R lua/. "$out/share/rex-whichkey/lua/"
-        install -Dm644 docs/mapping-format.md "$out/share/doc/rex-whichkey/mapping-format.md"
-        install -Dm644 docs/runtime-bootstrap.md "$out/share/doc/rex-whichkey/runtime-bootstrap.md"
+        mv "$out/bin/cmd" "$out/bin/rex-whichkey"
+        install -Dm644 lua/rex_whichkey.lua "$out/share/rex-whichkey/lua/rex_whichkey.lua"
+        mkdir -p "$out/share/doc/rex-whichkey/docs" "$out/share/rex-whichkey/examples"
+        cp README.md "$out/share/doc/rex-whichkey/"
+        cp docs/*.md "$out/share/doc/rex-whichkey/docs/"
+        cp examples/README.md examples/my_whichkey.json examples/rex-whichkey-keybinding.lua "$out/share/rex-whichkey/examples/"
         install -Dm644 LICENSE "$out/share/licenses/rex-whichkey/LICENSE"
       ''
       + (
         if dependency != null
         then ''
-          # A complete normal layout serves implicit public and explicit Lua use.
-          mv "$out/bin/cmd" "$out/share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey"
-          ln -s ../share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey "$out/bin/rex-whichkey"
-          mkdir -p "$out/share/rex-whichkey/lua/rex_whichkey/runtime/deps"
-          ln -s ${dependency}/bin/rex "$out/share/rex-whichkey/lua/rex_whichkey/runtime/deps/rex"
+          # Go discovers this optional dependency relative to the public image.
+          mkdir -p "$out/libexec/rex-whichkey"
+          ln -s ${dependency}/bin/rex "$out/libexec/rex-whichkey/rex"
         ''
-        else ''
-          # Without a dependency, retain the ordinary standalone public image.
-          # Lua still reaches it, but Go rejects its incomplete explicit layout.
-          mv "$out/bin/cmd" "$out/bin/rex-whichkey"
-          ln -s ../../../../../bin/rex-whichkey "$out/share/rex-whichkey/lua/rex_whichkey/runtime/rex-whichkey"
-        ''
+        else ""
       );
 
     meta = {
-      description = "Which-key menu and opt-in server-side Lua integration for Rex";
+      description = "Go-owned Rex CLI menu with JSON data and an optional launch-only Lua binding";
       homepage = "https://github.com/curtbushko/rex-whichkey";
       license = lib.licenses.mit;
       mainProgram = "rex-whichkey";
