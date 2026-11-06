@@ -38,26 +38,27 @@ implementation:
       - RUNTIME-CLI-DISCOVERY
       - RUNTIME-BOOTSTRAP-COMPATIBILITY
 lifecycle:
-  state: planned
-  sourceEventID: null
-  changedAt: '2026-11-05T00:40:11.037Z'
+  state: complete
+  sourceEventID: rex-whichkey-p15-t01-tasks-a02/release-runtime-launched/1
+  changedAt: '2026-11-05T13:41:40.481Z'
 title: Specify the supported code-owned bootstrap contract
 mtnCreateRetry:
   key: rex-whichkey-15-01-bootstrap-contract/create/1
   intent: 3af8e2436bf21b7e80ee254a479f7dc1b9b21fd209b07d6738d32174a5e343f5
-status: open
+status: done
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-05T00:40:12.030Z'
-dateModified: '2026-11-05T00:40:13.073Z'
+dateModified: '2026-11-05T13:45:15.040Z'
 tags:
   - task
 type: task
 id: 9da80940-08a4-4935-aab3-451ddc69be33
 projects:
   - '[[phases/rex-whichkey-15-code-owned-runtime.md]]'
+completedDate: '2026-11-05'
 ---
 # Specify the supported code-owned bootstrap contract
 
@@ -87,3 +88,11 @@ Describe traceable cases for public versus key/palette launch, restricted/missin
 ## Coverage
 
 Parent criteria 1–8: this task fixes the interfaces and responsibility boundaries; downstream tasks implement them. Requirements REQ-002, REQ-003, REQ-005, REQ-011, REQ-013, REQ-014, REQ-016, REQ-017. Completion is an integrated reviewed contract, not a claimed working runtime.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA1VDEzOjQ1OjE1LjAzMloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5Ijoic3VtbWFyeSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNS10MDEvc3VtbWFyeS8zIiwiaW50ZW50IjoiZWJhNjBmZmM0MGM1OTRjYzMyMDliY2RiN2VhMjRiNmI3YWE0NjhhMDI1YjhmZWU3MTQxMGY3NDgyNmQxNTliNSJ9 -->
+### 2026-11-05T13:45:15.032Z · summary · unspecified
+
+{"acceptedScope":"Reviewed bootstrap contract only: execution-host/module-relative discovery, normal CLI dependency layout, Go-owned compatibility and public self-selection/original-VM file relay, safety/rename/upgrade invariants and downstream boundaries; no production bootstrap implementation delivered.","approvalSummary":["User explicitly authorized Phase 15 and its five tasks, preservation checkpoint and continuation.","Fresh same-family combined review rex-whichkey-p15-t01/review/2 approved exact candidate d254def84272085b8bf8878f91b058e836cfce72; not cross-family verification."],"attempt":2,"correction":"Cleanup failure is a facade jq runtime-guard compile error, not evidence of a live runtime; stopped workers and retained dirty diagnosis verified independently.","eventID":"rex-whichkey-p15-t01/summary/3","files":["docs/runtime-bootstrap.md"],"integrationEventID":"rex-whichkey-p15-t01/integration/2","kind":"summary","limitations":["All runtime/TDD/project tests and builds unperformed under accepted policy; source review/whitespace checks are not runtime verification.","Source preservation checkpoint 30a4439 is an unreviewed input, not this task delivery.","Versioned official CLI asset evidence covers Apple-silicon macOS and Linux architectures; Intel restricted-PATH dependency remains explicitly unsupported without upstream evidence.","Cleanup facade failed in its jq runtime-reservation guard; all workers were independently confirmed stopped. Prior dirty diagnosis and clean owned worktrees are retained without deletion; delivery/native completion verified separately."],"recordRef":"tasks/rex-whichkey-15-01-bootstrap-contract.md","refines":"rex-whichkey-p15-t01/summary/2","requirements":["REQ-002","REQ-003","REQ-005","REQ-011","REQ-013","REQ-014","REQ-016","REQ-017"],"retainedArtifacts":[{"path":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p15-t01-builder-a01/docs/runtime-bootstrap.md","sha256":"1fe2a75a69da3429d47c34b15180d2ace3165b1d47584288e3258edb4f51ff10","state":"Stopped, uncommitted historical diagnosis; not target delivery."}],"reviewEventIDs":["rex-whichkey-p15-t01/review/2"],"schemaVersion":1,"specHash":"sha256:e41b9ba0725bb77d83b9f4ab48888b6cb54e0fc7746ff68255b9cfe38c0d2c4f","status":"complete","summaryVersion":1,"targetBranch":"main","targetCommit":"d254def84272085b8bf8878f91b058e836cfce72","targetTree":"bf56a0220c389189a6fe246330b091ab43bd6096","verification":[{"command":"git diff TARGET_BASE CANDIDATE --check","exitCode":0,"result":"pass"},{"command":"scope, clean frozen source and unchanged target base checks","exitCode":0,"result":"pass"},{"command":"git merge --ff-only CANDIDATE; git merge-base --is-ancestor CANDIDATE main","exitCode":0,"result":"pass"}]}
+<!-- mtn:end-entry:v1 -->

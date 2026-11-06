@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-05T00:33:34.932Z'
+dateModified: '2026-11-05T20:32:12.140Z'
 tags:
   - task
 type: task
@@ -106,6 +106,15 @@ User answered yes to the second-client availability question as well. Availabili
 
 ## REXWHICHKEY-20261030-221324 — Accepted user-directed test deferral
 ID assigned while processing the explicit user directive, not a claimed exact historical conversation timestamp. Authority: user said skip the test for now and defer it to the end of the phases because other work does not require Rex state; then explicitly said the Rex API can be trusted to tell state. Disconnected-origin/no-fallback acceptance moves from current Phase1 to final end-of-phases release validation (Phase6 task03 and project completion). Its state is Deferred/untested, not passed or cancelled. This refines the earlier Phase1 scheduling and second-client operating suggestion; no second app is required now and no existing-app Quit/reopen is approved or scheduled. API-reported session/block/layer/focus/client state and action results are authoritative; unexercised behavior remains unverified. Preserve prior findings/evidence. REXWHICHKEY-20261030-215048 remains Accepted permission for the bounded reversible configuration probe, not a mandatory immediate action or a test pass. Prioritize source-safety/traceability changes without Rex-state mutation. Public interface adoption, downstream phases and final acceptance still require their existing approvals/gates.
+
+
+## REXWHICHKEY-20261104-195905 — Accepted preservation checkpoint authorization
+
+- **State:** Accepted by the user's explicit instruction, “commit what is in the place right now and start our changes,” after the coordinator requested a committed preservation baseline. The ID was assigned when that request was raised; it does not claim the later approval occurred at that time.
+- **Decision:** Preserve the existing non-`.tasks` repairs in a separate, explicitly unreviewed source checkpoint before isolated Phase 15 work, and checkpoint existing workflow metadata separately. Do not attribute those repairs to Phase 15 delivery or independent review.
+- **Verified implementation:** Source checkpoint `30a4439302ade4e08487d176ba6823206ddc326d`; separate metadata checkpoint `664f8fb7e4f0a7f0a7b9eb8b943dd144d92cb742`. Both are in `main` history. No project tests, runtime probes, deployment, user-configuration changes or standards weakening were authorized by this preservation decision.
+- **Rationale:** Phase 15 writers require committed-base isolation while retaining the existing launch, endpoint/PTY, rename, documentation and packaging repairs without guessing their authorship or copying dirty parent files.
+- **Relationship:** Operational prerequisite to Phase 15 execution; does not replace or broaden accepted responsibility correction `REXWHICHKEY-20261104-193124`. Current source delivery remains recorded on the phase/tasks through native mtn evidence.
 
 <!-- mtn:evidence:v1 -->
 
