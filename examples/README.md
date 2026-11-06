@@ -1,157 +1,100 @@
-# Server-side setup and options
+# Launch and JSON menu examples
 
-`mapping.go` and [the mapping standard](../docs/mapping-format.md) own all option,
-replacement and mapping rules. Lua consumes that standard; callbacks stay in the
-original Rex configuration VM, not in Go or a separate script runtime.
+These are source examples, not installed user configuration or runtime evidence.
+Go owns configuration, providers, menu lifetime and all Rex operations.
 
-## One-time user-owned setup and ordinary launch
+## Optional function keybinding
 
-Install the matching helper, Rex CLI and `rex_whichkey` Lua modules on the Rex
-server host as described in the [README](../README.md). Make the modules available
-to that runtime's module lookup, and both executables available on the terminal
-and server process's PATH. In your own server-side `init.lua`:
+Install the launch module on the execution host where Rex loads sibling modules,
+then, only when you choose to edit your own init.lua, use
+[rex-whichkey-keybinding.lua](rex-whichkey-keybinding.lua):
 
 ```lua
-local popup = require("rex_whichkey")
-popup.register_completion("whichkey_complete")
-local menu = popup.new(require("rex_whichkey.defaults"))
-menu.setup()
-menu.register_launch("whichkey")
+local whichkey = require("rex_whichkey")
+rex.bind("ctrl+space", function(ctx)
+    return whichkey.launch(ctx)
+end)
 ```
 
-Setup must succeed. Completion is registered once in the same VM; its name must
-be distinct from the launch action. No socket literal is required for the normal
-Linux/macOS default-server case. This code registers the real configuration
-action, not a keybinding. Normal Rex keys/palette can invoke it with their actual
-context; existing direct `menu.launch(ctx)` remains available.
+Choose an unused key: this spelling is only an example and can replace a shortcut.
+There is no named action/palette registration. Rex's process PATH must already
+contain the installed `rex-whichkey`; a terminal's newly changed PATH is not proof
+of the running server's environment. Home Manager links only the module and does
+not install this binding, reload Rex or own init.lua.
 
-With client **Remote Control** enabled, invoke from the originating Rex terminal:
+The module uses documented argument-array `rex.exec.start`, `detach=true`, no
+timeout and no lifetime wait. `env` overlays the execution environment; `false`
+removes missing `ctx.session_id/block_id/client_id` values from
+`REX_SESSION/REX_BLOCK/REX_CLIENT`. It never derives endpoint authority from
+`ctx.server`. A start handle is not menu-display evidence; later failures belong
+to the detached Go process. Immediate start errors are raised, not called success.
 
-```sh
-rex-whichkey
-```
+## Data configuration
 
-The command captures full `REX_SESSION`/`REX_BLOCK`, then uses an exact `--client`
-or present `REX_CLIENT`, or requires exactly one eligible attached client in that
-session. Missing/stale/ambiguous origin is an error, never a focus/current-client
-fallback. Use `--help` for public flags. To use another launch name, replace the
-last setup line with `menu.register_launch("my_whichkey")` and invoke
-`rex-whichkey --action my_whichkey`. Launch names use lowercase ASCII letters,
-digits and underscores only. No user-written JSON or private mode is needed;
-standalone `menu` is a low-level JSON UI, not this floating-popup launch path.
-Accepted activation is not proof of display or callback execution. Do not retry
-an uncertain activation/action.
+[my_whichkey.json](my_whichkey.json) is a **whole-spec replacement**, including
+explicit optional resource-list providers. It is not the unchanged built-in menu.
+Copy/adapt it yourself to your execution-host config location or pass
+`rex-whichkey --config /absolute/path/menu.json`. The minimal binding starts the
+same public binary without flags; it uses Go's environment/default file selection.
 
-Endpoint precedence is present explicit override > nonempty execution-host
-`REX_SERVER` > bounded `rex --autostart=false --timeout 2s whoami --json` native
-Linux/macOS discovery. Go validates/captures the concrete endpoint; Rex owns its
-platform path/runtime/home rules. No viewing-Mac paths, guessed filenames,
-server autostart or alternate socket probing are used. The normal default server
-must already be reachable. Missing runtime/home context, malformed endpoints or
-unsupported identity output fails with actionable guidance.
+Selection: present `--config` > nonempty `REX_WHICHKEY_CONFIG` >
+`$XDG_CONFIG_HOME/rex-whichkey/config.json`, or
+`$HOME/.config/rex-whichkey/config.json` if XDG_CONFIG_HOME is absent.
+Only missing implicit data means built-ins. Relative explicit/environment paths
+use the execution process cwd; prefer absolute paths for server launch.
+XDG_CONFIG_HOME, if present, must be absolute and nonempty.
 
-For a custom/shared server, Lua's optional `popup.new(defaults, endpoint)` binds
-an immutable preparation override; `menu.setup` does not change it. Supply a
-matching public `--server ENDPOINT` or environment on the terminal caller. The
-public flag is not forwarded to Lua preparation: both canonical results must
-agree. For example `/run/rex/server.sock` is Rex's documented **shared-server**
-socket, not a personal Linux/macOS default. An absolute socket path, strict Unix
-URI or numeric-port `host:port` is routing data, never opaque `ctx.server` or a
-mutable host label. See the [launch contract](../docs/launch-contract.md) for
-exact precedence/validation and the [README troubleshooting](../README.md#troubleshooting-and-safety)
-for module/PATH, client, endpoint, registration and uncertain-activation failures.
-
-You own `init.lua` and ordinary Rex configuration administration. Nothing here
-edits or reloads it, creates a daemon or installs a separate Lua VM.
-
-## Inline and sibling-module configuration
-
-In your own Rex `init.lua`, inline options have this form:
-
-```lua
-local inline = {
-  position = "center",
-  title = "", -- explicit empty title, not a request for a default
-  icons = { group = ">" }, -- breadcrumb becomes empty: whole-table replacement
-  spec = {
-    { "w", group = "Sessions" },
-    { "wn", "session.new", desc = "New session" },
-  },
+```json
+{
+  "version": 1,
+  "title": "My menu",
+  "spec": [
+    {"keys": "w", "group": "Sessions"},
+    {"keys": "ws", "desc": "Switch session", "action": "session.switch"},
+    {"keys": "wr", "desc": "Rename session", "action": "session.rename"},
+    {"keys": "x", "desc": "Close pane", "action": "pane.close", "confirm": true}
+  ]
 }
 ```
 
-Replace the initial `menu.setup()` with `menu.setup(inline)` to use that table.
-Alternatively put [`my_whichkey.lua`](my_whichkey.lua) beside the **server's**
-`init.lua` and use `menu.setup({}, "my_whichkey")`, or
-`menu.setup(inline, "my_whichkey")` to overlay inline options. Rex documents
-sibling-module lookup with `require("my_whichkey")`.
-The installed integration namespace is `rex_whichkey`; user modules must have
-another name. The internal loader accepts dotted module names such as
-`my_whichkey` or `my_plugins.whichkey_options`, never client-local file paths.
-It uses the server runtime's `require` without changing `package.path`, the
-working directory or `REX_CONFIG`. Install the integration's `lua/` directory in
-that same runtime's module search path using packaging, not by naming a local
-workstation checkout in a remote configuration.
+Omit `spec` to retain all built-ins; `{"version":1}` is sufficient.
+Present `spec`/`icons` replace whole values, not per-key merges. Empty strings
+and false booleans are literal data. `hidden:true` hides but does not disable;
+`cond:false` disables. No source file is generated automatically.
+The [schema/action catalogue](../docs/mapping-format.md) defines strict names,
+Unicode/key rules, bounds, destructive confirmation and provider subtrees.
 
-You own `init.lua`; nothing in these examples writes or reloads it. Ordinary
-`require` caching applies. The loader neither clears `package.loaded` nor reloads
-modules behind the user's back. A module must return an options table; missing
-modules, syntax errors and modules returning other values are errors, not empty
-configurations. As with ordinary Lua configuration, imported files are trusted
-executable code. Their arbitrary external side effects cannot be rolled back.
+Providers `sessions/windows/panes/known-hosts` require groups, no args/actions.
+Windows/panes refer to the origin session, not a viewer's current session.
+Generated choices retain full IDs; hosts are listing-only, not SSH/connect.
+Only built-in `ws` is dynamic by default.
 
-## Internal composition reference (not user wiring)
+## Migration from executable Lua options
 
-The public setup above already supplies the real compiler and registry through
-`lua/rex_whichkey.lua`; users do not need to assemble this internal loader.
-`require("rex_whichkey.config")` supplies these helpers without requiring an
-interpreter or callback VM in Go:
+Preserve old user files before changing wiring. Replace old
+`M.new/setup/register_launch/register_completion` calls and runtime registrations
+with the function binding. Manually translate literal data into flat full-key
+JSON mappings. The old `my_whichkey.lua` example is retired, not auto-converted.
+Review every old action: the JSON catalogue deliberately rejects arbitrary Lua
+actions, Zoom/directional-focus actions and executable callbacks. Do not silently
+discard unsupported user data or present a partial translation as equivalent.
 
-- `resolve(defaults, imported, inline)` selects and detaches raw options. It
-  validates configuration fields and the outer spec list, **not mapping
-  semantics**. It does not evaluate functions or install a configuration.
-- `load(module_name)` loads and checks an imported options table through Rex's
-  server-side `require`. Integration namespace names and file paths are rejected.
-- `new(defaults, prepare)` constructs a loader with `setup(inline, module_name)`
-  and `current()` functions (dot calls). `defaults` must contain all five resolved
-  fields from the defaults owner, including the built-in spec; this loader
-  invents neither another set of defaults nor any built-in actions.
+Nested Lua inheritance, functions/computed text/conditions, callbacks and hooks
+are deferred. There is no new hook schema or stub. Old originals remain in Git;
+legacy Lua test modules are archived byte-for-byte under
+`tests/fixtures/phase15-lua`. They are not installation or runtime assets.
+Changing source declarations is not activation/deployment permission.
 
-The public composer supplies `mapping.compile(candidate.spec)` as the real
-`prepare(candidate)` raw-mapping compiler. It validates and compiles according
-to the mapping standard, throws on invalid mappings, and returns a non-nil/
-non-false compiled template. There is no no-op validator or missing-module
-success path. Compilation does not invoke action callbacks or evaluate dynamic
-labels/conditions at setup time; those belong to invocation evaluation in the
-originating Rex runtime.
+## Evidence and references
 
-`setup` imports, resolves and compiles before publishing. It returns detached raw
-options and the compiler-owned template. `current()` returns the last successful
-raw options and template, or nil before any successful setup. Templates must be
-treated as immutable by their owner. Input and returned raw option tables are
-copied; functions keep their original runtime/closure identity. Cyclic tables and
-metatables are rejected. Reentrant setup fails instead of interleaving installs.
+The coordinator observed Task2's direct public default menu and dismissal on
+Darwin arm64, not this example binding or JSON replacement. Final combined runtime,
+selected effects and physical keyboard launch are not established by these files.
+No user binding, config, profile or Rex runtime was changed by writing them.
 
-Precedence is **defaults < imported < inline**. Each setup starts again from the
-original defaults. `spec` and `icons` replace whole values rather than merging:
-inline `spec = {}` clears imported/default bindings; inline `icons = {}` clears
-both markers. Absent/nil values retain the lower-priority value. Wrong types,
-unknown fields and invalid display text fail, including when found in a supplied
-lower-priority options table. Overridden specs never execute dynamic functions.
-
-A failed import, resolution or compilation leaves the last successful loader
-configuration/template installed. Invocation callback lifetimes, replacement
-invalidation, dynamic evaluation and dispatch are the corresponding integration
-owners' responsibilities; this module does not claim to implement them.
-
-## Source references and verification limits
-
-- [Rex configuration: server location and sibling modules](https://www.superlogical.com/rex/docs/customize/config)
-- [Rex Lua reference: Lua 5.1 and standard `require`](https://www.superlogical.com/rex/docs/reference/lua)
-
-These published contracts informed the loader. This documentation revision uses
-source inspection/whitespace checks only: no example execution, tests, compilation,
-Rex config check/reload, live API, remote or GUI exercises. Earlier coordinator
-compilation and independent source reviews are recorded separately in the
-[delivery inventory](../docs/acceptance.md). They do not establish runtime
-compatibility, Linux/macOS certification or a working installed launcher.
+- [Launch contract](../docs/launch-contract.md)
+- [Ordinary package and CLI discovery](../docs/runtime-bootstrap.md)
+- [Release evidence and limits](../docs/acceptance.md)
+- Rex [function binding](https://www.superlogical.com/rex/docs/reference/lua#rexbindkey-fn),
+  [execution options](https://www.superlogical.com/rex/docs/reference/lua#rexexecargv-opts),
+  [detached start](https://www.superlogical.com/rex/docs/reference/lua#rexexecstartargv-opts)

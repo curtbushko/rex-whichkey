@@ -71,8 +71,9 @@ back, focus and idle never call `Layer.Resize`. Larger menus paginate inside the
 current cells; the popup does not choose an all-submenu maximum at startup.
 Popup frames start at row zero; standalone `RunTerminal` positioning is unchanged.
 The private preferred-row observer, hint files and live geometry feedback loop
-are retired. The existing one-second watcher checks resource liveness and, in
-configured mode, the captured app generation only. See the
+are retired. The existing one-second watcher checks captured resource placement/liveness,
+not GUI attachment/generation as an idle-display prerequisite. Selected app
+effects independently revalidate the retained connection after cleanup. See the
 [launch contract](launch-contract.md#fixed-navigation-bounds-and-liveness).
 
 The original position rectangle still caps initial height: top/bottom use at most
@@ -185,9 +186,10 @@ prove that a native app restores/displays its floating layer on tab return.
   caller-side export changes that child. Its effective environment is managed
   by Rex. Changing a terminal variable does not change an already-running
   server's environment.
-- Private `menu` and `popup` modes also accept `--no-color` and `--ascii`.
-  They are not public root-launch flags or Lua setup fields; the delivered
-  launchers do not forward them. ASCII mode replaces application decorations
+- Public `rex-whichkey --no-color --ascii` explicitly forwards these presentation
+  flags to the Go-owned popup child. Low-level UI/result `menu` and private
+  `popup` modes accept them too. They are not Lua setup fields; the minimal
+  keybinding starts the public binary without flags. ASCII mode replaces application decorations
   with ASCII equivalents and omits optional icons, but does not transliterate
   user labels or itself disable colors.
 - Control characters are removed before text measurement/styling, including
@@ -203,6 +205,17 @@ prove that a native app restores/displays its floating layer on tab return.
   bounded best effort, not a guarantee after SIGKILL or server/terminal loss.
 
 ## Evidence
+
+Current CLI-only source uses Go JSON configuration and the same retained renderer;
+no Lua configuration/registration is needed. Task2's coordinator observed the
+normal default public menu/navigation/dismissal/cleanup on Darwin arm64 at
+`7bdbda2`, not the full palette/geometry/focus/flags matrix. Final combined
+launcher/package runtime is pending. No physical key/reload, Nix build/activation
+or new rendering experiment is claimed here.
+
+The following observations are **historical and revision-bound**, not current
+combined-candidate certification. Legacy configured-Lua/callback references
+describe those earlier revisions, not supported current setup.
 
 The [compact-presentation inventory](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
 records supplied producer review/compilation and coordinator measurements at

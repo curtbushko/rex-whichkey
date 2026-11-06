@@ -1,39 +1,31 @@
-# Home Manager integration: source-review cases
+# Home Manager integration: source-review guide
 
-These are configuration examples and a source-review checklist, not an evaluation
-or activation runner. No tests, Nix evaluation/build, Rex invocation or reload were
-performed for this module.
+This is documentation, not an evaluation/activation runner.
+Nix checks for this cutover are parse/format/whitespace only; no Nix
+evaluation/build, profile activation, Rex reload or installed keybinding result
+is claimed.
 
-## Import and opt in on the server host
+## Import and opt in on the execution host
 
-Add the flake as an input to your own configuration, then import its module in the
-**Home Manager configuration for the user running the Rex server**:
+In the Home Manager configuration for the user running the Rex server:
 
 ```nix
-# Within your own Home Manager module, with inputs supplied by your configuration:
 { inputs, ... }: {
   imports = [ inputs.rex-whichkey.homeManagerModules.default ];
   programs.rex-whichkey.enable = true;
 }
 ```
 
-`homeManagerModules.rex-whichkey` is the same module. Neither importing the module
-nor installing the package alone registers an action. The flake module selects
-`packages.<host-system>.rex-whichkey`; `programs.rex-whichkey.package` can override
-it with a compatible package containing the same executable/Lua layout. Directly
-importing `nix/home-manager.nix` instead uses `pkgs.callPackage ./package.nix {}`.
-The flake export is preferred for the project's pinned Go package selection.
+`homeManagerModules.rex-whichkey` is the same module.
+The flake module defaults to its host-platform package;
+`programs.rex-whichkey.package` can override it with a compatible package.
+Direct import of `nix/home-manager.nix` defaults to
+`pkgs.callPackage ./package.nix {}`. Flake import retains pinned Go selection.
 
-When enabled, the module adds the executable to `home.packages` and links exactly
-these two integration paths beside the server's `init.lua`:
-
-- `rex_whichkey.lua` → the package's Lua entry point
-- `rex_whichkey` → the package's Lua module directory (one directory symlink)
-
-The default destination is `${config.xdg.configHome}/rex`, matching Rex's
-`$XDG_CONFIG_HOME/rex/init.lua` / `~/.config/rex/init.lua` location on Linux and
-macOS. For a server using a custom `REX_CONFIG`, select the directory containing
-that file, inside the Home Manager user's home:
+When enabled, the module adds the package to `home.packages` and links **only**
+`rex_whichkey.lua` to `share/rex-whichkey/lua/rex_whichkey.lua`.
+The default destination is `${config.xdg.configHome}/rex`, beside init.lua.
+For a custom `REX_CONFIG`, choose its parent inside the user's home:
 
 ```nix
 { config, ... }: {
@@ -44,93 +36,67 @@ that file, inside the Home Manager user's home:
 }
 ```
 
-This option does not set `REX_CONFIG`, create an init file, change the Lua search
-path or configure a client machine. Rex's server runtime loads the installed
-modules through its documented sibling-module `require` lookup.
+This does not set REX_CONFIG, own the whole Rex directory, change Lua search paths,
+generate init.lua/menu JSON or install a keybinding. The module relies on Rex's
+documented sibling-module loading. It does not configure a viewing client or
+deploy anything remotely.
 
-## Explicit wiring in the user-owned init.lua
+## User-owned wiring and data
 
-You choose whether and when to add wiring to **your own** server configuration.
-The module generates none of this Lua and never reads, writes or imports your
-existing mapping file into the Nix store. The following consumes the delivered
-`lua/rex_whichkey.lua` and `lua/rex_whichkey/defaults/init.lua` interfaces:
+Only if/when you choose to change your init.lua:
 
 ```lua
-local popup = require("rex_whichkey")
-popup.register_completion("whichkey_complete")
-
--- Replace this example with this server's fixed, reachable socket endpoint.
--- Never use ctx.server, a client-local socket or an inferred current server.
-local menu = popup.new(
-    require("rex_whichkey.defaults"),
-    "unix:///absolute/path/to/server.sock"
-)
-
--- Optional sibling my_whichkey.lua remains user-owned, with its original bytes.
--- Use menu.setup({}) instead for built-ins only, or put inline options here.
-menu.setup({}, "my_whichkey")
-
-rex.action {
-    name = "whichkey",
-    title = "Which key",
-    run = function(ctx)
-        menu.launch(ctx)
-    end,
-}
+local whichkey = require("rex_whichkey")
+rex.bind("ctrl+space", function(ctx)
+    return whichkey.launch(ctx)
+end)
 ```
 
-Register completion once in the same server Lua VM as the launch action. Keep the
-completion name unique among your actions, and bind the `whichkey` action through
-your existing Rex keybinding configuration if desired. The installed namespace
-`rex_whichkey` is reserved; user mapping modules must use a different name, such
-as `my_whichkey`. Inline/import precedence remains **defaults < imported < inline**;
-`spec` and `icons` replace whole tables, as defined by `docs/mapping-format.md`.
+The key is an example, not an installed/reloaded/observed shortcut.
+The launcher starts ordinary `rex-whichkey` through documented detached
+argument-array execution. Rex's process PATH must already find it; an updated
+terminal profile does not prove the running server inherited it.
+Go discovers the compatible Rex CLI/endpoint and validates exact context IDs.
+No Lua action/runtime/completion registration or anchor/helper path is required.
 
-Both `rex-whichkey` and the existing `rex` CLI must be on the **server process's**
-PATH. An already-running server need not inherit a newly installed user profile;
-this module does not restart it or promise that its environment has changed.
-Nothing is installed on a remote server by configuring only the local client.
+Go reads optional version-1 JSON from its
+[documented selection](../../../docs/mapping-format.md#file-selection).
+Home Manager does not import/convert user Lua, copy user data into the Nix store,
+or install an automatic replacement config. Preserve old files; manually account
+for literal data and deferred functions/hooks/callbacks before migration.
+See [examples](../../../examples/README.md).
 
-## Disabled and preservation review
+The real package image is `bin/rex-whichkey`; optional licensed CLI symlink is
+`libexec/rex-whichkey/rex`. The pinned source has no Intel macOS CLI artifact;
+standalone validated PATH support remains. Go, not Nix, owns discovery policy.
+See [package layout](../../../docs/runtime-bootstrap.md).
 
-With the import retained, this is the default (explicitly shown):
+## Preservation and migration checklist (source-only)
 
-```nix
-{
-  programs.rex-whichkey.enable = false;
-}
-```
+- Disabled (the default): `lib.mkIf cfg.enable` contributes no package/file links.
+- Enabled: exactly the package and one launch-module link; no obsolete recursive
+  namespace/module-directory link, binding, hook, service or activation script.
+- The file retains `force=false`; normal Home Manager conflict handling applies.
+  Do not force/delete unmanaged files to bypass a conflict.
+- A pre-existing whole-Rex-directory link must be accounted for in your own
+  declarative layout; this module never takes over init.lua or sibling files.
+- Compared with the old module, newly generated configuration no longer declares
+  the `rex_whichkey` directory link. Source removal is **not activation** and does
+  not remove an existing live generation or authorize deletion of user assets.
+- Update old user-owned require/setup/registration wiring deliberately through
+  your own lifecycle. No automatic reload/restart or executable-Lua migration.
+- Disabling/removing a future managed generation stops this module's contributions,
+  not user-owned init.lua/menu data. Adjust your own require/binding if absent.
 
-Read `nix/home-manager.nix` and the small flake export without executing them:
+Parse and format checks do not prove enabled/disabled evaluation, conflict safety
+on activation, file preservation, installed PATH, Lua loading or physical-key
+launch. Task2's observed direct Go menu is separate evidence and does not validate
+Home Manager deployment. Final combined coordinator runtime is still pending.
 
-- **Disabled:** the entire `home.packages` and `home.file` contribution is behind
-  `lib.mkIf cfg.enable`. There are no files, hooks, services or environment changes
-  contributed by the disabled module. Option defaults do not activate anything.
-- **Enabled:** only the executable package and the two reserved module links are
-  contributed. No `init.lua`, user mapping file, whole Rex directory, keybinding,
-  action registration, `REX_CONFIG` or `LUA_PATH` setting is managed.
-- Both links explicitly retain `force = false`; the directory link also retains
-  `recursive = false`. Do not set force or delete/move conflicting files to make
-  activation succeed. Existing unrelated sibling files are not module targets.
-- If either reserved path already exists unmanaged, normal Home Manager conflict
-  handling applies; the module contains no bypass or overwrite command. If your
-  configuration already links the **entire** Rex directory, account for these
-  sibling paths in your own declarative layout rather than replacing init.lua.
-- There is no custom activation, `onChange`, reload/restart, service or launchd
-  unit. Enabling does not launch the menu or mutate running server state.
-- Removing/disabling the module in a later Home Manager generation removes its
-  managed links/package contribution, not your init or mapping files. User-added
-  require/setup wiring is still yours and must be adjusted before using Rex with
-  the integration absent; disabling does not edit it for you.
+Historical two-link/bridge instructions are preserved at
+`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:tests/packaging/home-manager/README.md`,
+not active setup requirements.
 
-This establishes source intent only. Disabled/enabled evaluation, conflict
-handling, existing-file byte preservation on activation, server PATH inheritance,
-Lua search compatibility and end-to-end invocation remain runtime-unverified.
-Independent review is required; no evaluation or runtime success is claimed here.
-
-## References
-
-- [Rex configuration location and sibling-module loading](https://www.superlogical.com/rex/docs/customize/config)
-- [Go-owned mapping and options standard](../../../docs/mapping-format.md)
-- [Lua loader configuration semantics](../../../examples/README.md)
-- [Packaged layout](../../../nix/package.nix)
+References: [module](../../../nix/home-manager.nix),
+[flake](../../../flake.nix), [Rex config](https://www.superlogical.com/rex/docs/customize/config),
+[launch contract](../../../docs/launch-contract.md).

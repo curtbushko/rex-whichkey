@@ -7,27 +7,22 @@
   cfg = config.programs.rex-whichkey;
 in {
   options.programs.rex-whichkey = {
-    enable = lib.mkEnableOption "the opt-in Rex which-key package and server-side Lua modules";
+    enable = lib.mkEnableOption "the Rex which-key package and launch-only Lua module";
 
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.callPackage ./package.nix {};
       defaultText = lib.literalExpression "pkgs.callPackage ./package.nix {}";
       description = ''
-        Package providing bin/rex-whichkey and share/rex-whichkey/lua.
+        Package providing the real bin/rex-whichkey and
+        share/rex-whichkey/lua/rex_whichkey.lua launch module.
         The flake module defaults to this flake's package for the host platform.
-        Includes the licensed execution-host Rex CLI dependency where published;
-        with that dependency the public bin entry links to the real executable
-        beside the layout-1 anchor. Without it (default Intel macOS), the real
-        executable stays in bin and the anchor's sibling links to it. Native
-        public launch with no implicit default or explicit action can use a
-        valid execution-host PATH CLI without environment repair or a dependency
-        override. Both
-        configured public and key/palette launch still reject the incomplete
-        layout even with a PATH/environment CLI. A package override supplying a
-        legitimately available licensed rex-cli dependency can complete it.
-        Installation does not select an endpoint, configure a Rex service or
-        reload the server.
+        Includes an optional licensed execution-host Rex CLI at
+        libexec/rex-whichkey/rex where published. The pinned source has no
+        Intel macOS CLI artifact; standalone execution-host PATH discovery
+        remains supported. Go owns discovery, validation and endpoint policy.
+        Installation does not configure data, bindings or a Rex service,
+        select an endpoint, or reload the server.
       '';
     };
 
@@ -39,8 +34,8 @@ in {
         Directory containing the server's user-owned Rex init.lua, inside the
         Home Manager user's home. For a custom REX_CONFIG, select its parent
         directory here. This does not set REX_CONFIG or modify init.lua.
-        Only the reserved rex_whichkey.lua and rex_whichkey module paths are
-        linked; existing user mappings must use a different module name.
+        Only the reserved rex_whichkey.lua launch module is linked.
+        No module directory, init.lua or menu data is managed.
       '';
     };
   };
@@ -53,11 +48,6 @@ in {
     home.file = {
       "${cfg.configDirectory}/rex_whichkey.lua" = {
         source = "${cfg.package}/share/rex-whichkey/lua/rex_whichkey.lua";
-        force = false;
-      };
-      "${cfg.configDirectory}/rex_whichkey" = {
-        source = "${cfg.package}/share/rex-whichkey/lua/rex_whichkey";
-        recursive = false;
         force = false;
       };
     };
