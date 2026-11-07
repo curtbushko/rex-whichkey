@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
+	"strings"
+	"sync"
 	"time"
 
 	"temp/rex"
@@ -59,7 +60,7 @@ func decodePopupConfig(input io.Reader) (Config, error) {
 		return Config{}, err
 	}
 	for _, mapping := range config.Spec {
-		if mapping.CallbackRef != "" || mapping.Enabled() && menuProvider(mapping) != "" {
+		if mapping.CallbackRef != "" {
 			return Config{}, errors.New("whichkey: invalid executable popup snapshot")
 		}
 	}
@@ -138,41 +139,6 @@ func providerRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
 	return rows, nil
 }
 
-// menuInventories caches exactly one attempt per resource kind. It is local to
-// this launch, not a refresh mechanism, registry or shared daemon.
-type menuInventories struct {
-	sessions, windows, panes             []providerRow
-	sessionsRead, windowsRead, panesRead bool
-	sessionsErr, windowsErr, panesErr    error
-}
-
-func (inventory *menuInventories) read(ctx context.Context, client *rex.Client, sessionID, provider string) ([]providerRow, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	switch provider {
-	case menuProviderSessions:
-		if !inventory.sessionsRead {
-			inventory.sessions, inventory.sessionsErr = readSessionRows(ctx, client, sessionID)
-			inventory.sessionsRead = true
-		}
-		return inventory.sessions, inventory.sessionsErr
-	case menuProviderWindows:
-		if !inventory.windowsRead {
-			inventory.windows, inventory.windowsErr = readWindowRows(ctx, client, sessionID)
-			inventory.windowsRead = true
-		}
-		return inventory.windows, inventory.windowsErr
-	case menuProviderPanes:
-		if !inventory.panesRead {
-			inventory.panes, inventory.panesErr = readPaneRows(ctx, client, sessionID)
-			inventory.panesRead = true
-		}
-		return inventory.panes, inventory.panesErr
-	default:
-		return nil, errors.New("whichkey: unexpanded provider")
-	}
-}
-
 func readSessionRows(ctx context.Context, client *rex.Client, currentID string) ([]providerRow, error) {
 	sessions, err := client.Sessions(ctx)
 	if err != nil {
@@ -196,15 +162,9 @@ func readSessionRows(ctx context.Context, client *rex.Client, currentID string) 
 	return rows, nil
 }
 
-func readWindowRows(ctx context.Context, client *rex.Client, sessionID string) ([]providerRow, error) {
-	session, err := client.Session(ctx, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	windows, err := session.Windows(ctx)
-	if err != nil {
-		return nil, err
-	}
+func readWindowRows(view rex.SessionSnapshot) ([]providerRow, error) {
+	sessionID := view.Session().ID
+	windows := view.Windows()
 	if len(windows) > maxSessionMenuEntries {
 		return nil, errProviderOverflow
 	}
@@ -223,15 +183,8 @@ func readWindowRows(ctx context.Context, client *rex.Client, sessionID string) (
 	return rows, nil
 }
 
-func readPaneRows(ctx context.Context, client *rex.Client, sessionID string) ([]providerRow, error) {
-	session, err := client.Session(ctx, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	blocks, err := session.Blocks(ctx)
-	if err != nil {
-		return nil, err
-	}
+func readPaneRows(view rex.SessionSnapshot) ([]providerRow, error) {
+	blocks := view.Blocks()
 	if len(blocks) > maxSessionMenuEntries {
 		return nil, errProviderOverflow
 	}
@@ -274,7 +227,7 @@ func expandResourceMarker(marker Mapping, entries []providerRow, readErr error) 
 		if err := budget.reserve(len(marker.Keys), 1); err != nil {
 			return nil, err
 		}
-		label := "Warning: inventory unavailable; reopen to retry"
+		label := "Warning: inventory unavailable; not retried this invocation"
 		children = []Mapping{{Keys: marker.Keys + "0", Group: &label, Hidden: marker.Hidden}}
 	} else {
 		var formatErr error
@@ -289,51 +242,6 @@ func expandResourceMarker(marker Mapping, entries []providerRow, readErr error) 
 	return append([]Mapping{root}, children...), nil
 }
 
-// nativeSessionMenu expands all providers once before sizing or handoff. Each
-// kind shares one read-only inventory, even when configured at several prefixes.
-func nativeSessionMenu(parent context.Context, client *rex.Client, origin launchOrigin, config Config) (Config, map[string]providerTarget, error) {
-	expandedConfig, err := resolveHostMenu(parent, config, origin.selection)
-	if err != nil {
-		return Config{}, nil, err
-	}
-	config = expandedConfig
-	targets := make(map[string]providerTarget)
-	var inventory menuInventories
-	expanded := make([]Mapping, 0, len(config.Spec))
-	bytesUsed := 0
-	for _, marker := range config.Spec {
-		rows := []Mapping{marker}
-		if marker.Enabled() && menuProvider(marker) != "" {
-			entries, readErr := inventory.read(parent, client, origin.SessionID, menuProvider(marker))
-			if cancelErr := parent.Err(); cancelErr != nil {
-				return Config{}, nil, cancelErr
-			}
-			rows, err = expandResourceMarker(marker, entries, readErr)
-			if err != nil {
-				return Config{}, nil, err
-			}
-			retainPaneTargets(targets, rows, entries)
-		}
-		encoded, encodeErr := json.Marshal(rows)
-		if encodeErr != nil {
-			return Config{}, nil, encodeErr
-		}
-		bytesUsed += len(encoded)
-		if bytesUsed > menuConfigLimit {
-			return Config{}, nil, errors.New("whichkey: combined menu exceeds 4 MiB; not truncated")
-		}
-		expanded = append(expanded, rows...)
-	}
-	config.Spec = expanded
-	if checkErr := validateMenuConflicts(config.Spec); checkErr != nil {
-		return Config{}, nil, fmt.Errorf("whichkey: expanded menu: %w", checkErr)
-	}
-	if checkErr := menuSnapshotBound(config); checkErr != nil {
-		return Config{}, nil, checkErr
-	}
-	return config, targets, nil
-}
-
 func retainPaneTargets(targets map[string]providerTarget, rows []Mapping, entries []providerRow) {
 	index := 0
 	for _, row := range rows {
@@ -342,6 +250,270 @@ func retainPaneTargets(targets map[string]providerTarget, rows []Mapping, entrie
 			index++
 		}
 	}
+}
+
+// Four finite inventory kinds share the same single-publication contract as
+// rename labels. The last job kind loads both rename labels from the origin view.
+const metadataRenameKind = 4
+
+var providerKinds = [4]string{menuProviderSessions, menuProviderWindows, menuProviderPanes, menuProviderHosts}
+var providerDemandFiles = [4]string{"sessions-demand.json", "windows-demand.json", "panes-demand.json", "hosts-demand.json"}
+var providerUpdateFiles = [4]string{"sessions-update.json", "windows-update.json", "panes-update.json", "hosts-update.json"}
+
+func providerKind(mapping Mapping) int {
+	for kind, name := range providerKinds {
+		if menuProvider(mapping) == name {
+			return kind
+		}
+	}
+	return -1
+}
+
+type providerUpdate struct {
+	Binding renameBinding `json:"binding"`
+	Rows    []Mapping     `json:"rows"`
+}
+
+type metadataResult struct {
+	kind    int
+	entries []providerRow
+	hosts   rex.HostInventory
+	labels  renameLabels
+	err     error
+}
+
+// Only the owning controller/UI loop changes scheduling state. Workers receive
+// captured read-only context and send one detached value. There are at most two
+// executing goroutines, two result slots and five once-only jobs; no work queue
+// can grow with key presses or repeated markers.
+type metadataJobs struct {
+	ctx             context.Context
+	cancel          context.CancelFunc
+	workers         sync.WaitGroup
+	wanted, started [5]bool
+	active          int
+	results         chan metadataResult
+	request         popupRequest
+	client          *rex.Client
+}
+
+func newMetadataJobs(ctx context.Context, request popupRequest, client *rex.Client) *metadataJobs {
+	ctx, cancel := context.WithCancel(ctx)
+	return &metadataJobs{ctx: ctx, cancel: cancel, results: make(chan metadataResult, 2), request: request, client: client}
+}
+
+func (jobs *metadataJobs) stop() {
+	jobs.cancel()
+	jobs.workers.Wait()
+}
+
+func (jobs *metadataJobs) start() {
+	for kind, wanted := range jobs.wanted {
+		if jobs.ctx.Err() != nil || jobs.active >= 2 {
+			return
+		}
+		if !wanted || jobs.started[kind] {
+			continue
+		}
+		jobs.started[kind] = true
+		jobs.active++
+		jobs.workers.Add(1)
+		go func() {
+			defer jobs.workers.Done()
+			result := loadMetadata(jobs.ctx, jobs.request, jobs.client, kind)
+			select {
+			case jobs.results <- result:
+			case <-jobs.ctx.Done():
+			}
+		}()
+	}
+}
+
+func loadMetadata(parent context.Context, request popupRequest, client *rex.Client, kind int) metadataResult {
+	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+	defer cancel()
+	result := metadataResult{kind: kind}
+	if kind == metadataRenameKind {
+		result.labels = loadRenameLabels(ctx, client, request)
+		return result
+	}
+	if kind == 3 {
+		result.hosts, result.err = rex.Hosts(ctx, rex.InventoryOptions{Selection: request.selection, Timeout: 3 * time.Second})
+		return result
+	}
+	if client == nil || request.snapshot == nil || request.snapshot.Session().ID != request.SessionID {
+		result.err = errors.New("whichkey: native resource origin required")
+		return result
+	}
+	switch kind {
+	case 0:
+		result.entries, result.err = readSessionRows(ctx, client, request.SessionID)
+	case 1:
+		result.entries, result.err = readWindowRows(*request.snapshot)
+	case 2:
+		result.entries, result.err = readPaneRows(*request.snapshot)
+	}
+	return result
+}
+
+// A provider root is always a group, including the legacy Switch action marker.
+// The placeholder cannot execute or reserve a future resource key for replay.
+func pendingProviderRows(marker Mapping) ([]Mapping, error) {
+	root := marker
+	root.Provider, root.Action, root.Args = "", "", nil
+	if root.Group == nil {
+		label := root.Desc
+		root.Group, root.Desc = &label, ""
+	}
+	budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
+	if err := budget.reserve(len(root.Keys), 1); err != nil {
+		return nil, err
+	}
+	label := "Loading inventory; choices disabled"
+	return []Mapping{root, {Keys: root.Keys + "0", Group: &label, Hidden: root.Hidden}}, nil
+}
+
+func providerMarkerRows(marker Mapping, ready [4]*providerUpdate) ([]Mapping, error) {
+	kind := providerKind(marker)
+	if !marker.Enabled() || kind < 0 {
+		return []Mapping{marker}, nil
+	}
+	if ready[kind] == nil {
+		return pendingProviderRows(marker)
+	}
+	return providerSubtree(marker.Keys, ready[kind].Rows), nil
+}
+
+func providerSubtree(prefix string, batch []Mapping) []Mapping {
+	var rows []Mapping
+	for _, row := range batch {
+		if row.Keys == prefix || strings.HasPrefix(row.Keys, prefix) {
+			rows = append(rows, row)
+		}
+	}
+	return rows
+}
+
+// Combine complete kind batches in original marker order. Validation precedes
+// publication, so overflow/conflict never becomes a plausible truncated menu.
+func providerConfig(base Config, ready [4]*providerUpdate) (Config, error) {
+	config := base
+	config.Spec = nil
+	bytesUsed := 0
+	for _, marker := range base.Spec {
+		rows, err := providerMarkerRows(marker, ready)
+		if err != nil {
+			return Config{}, err
+		}
+		data, err := json.Marshal(rows)
+		if err != nil {
+			return Config{}, err
+		}
+		bytesUsed += len(data)
+		if bytesUsed > menuConfigLimit {
+			return Config{}, errors.New("whichkey: combined menu exceeds 4 MiB; not truncated")
+		}
+		config.Spec = append(config.Spec, rows...)
+	}
+	if err := validateMenuConflicts(config.Spec); err != nil {
+		return Config{}, err
+	}
+	if err := menuSnapshotBound(config); err != nil {
+		return Config{}, err
+	}
+	return config, nil
+}
+
+func buildProviderUpdate(base Config, demand renameDemand, result metadataResult) (providerUpdate, map[string]providerTarget, error) {
+	update := providerUpdate{Binding: demand.binding()}
+	targets := make(map[string]providerTarget)
+	bytesUsed := 0
+	for _, marker := range base.Spec {
+		if !marker.Enabled() || providerKind(marker) != result.kind {
+			continue
+		}
+		var rows []Mapping
+		var err error
+		if result.kind == 3 {
+			rows, err = expandedHostRows(marker, result.hosts, result.err)
+		} else {
+			rows, err = expandResourceMarker(marker, result.entries, result.err)
+		}
+		if err != nil {
+			return providerUpdate{}, nil, err
+		}
+		data, err := json.Marshal(rows)
+		if err != nil {
+			return providerUpdate{}, nil, err
+		}
+		bytesUsed += len(data)
+		if bytesUsed > menuConfigLimit {
+			return providerUpdate{}, nil, errors.New("whichkey: provider batch exceeds 4 MiB; not truncated")
+		}
+		retainPaneTargets(targets, rows, result.entries)
+		update.Rows = append(update.Rows, rows...)
+	}
+	return update, targets, nil
+}
+
+func validateProviderDemand(demand renameDemand, invocation string, kind int, config Config) error {
+	if demand.Invocation != invocation || demand.Kind != providerKinds[kind] || demand.Load != 1 {
+		return errors.New("whichkey: stale or unknown provider demand")
+	}
+	for _, marker := range config.Spec {
+		if marker.Enabled() && providerKind(marker) == kind && marker.Keys == demand.Keys {
+			return nil
+		}
+	}
+	return errors.New("whichkey: provider demand is not an enabled retained marker")
+}
+
+// Validate every complete marker expansion, its original root and all children.
+// No child can introduce another provider, escape the subtree or nominate IDs
+// for parent authority. The parent's separately retained batch is authoritative.
+func validateProviderUpdate(base Config, demand renameDemand, update providerUpdate) error {
+	if update.Binding != demand.binding() {
+		return errors.New("whichkey: stale provider publication")
+	}
+	seen := make(map[string]bool)
+	for _, marker := range base.Spec {
+		if !marker.Enabled() || menuProvider(marker) != demand.Kind {
+			continue
+		}
+		rows := providerSubtree(marker.Keys, update.Rows)
+		for _, row := range rows {
+			if seen[row.Keys] {
+				return errors.New("whichkey: duplicate provider publication key")
+			}
+			seen[row.Keys] = true
+		}
+		if err := validateProviderSubtree(marker, rows); err != nil {
+			return err
+		}
+	}
+	if len(seen) != len(update.Rows) {
+		return errors.New("whichkey: provider publication escaped retained markers")
+	}
+	return nil
+}
+
+func validateProviderSubtree(marker Mapping, rows []Mapping) error {
+	if len(rows) < 2 {
+		return errors.New("whichkey: incomplete provider publication")
+	}
+	pending, err := pendingProviderRows(marker)
+	if err != nil {
+		return err
+	}
+	root, err := json.Marshal(pending[0])
+	if err != nil {
+		return err
+	}
+	actual, err := json.Marshal(rows[0])
+	if err != nil || string(root) != string(actual) {
+		return errors.New("whichkey: changed provider root")
+	}
+	return ValidateMenuProviderChildren(marker, rows[1:])
 }
 
 func validatePaneChoice(ctx context.Context, target providerTarget) (rex.Block, error) {

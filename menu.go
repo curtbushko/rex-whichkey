@@ -25,6 +25,7 @@ type MenuEvent struct {
 	Selection *Selection
 	Dismissed bool
 	update    *renameBinding // Private publication binding, never target authority.
+	provider  *renameBinding
 }
 
 // Menu owns one invocation's evaluated mappings and navigation state. It performs
@@ -38,9 +39,10 @@ type Menu struct {
 	page        int
 	done        bool
 
-	textSpec *textEntrySpec
-	entry    *menuTextEntry
-	updates  *menuRenameUpdates // Written only by the terminal UI loop.
+	textSpec  *textEntrySpec
+	entry     *menuTextEntry
+	updates   *menuRenameUpdates // Written only by the terminal UI loop.
+	providers *menuProviderUpdates
 }
 
 type menuNode struct {
@@ -213,8 +215,7 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 		return MenuEvent{}
 	}
 	if target.mapping.Action == "" && target.mapping.CallbackRef == "" {
-		m.current = target
-		m.page = 0
+		m.enterGroup(target)
 		return MenuEvent{}
 	}
 	if m.textSpec != nil && inlineRenameMapping(target.mapping) {
@@ -229,6 +230,19 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 	return m.selectNode(target, false)
 }
 
+func (m *Menu) enterGroup(target *menuNode) {
+	if m.providers != nil {
+		for _, marker := range m.providers.base.Spec {
+			kind := providerKind(marker)
+			if marker.Enabled() && kind >= 0 && m.providers.ready[kind] == nil && target.keys == marker.Keys+"0" {
+				return // A loading leaf cannot consume/reserve a future resource key.
+			}
+		}
+	}
+	m.current, m.page = target, 0
+	m.demandProviders(false)
+}
+
 func (m *Menu) selectNode(target *menuNode, confirmed bool) MenuEvent {
 	m.done = true
 	event := MenuEvent{Selection: &Selection{
@@ -238,6 +252,19 @@ func (m *Menu) selectNode(target *menuNode, confirmed bool) MenuEvent {
 	if m.updates != nil && m.renameReady(target) && renameKind(target.mapping) >= 0 {
 		binding := m.updates.ready[renameKind(target.mapping)].Demand.binding()
 		event.update = &binding
+	}
+	if m.providers != nil {
+		for _, update := range m.providers.ready {
+			if update == nil {
+				continue
+			}
+			for _, row := range update.Rows {
+				if row.Keys == target.keys && row.Action != "" {
+					binding := update.Binding
+					event.provider = &binding
+				}
+			}
+		}
 	}
 	return event
 }

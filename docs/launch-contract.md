@@ -44,12 +44,16 @@ These are published API contracts, not a physical-key observation.
 4. Capture explicit app intent or the pane owner if eligible. An explicit invalid
    or unavailable app rejects; absent implicit GUI eligibility does not gate
    resource-only display.
-5. Expand enabled Go providers once and retain targets; retain the required origin
-   session-view snapshot without extra rename-label reads. Calculate one initial
-   rectangle and create the actual popup terminal.
-6. Wait for ordinary interaction/dismissal/cancellation without idle expiry.
-   Restore terminal state, validate the result against the retained snapshot,
-   finish exact cleanup, then dispatch a selected effect once.
+5. Retain the matching required origin session-view snapshot and enable forms,
+   without provider/rename-label waits. Calculate one initial rectangle from static
+   groups/loading placeholders and create the popup terminal.
+6. Actually write the validated static root before demanding nonessential metadata.
+   Visible enabled sessions start after that successful draw; hidden sessions,
+   windows/panes/hosts wait for explicit enabled prefix entry. Rename labels wait
+   for form entry. Retain complete exact choices before publishing ready rows.
+7. Handle interaction/dismissal/cancellation without idle expiry. Cancel/join jobs
+   and transport, restore terminal state, validate the result against retained
+   publications, finish exact cleanup, then dispatch a selected effect once.
 
 Neither old Lua registrations nor an installed old bridge select, redirect or
 gate startup. There is no custom `rex do whichkey` route, runtime advertisement,
@@ -84,9 +88,11 @@ authentication remain Rex policy.
 
 The closed [catalogue](mapping-format.md#complete-public-action-catalogue) is
 authoritative; arbitrary configured executable/action names are not supported.
-Go expands sessions/windows/panes/known-hosts before sizing. Generated full IDs
-and action intents remain in the parent; the PTY returns canonical keys,
-confirmation and authorized rename text, never replacement target authority.
+Go loads sessions/windows/panes/known-hosts asynchronously under the
+[per-kind demand policy](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
+Generated full IDs and action intents remain in the parent; the PTY returns
+canonical keys, confirmation, authorized rename text and publication bindings,
+never replacement target authority.
 
 Session/window selection revalidates destination membership and sends exact
 `session.select` args without outer origin session/block overrides. Split also
@@ -100,10 +106,11 @@ Rename and destructive close use exact typed resource methods after cleanup.
 
 ## Private incremental rename contract (STARTUP-UI-UPDATES)
 
-This bounded contract is specified before its consumers. It is private Go
-invocation plumbing, not a public config/protocol/service extension. Inventories
-still expand eagerly in this intermediate revision; this is not final async
-first-frame startup.
+The task2 rename contract is now extended for actual provider consumers
+(STARTUP-ASYNC-DATA / STARTUP-QUERY-REUSE). It is private Go invocation plumbing,
+not a public config/protocol/service extension or a persistent cache. Source
+ordering is draw-first; final public first-frame/data/action readiness observation
+is still a coordinator gate, not established by this document.
 
 - The parent creates a random invocation ID in `runtime.json`. Four fixed regular
   slots (`rename-tab-demand.json`, `rename-session-demand.json`,
@@ -111,10 +118,17 @@ first-frame startup.
   carries at most one strict JSON object, bounded by `popupMessageLimit`. Owned
   0600/no-follow/link-count checks and nonblocking flock serialize full reads and
   writes; contention is retried by the existing polling loops, never by waiting
-  on the terminal thread. No append log, arbitrary filenames or unbounded queue.
+  on the terminal thread. Eight additional literal slots pair
+  `sessions/windows/panes/hosts-demand.json` with
+  `sessions/windows/panes/hosts-update.json`. Each kind has only one demand and one
+  terminal publication, including errors. No append log, arbitrary filename,
+  refresh generation or unbounded queue exists.
 - Opening an inline form demands canonical kind `tab` or `session`, full canonical
-  mapping keys as its prefix, invocation ID and load number 1. At most two demands
-  and one metadata worker exist. The worker reads a detached origin session-view
+  mapping keys as its prefix, invocation ID and load number 1. There are four
+  provider demands, two form demands, five possible once-only jobs (one supplies
+  both labels), at most two executing metadata workers and two result slots.
+  Workers return immutable values, not mutations to shared menu/controller state.
+  The label worker reads a detached origin session-view
   snapshot already required for placement, or obtains that exact view on demand
   when none is supplied. Its immutable result contains both labels or a bounded
   unavailable reason; it cannot mutate Config, targets, live Menu or terminal.
@@ -139,6 +153,21 @@ first-frame startup.
   unavailable bindings refuse; non-rename results
   cannot carry one. Labels, ordering, child actions/args/IDs grant no authority.
   No refresh/retry generations exist in this revision; each kind publishes once.
+- Provider demands use the same invocation/kind/load/full-prefix identity.
+  The controller validates enabled retained markers, builds all same-kind marker
+  rows, validates child/combined bounds and retains exact mapping args and pane
+  placements **before** publishing. A provider update carries complete rows plus
+  invocation/kind/load, not duplicated near-limit demand keys. UI-loop application
+  validates the whole batch off to the side, then rebinds existing navigation,
+  confirmation and form nodes without resetting their state or terminal decoders.
+  Pending choices are non-executable; loading keys/Enter are discarded, not replayed.
+  A selected provider child carries a `provider` binding matched after join to
+  the parent's published batch. Child IDs, labels, list indices and stale bindings
+  cannot replace parent authority. Errors/empty rows cannot execute.
+- Windows/panes and current rename labels reuse only the captured matching origin
+  session-view. Sessions-list and hosts each have a separate invocation result.
+  Current Inspect/origin/GUI-generation/destination/geometry/liveness/cleanup
+  checks remain live reads, not presentation-cache lookups.
 - Child terminal loss/cancel/parent-pipe EOF stops interaction; its lifetime
   watcher is canceled/joined before result commit. Parent selection/dismissal,
   error, origin loss or cancellation cancels and joins its metadata worker and
@@ -177,6 +206,8 @@ Cleanup targets only:
 | `native-input.json` | Private inline-form enablement; legacy label presentation remains private, not identity |
 | `rename-tab-demand.json`, `rename-session-demand.json` | Bounded single-publication form demands |
 | `rename-tab-update.json`, `rename-session-update.json` | Bounded retained presentation publications |
+| `sessions-demand.json`, `windows-demand.json`, `panes-demand.json`, `hosts-demand.json` | One enabled-marker demand per kind |
+| `sessions-update.json`, `windows-update.json`, `panes-update.json`, `hosts-update.json` | One complete parent-retained batch per kind, including errors |
 | `lifetime` | Invocation-local FIFO |
 | `runtime-image`, `runtime.json` | Invocation-local image copy and selected CLI path/independent endpoint context, not an executable receipt or Lua bridge |
 | Private `rex-whichkey-*` directory and open source-image handle | Remove fixed names through the owned root, then empty directory; retire source handle before effect |
@@ -201,14 +232,15 @@ against external changes.
 
 ## Evidence and historical boundary
 
-Task2's coordinator actually observed default public root/Sessions/Switch menus,
-Backspace/Escape, exit0, primary terminal, exact popup/block/private-directory
-cleanup and origin focus on Darwin arm64 at `7bdbda2`.
-See [acceptance](acceptance.md) for the exact commit and artifacts.
-The final launcher/package combined candidate still needs independent review and
-coordinator normal public runtime, including a benign effect only on an explicitly
-owned disposable target. No leaf product invocation, physical-key/reload,
-Nix build/activation, remote trial or selected effect is claimed here.
+Phase16 CLI-only delivery is verified, including the final public menu and an
+exact owned inline rename. Phase18 tasks1/2 have reviewed/integrated public runs,
+including actual loading/edit/ready preservation and owned rename/cancel/cleanup.
+See [acceptance](acceptance.md) for revision-bound artifacts and timing limits.
+The final async combined candidate still needs independent source review and
+coordinator comparable normal public first-frame/data/action-ready observation,
+owned benign effect, cancellation and exact cleanup. No final speedup, leaf
+product invocation, physical-key/reload, installed profile, Nix activation or
+cross-platform/remote success is claimed.
 
 The earlier bridge contract is historical at
 `cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/launch-contract.md`.
