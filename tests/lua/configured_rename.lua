@@ -1,4 +1,4 @@
-package.path = "tests/fixtures/phase15-lua/?.lua;tests/fixtures/phase15-lua/?/init.lua;" .. package.path
+package.path = "tests/fixtures/legacy-context-checkpoint/?.lua;tests/fixtures/legacy-context-checkpoint/?/init.lua;" .. package.path
 local mapping = require("rex_whichkey.mapping")
 local dispatch = require("rex_whichkey.dispatch")
 local session = "session:11111111-1111-1111-1111-111111111111"
