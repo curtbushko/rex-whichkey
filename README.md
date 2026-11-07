@@ -6,13 +6,16 @@ JSON menu data, renders the menu and performs operations through the Rex CLI.
 There is no Go launcher/controller, renderer child, image copy, private IPC,
 daemon or executable Lua menu configuration.
 
-**Evidence:** Phase19 tasks1/2 have reviewed, integrated direct Lua/Go runs,
-including providers, an exact owned rename, cancel/dismissal, real own-PTY resize,
-pre-effect visible retirement and observed post-exit host deletion. The new
-`make run` route below still needs coordinator observation on the exact reviewed
-combined checkout and rebuilt main. Build/help/creation acknowledgment is not
-menu-display or exit proof. No installed-profile, physical-keybinding, remote or
-all-platform success is claimed. See [acceptance](docs/acceptance.md).
+**Evidence:** Phase19 Task03 records actual `make run` on reviewed combined
+source and rebuilt main at `6564d07ef690d591ea842fa9d986d0bcfa919dd4`: current
+checkout Go executable, shared Lua float, root/providers, exact owned rename,
+separate edited cancellation/dismissal, pre-effect visible retirement and observed
+exit 0/post-exit host absence. Task02 separately observed real own-PTY resize.
+This docs-only refresh runs no product; independent review and the coordinator's
+final rebuilt-main run remain required before phase completion. Build/help/creation
+acknowledgment is not menu-display or exit proof. Full lint remains unresolved
+(53 diagnostics, exit 201; AI lint not reached). No installed-profile, physical-
+keybinding, remote or all-platform success is claimed. See [acceptance](docs/acceptance.md).
 
 ## Run this checkout
 
@@ -197,7 +200,10 @@ active. Providers are sessions/windows/panes/known-hosts (hosts listing-only).
 Inline rename uses this same menu. Lua keeps one fixed fractional rectangle;
 Go fits its own PTY cells and handles SIGWINCH/pagination without resizing it.
 Native chrome uses Rex defaults **for now**: user1a explicitly deferred REQ-026
-native titlebar/border/corners/shadow customization; it is not implemented.
+native titlebar/border/corners/shadow customization; it is not implemented or
+credited complete. Rex's native header, border, corners and shadow may remain
+visible. Go's rendered header/footer and semantic terminal colors are separate;
+no theme setting or painted border supplies native chrome control.
 
 Go selects `rex` once by ordinary execution-host PATH and independently selects
 its endpoint: explicit direct `--server` > nonempty `REX_SERVER` > bounded
