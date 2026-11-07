@@ -1,66 +1,16 @@
 package whichkey
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"temp/rex"
 )
-
-// resolveHostMenu expands only enabled, explicit known-hosts markers. All markers
-// share one bounded execution-host snapshot; neither --server nor popup/origin
-// identities select that inventory. No marker means no executable resolution or
-// inventory I/O, including for an explicitly empty/replaced user spec.
-func resolveHostMenu(ctx context.Context, config Config, selection *rex.CLISelection) (Config, error) {
-	if err := config.Validate(); err != nil {
-		return Config{}, err
-	}
-	requested := false
-	for _, mapping := range config.Spec {
-		if mapping.Enabled() && mapping.Provider == "known-hosts" {
-			requested = true
-			break
-		}
-	}
-	if !requested {
-		return config, nil
-	}
-	// Only the invocation's selected CLI path is reused. The independently
-	// retained endpoint does not retarget rex hosts' execution-host inventory.
-	inventory, readErr := rex.Hosts(ctx, rex.InventoryOptions{Selection: selection, Timeout: 3 * time.Second})
-	if err := ctx.Err(); err != nil {
-		return Config{}, err // Invocation cancellation/expiry is not a listing warning.
-	}
-	var expanded []Mapping
-	for _, mapping := range config.Spec {
-		if !mapping.Enabled() || mapping.Provider != menuProviderHosts {
-			expanded = append(expanded, mapping)
-			continue
-		}
-		rows, expandErr := expandedHostRows(mapping, inventory, readErr)
-		if expandErr != nil {
-			return Config{}, expandErr
-		}
-		expanded = append(expanded, rows...)
-		bounded := config
-		bounded.Spec = expanded
-		if err := menuSnapshotBound(bounded); err != nil {
-			return Config{}, err
-		}
-	}
-	config.Spec = expanded
-	if err := config.Validate(); err != nil {
-		return Config{}, fmt.Errorf("whichkey: expanded host menu: %w", err)
-	}
-	return config, nil
-}
 
 func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr error) ([]Mapping, error) {
 	keys, err := NormalizeKeys(mapping.Keys)
@@ -78,17 +28,19 @@ func expandedHostRows(mapping Mapping, inventory rex.HostInventory, readErr erro
 	} else {
 		budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
 		for range 2 {
-			if err := budget.reserve(len(mapping.Keys), 1); err != nil {
-				return nil, err
+			if boundErr := budget.reserve(len(mapping.Keys), 1); boundErr != nil {
+				return nil, boundErr
 			}
 		}
 		label := "Warning: inventory unavailable (read failed, timed out or invalid); not retried"
 		scope := "Inventory: execution host and its configured Rex home; reachability unknown"
 		rows = []Mapping{mapping, {Keys: mapping.Keys + "i", Group: &scope}, {Keys: mapping.Keys + "w", Group: &label}}
 	}
-	root := mapping
-	root.Provider = ""
-	rows[0] = root
+	pending, err := pendingProviderRows(mapping)
+	if err != nil {
+		return nil, err
+	}
+	rows[0] = pending[0]
 	for index := 1; index < len(rows); index++ {
 		rows[index].Hidden = mapping.Hidden
 	}
@@ -178,7 +130,7 @@ func (budget *menuKeyBudget) reserveFields(prefixBytes, count int) error {
 }
 
 // HostMenuMappings presents one effective rex.Hosts snapshot beneath prefix.
-// resolveHostMenu inserts these non-executable records before NewMenu, rejecting
+// The invocation controller inserts these non-executable records atomically, rejecting
 // collisions rather than overwriting user mappings. Every record is a group:
 // opening a host only shows its details, never selects an action or emits a
 // bridge completion.

@@ -5,12 +5,13 @@ Go reads JSON menu data, builds dynamic resource lists, renders the popup and
 performs operations through the Rex CLI. Lua only starts the installed binary.
 There is no daemon, executable Lua configuration or hook/callback facility.
 
-**Evidence:** the coordinator observed the normal public Go menu at
-`7bdbda2b1e1e9d55ced9d26cc03204d61f505c00` on Darwin arm64: root,
-Sessions → Switch, Backspace, Escape, process exit, terminal restoration and exact
-owned cleanup. That is Task2 evidence, not validation of this launcher/package
-revision, physical keybinding, selected action effects or other platforms.
-Final combined source review and coordinator runtime validation remain pending.
+**Evidence:** Phase16 CLI-only delivery is complete, including actual public
+menu/navigation/owned rename/dismissal/cleanup on Darwin arm64. Phase18 tasks1/2
+also have reviewed, integrated public-run evidence, including rename edits while
+loading and preservation after ready. This revision finishes draw-first,
+bounded async/on-demand inventories; its final combined review and comparable
+public timing/effect/cancel/cleanup checks remain pending. No installed-profile,
+physical-keybinding, all-provider or cross-platform success is claimed.
 See [acceptance](docs/acceptance.md).
 
 ## Install on the Rex server host

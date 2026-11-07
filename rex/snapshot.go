@@ -55,6 +55,20 @@ func (c *Client) SessionSnapshot(ctx context.Context, target string) (SessionSna
 // Session returns the exact captured session and its label at read time.
 func (v SessionSnapshot) Session() Session { return v.session }
 
+// Windows returns detached metadata in captured server tab order.
+func (v SessionSnapshot) Windows() []Window {
+	return append([]Window{}, v.windows...)
+}
+
+// Blocks returns detached placement metadata in captured window/layer order.
+func (v SessionSnapshot) Blocks() []Block {
+	blocks := make([]Block, 0)
+	for _, layer := range v.layers {
+		blocks = append(blocks, layer.blocks...)
+	}
+	return blocks
+}
+
 // Window returns an exact member, never a label, position or active-tab match.
 func (v SessionSnapshot) Window(id string) (Window, error) {
 	if !resourceID(id, "window") {

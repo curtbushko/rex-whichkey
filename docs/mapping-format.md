@@ -7,13 +7,13 @@ contract in the flat Go package. It reads files and returns an independent,
 validated configuration; it never invokes Rex, queries inventories, evaluates
 Lua, writes configuration or expands providers.
 
-The public entrypoint uses this loader, expands enabled providers once before
-popup sizing/PTY handoff, and dispatches retained selections through Go's Rex CLI
-resources after cleanup. It never queries Lua runtime/launch registrations.
-The coordinator observed Task2's default public menu/navigation/dismissal and
-owned cleanup on Darwin arm64 at `7bdbda2b1e1e9d55ced9d26cc03204d61f505c00`.
-That does not validate arbitrary JSON files, every action/provider, the minimal
-keybinding or the final combined package revision. See [acceptance](acceptance.md).
+The public entrypoint uses this loader, draws validated static groups/loading
+placeholders, and then loads eligible providers asynchronously. Go retains exact
+choices before publishing them and dispatches through Rex CLI resources only
+after cleanup. It never queries Lua runtime/launch registrations. Phase16 and
+Phase18 tasks1/2 have actual public Darwin evidence; final async runtime and
+comparable timing remain pending. This is not arbitrary-config, every-provider,
+keybinding or installed-profile certification. See [acceptance](acceptance.md).
 Legacy
 `DecodeConfig`, callback wire validation and `launchOutput` remain isolated for
 unchanged source tests, not as an alternative public configuration/control path.
@@ -163,15 +163,41 @@ All four are opt-in. The only existing default dynamic intent is `ws`, adapted
 by the consumer from `session.switch` to the sessions list. The loader leaves the
 current built-in record intact. It adds no other default provider row.
 
-The Go parent expands enabled markers once before sizing/PTY handoff, preserving
-source order and hidden display flags. Sessions use one bounded session snapshot;
-windows/panes list the origin Session's resources. Each resource provider rejects
-more than 512 resources, without truncation; all batches and the combined transport
-remain bounded and validated. Full IDs stay in retained targets and displayed rows.
+The static root is written before any provider demand or rename-label wait.
+Scheduling is invocation-local:
+
+- Enabled visible `sessions` / `session.switch` markers request one background
+  session list **after the first successful draw**. Hidden enabled sessions load
+  only on explicit prefix entry.
+- `windows` and `panes` load on first enabled prefix entry. They use the captured
+  matching origin session-view snapshot, including original ordering/current
+  markers, rather than re-inspecting for presentation.
+- `known-hosts` loads only on explicit enabled prefix entry. It uses listing-only
+  `rex hosts --json` on the execution host with its existing home semantics,
+  fields/warnings/limits; no endpoint probe, attach or reachability claim.
+- Disabled/condition-false/absent providers do no work. Hidden is still callable.
+  All markers of one kind share one in-flight attempt and terminal result,
+  **including errors**. Leaving/re-entering a prefix never retries. A new public
+  invocation obtains new snapshots; no persistent cache or refresh timer exists.
+
+At most two metadata jobs execute, including rename labels, with finite demand
+and result slots. Loading, unavailable warnings and empty inventories are distinct
+non-executable rows; no pending key/Enter/effect is buffered or replayed. Full IDs
+and exact target associations are retained before ready rows are published.
+Updates apply complete validated batches on the UI loop without changing the
+popup rectangle, active prefix/page/confirmation, form edits/cursor or terminal
+decoder state. Source order, hidden flags and More/Tab pagination remain.
+
+Each resource provider rejects more than 512 resources without truncation; the
+1024-child, key-byte and combined 4-MiB bounds still apply. Overflow/conflict or
+invalid expansion fails rather than showing a plausible partial ready menu.
 Stale/moved resources fail rather than retargeting by label, focus or position.
-Generated keys identify retained choices, not resource authority. Known-host
-details remain non-executable, including when inventory is unavailable; remote
-connect/management is not implied.
+Generated keys identify retained choices, not resource authority. Presentation
+reuse does not replace fresh pre-effect origin/GUI-generation/destination checks.
+Known-host details remain non-executable; remote connect/management is not implied.
+Standalone `menu` is UI/result-only: hosts have the same demand behavior; resource
+providers without native origin authority show unavailable, not fabricated targets.
+See the [private update contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates).
 
 `ValidateMenuProviderChildren(marker, children)` is the structural batch contract:
 

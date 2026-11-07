@@ -94,27 +94,39 @@ an independent canonical endpoint, invocation ID, inline-form enablement and a
 parent lifetime pipe.
 Those are private implementation files, not install-time helpers, public config
 or a callback channel.
-The child returns keys/confirmation/text and, for rename, the minimal retained
-update binding only; the parent retains resource/action authority and dispatches
-once after exact cleanup. There is no idle expiry.
+The child returns keys/confirmation/text and minimal rename/provider publication
+bindings only; the parent retains resource/action authority and dispatches once
+after exact cleanup. There is no idle expiry.
 
 The [private incremental contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates)
-is defined before the rename consumers: two single-publication demand slots and
-two update slots, strict bounded JSON, invocation/kind/load/canonical-prefix
-identity, nonblocking flock and fixed owned cleanup. One on-demand worker returns
-immutable label values from the already-required origin snapshot (or one exact
-session-view read if absent). The controller retains ready state before publishing;
-the UI loop alone applies it. Loading/unavailable forms remain editable/cancellable
-but cannot submit. Late labels cannot replace touched fields, validation errors,
-partial input or confirmation. Teardown cancels/joins the worker/controller and
-child lifetime watcher; errors block effects. No extra transport readers/writers
-or background terminal writer exist. Inventories remain eager at this step.
+uses twelve fixed single-publication slots: two form demand/update pairs and four
+provider demand/update pairs. Strict bounded JSON, invocation/kind/load identity,
+canonical demand prefixes and nonblocking flock preserve complete publications.
+The existing UI loop writes the static root first, then requests visible enabled
+sessions in background; hidden sessions, windows/panes/hosts wait for explicit
+enabled prefix entry. Labels wait for form entry. Absent/disabled providers do
+nothing. One in-flight/terminal result per kind includes errors and is reused by
+all matching markers without reopen retry.
 
-`rex.SessionSnapshot` is a small concrete per-invocation session-view value. It
-exposes detached typed Session/Window/Block metadata from one validated exact view,
-including original placement and labels, for current rename and later inventory
-reuse. It is not a generic cache or cross-invocation store. Ordinary resource
-`Inspect` methods continue to fetch fresh views; pre-effect freshness is unchanged.
+One small invocation scheduler runs at most two metadata jobs with two result
+slots. Workers return detached values; the controller alone retains complete
+mapping/target batches before publishing; only the UI loop applies/redraws.
+Updates preserve active prefix/page/confirmation/form edits/cursor and partial
+terminal decoding. Loading/unavailable rows cannot execute; forms remain
+editable/cancellable but cannot submit until ready. There is no buffered Enter.
+Cancellation/selection/error/parent loss stops and joins jobs/controller and the
+child lifetime watcher before result/cleanup permits effects. Errors propagate.
+No background terminal writer, extra service or persistent cache exists.
+
+`rex.SessionSnapshot` retains one validated exact origin session-view. Detached
+`Session()`, `Window(fullID)`, `Block(fullID)`, `Windows()` and `Blocks()` serve
+placement and same-read window/pane/rename presentation. This removes the prior
+presentation-only `Client.Session + Session.Windows/Blocks` inspect pairs.
+The sessions list and known hosts each have their own once-per-invocation result.
+Endpoint/session/placement matching is captured, never retargeted from later
+focus. Current `Inspect`, native origin, app owner/generation, destination,
+pre-create geometry consistency, liveness and cleanup checks intentionally remain
+fresh reads. Selected built-in action metadata remains off startup.
 
 The [fixed cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
 names all files/resources. Root-scoped fixed-name removal, no-follow/owner/mode
@@ -126,11 +138,13 @@ uncertain-effect retry is implied.
 
 ## Evidence and history
 
-Task2's integrated Go source was actually observed through normal public invocation
-on Darwin arm64 at `7bdbda2`; [acceptance](acceptance.md) identifies that limited
-menu/navigation/dismissal/cleanup result. This package/launcher revision is source
-work with parse/format/whitespace/Go compilation gates, not an installed Nix run.
-Final combined reviewed runtime remains a coordinator gate.
+Phase16 delivery is complete with actual final public menu/navigation/owned
+rename/dismissal/cleanup on Darwin arm64. Phase18 tasks1/2 add reviewed/integrated
+public runs, including pending rename edits preserved on ready. The current
+async source has format/whitespace/normal-build/vet gates; final combined source
+review and comparable public timing/effect/cancel/cleanup remain coordinator
+gates. [Acceptance](acceptance.md) records exact artifacts and limitations.
+No installed Nix/profile, physical-keybinding or cross-platform result is implied.
 
 Phase15's original-VM advertisement, protocol/layout anchor, completion receipts,
 finite startup barriers and public relay are **historical**, not startup

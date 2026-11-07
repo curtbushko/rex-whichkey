@@ -52,11 +52,10 @@ func launchNativePopup(parent context.Context, origin launchOrigin, selection *r
 	if appErr != nil && requested != "" {
 		return appErr
 	}
-	config, targets, err := prepareNativeMenu(ctx, client, origin, config)
-	if err != nil {
-		return err
-	}
-	message, err := nativePopupSelection(ctx, origin, selection, config, placement, &snapshot, noColor, ascii)
+	// Forms and provider placeholders need no nonessential inventory read.
+	config.textEntry = &textEntrySpec{}
+	state := nativeMenuState{config: config}
+	message, err := nativePopupSelection(ctx, origin, selection, &state, placement, &snapshot, noColor, ascii)
 	// No effects until terminal, owned popup, focus, pipe, files and captured
 	// source image retirement have succeeded. Uncertain cleanup is not retried.
 	err = errors.Join(err, origin.image.retire())
@@ -66,11 +65,11 @@ func launchNativePopup(parent context.Context, origin launchOrigin, selection *r
 	if message.Dismissed {
 		return nil
 	}
-	mapping, err := retainedNativeMapping(message, config)
+	mapping, err := retainedNativeMapping(message, state.config)
 	if err != nil {
 		return err
 	}
-	return dispatchNativeSelection(ctx, client, origin, placement, requested, mapping, message, targets, appErr)
+	return dispatchNativeSelection(ctx, client, origin, placement, requested, mapping, message, state.targets, appErr)
 }
 
 // App eligibility never gates resource-only display. A successful binding is
@@ -89,15 +88,11 @@ func captureNativeApp(ctx context.Context, client *rex.Client, origin launchOrig
 	return origin, nil
 }
 
-func prepareNativeMenu(ctx context.Context, client *rex.Client, origin launchOrigin, config Config) (Config, map[string]providerTarget, error) {
-	config, targets, err := nativeSessionMenu(ctx, client, origin, config)
-	if err != nil {
-		return Config{}, nil, err
-	}
-	// Enable inline forms, but do not fetch labels before interaction. The
-	// demand worker shares the already-required origin view when a form opens.
-	config.textEntry = &textEntrySpec{}
-	return config, targets, nil
+// Set only by the lifecycle after the controller is canceled and joined.
+// No worker writes memory visible to dispatch.
+type nativeMenuState struct {
+	config  Config
+	targets map[string]providerTarget
 }
 
 func retainedNativeMapping(message MenuEvent, config Config) (Mapping, error) {
@@ -257,17 +252,18 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 // nativePopupSelection only captures finish's validated result. No app lookup,
 // action, or second interactive UI can run inside finish's short operation context.
 // Returning success also requires the lifecycle's deferred cleanup to succeed.
-func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config, placement rex.Block, snapshot *rex.SessionSnapshot, noColor, ascii bool) (MenuEvent, error) {
+func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, state *nativeMenuState, placement rex.Block, snapshot *rex.SessionSnapshot, noColor, ascii bool) (MenuEvent, error) {
+	config := state.config
 	data, err := json.Marshal(config)
 	if err != nil {
 		return MenuEvent{}, errors.New("whichkey: cannot encode native menu configuration")
 	}
 	request := popupRequest{Configuration: string(data), Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-		image: origin.image, placement: &placement, snapshot: snapshot, noColor: noColor, ascii: ascii}
+		image: origin.image, placement: &placement, snapshot: snapshot, retained: state, noColor: noColor, ascii: ascii}
 	var retained MenuEvent
 	lifecycleErr := runPopupLifecycle(ctx, request, config, selection, func(_ context.Context, message MenuEvent) error {
 		if !message.Dismissed {
-			if _, selectionErr := retainedNativeMapping(message, config); selectionErr != nil {
+			if _, selectionErr := retainedNativeMapping(message, state.config); selectionErr != nil {
 				return selectionErr
 			}
 		} else if message.Selection != nil {
@@ -280,7 +276,7 @@ func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *r
 		return MenuEvent{}, lifecycleErr
 	}
 	if !retained.Dismissed {
-		if _, selectionErr := retainedNativeMapping(retained, config); selectionErr != nil {
+		if _, selectionErr := retainedNativeMapping(retained, state.config); selectionErr != nil {
 			return MenuEvent{}, selectionErr
 		}
 	}

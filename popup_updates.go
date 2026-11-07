@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -23,6 +22,15 @@ const (
 
 var renameDemandFiles = [2]string{"rename-tab-demand.json", "rename-session-demand.json"}
 var renameUpdateFiles = [2]string{"rename-tab-update.json", "rename-session-update.json"}
+
+// Literal transport inventory shared by creation and exact cleanup.
+func popupUpdateFiles() []string {
+	names := make([]string, 0, 12)
+	names = append(names, renameDemandFiles[:]...)
+	names = append(names, renameUpdateFiles[:]...)
+	names = append(names, providerDemandFiles[:]...)
+	return append(names, providerUpdateFiles[:]...)
+}
 
 type renameDemand struct {
 	Invocation string `json:"invocation"`
@@ -129,7 +137,7 @@ func transferRenameSlot(root *os.Root, name string, write []byte) (data []byte, 
 
 func publishRenameSlot(file *os.File, size int64, data []byte) ([]byte, bool, error) {
 	if size != 0 {
-		return nil, false, errors.New("whichkey: duplicate rename publication")
+		return nil, false, errors.New("whichkey: duplicate metadata publication")
 	}
 	n, err := file.Write(data)
 	if err != nil || n != len(data) {
@@ -181,12 +189,17 @@ func loadRenameLabels(ctx context.Context, client *rex.Client, request popupRequ
 // Only run's goroutine changes these fields. The lifecycle reads retained state
 // only after stop joins it; the worker's sole publication is its value channel.
 type popupRenameUpdates struct {
-	cancel     context.CancelFunc
-	stopped    chan struct{}
-	outcome    error
-	invocation string
-	retained   [2]*renameUpdate
-	published  [2]bool
+	cancel            context.CancelFunc
+	stopped           chan struct{}
+	outcome           error
+	invocation        string
+	retained          [2]*renameUpdate
+	published         [2]bool
+	config            Config
+	targets           map[string]providerTarget
+	providerDemands   [4]*renameDemand
+	providerRetained  [4]*providerUpdate
+	providerPublished [4]bool
 }
 
 func startPopupRenameUpdates(parent context.Context, cancelLifecycle context.CancelCauseFunc, directory string,
@@ -197,7 +210,13 @@ func startPopupRenameUpdates(parent context.Context, cancelLifecycle context.Can
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	updates := &popupRenameUpdates{cancel: cancel, stopped: make(chan struct{}), invocation: request.invocationID}
+	initial, err := providerConfig(config, [4]*providerUpdate{})
+	if err != nil {
+		cancel()
+		return nil, errors.Join(err, root.Close())
+	}
+	updates := &popupRenameUpdates{cancel: cancel, stopped: make(chan struct{}), invocation: request.invocationID,
+		config: initial, targets: make(map[string]providerTarget)}
 	go func() {
 		defer close(updates.stopped)
 		updates.outcome = errors.Join(updates.run(ctx, root, request, client, config), root.Close())
@@ -215,48 +234,119 @@ func (u *popupRenameUpdates) stop() error {
 }
 
 func (u *popupRenameUpdates) run(ctx context.Context, root *os.Root, request popupRequest, client *rex.Client, config Config) error {
-	jobs, cancel := context.WithCancel(ctx)
-	var worker sync.WaitGroup
-	defer func() { cancel(); worker.Wait() }()
-	results := make(chan renameLabels, 1)
+	jobs := newMetadataJobs(ctx, request, client)
+	defer jobs.stop()
 	var demands [2]*renameDemand
 	var labels *renameLabels
-	started := false
 	ticker := time.NewTicker(20 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case result := <-results:
+		case result := <-jobs.results:
+			jobs.active--
 			if ctx.Err() != nil {
-				return nil // Cancellation cannot resurrect a publication.
+				return nil
 			}
-			labels = &result
+			if result.kind == metadataRenameKind {
+				labels = &result.labels
+			} else if err := u.retainProviderResult(config, result); err != nil {
+				return err
+			}
 		case <-ticker.C:
 		}
-		newDemand, demandErr := u.readDemands(ctx, root, config, &demands)
-		if demandErr != nil {
-			return demandErr
+		newDemand, err := u.readDemands(ctx, root, config, &demands)
+		if err != nil {
+			return err
 		}
-		if newDemand && !started && ctx.Err() == nil {
-			started = true
-			worker.Add(1)
-			go func() {
-				defer worker.Done()
-				result := loadRenameLabels(jobs, client, request)
-				select {
-				case results <- result:
-				case <-jobs.Done():
-				}
-			}()
+		if newDemand {
+			jobs.wanted[metadataRenameKind] = true
 		}
+		if err := u.readProviderDemands(ctx, root, config); err != nil {
+			return err
+		}
+		for kind, demand := range u.providerDemands {
+			jobs.wanted[kind] = demand != nil
+		}
+		jobs.start()
 		if labels != nil {
 			if err := u.publish(ctx, root, demands, *labels); err != nil {
 				return err
 			}
 		}
+		if err := u.publishProviders(ctx, root); err != nil {
+			return err
+		}
 	}
+}
+
+func (u *popupRenameUpdates) retainProviderResult(config Config, result metadataResult) error {
+	demand := u.providerDemands[result.kind]
+	if demand == nil {
+		return errRuntimeStartup
+	}
+	update, targets, err := buildProviderUpdate(config, *demand, result)
+	if err != nil {
+		return err
+	}
+	ready := u.providerRetained
+	ready[result.kind] = &update
+	next, err := providerConfig(config, ready)
+	if err != nil {
+		return err
+	}
+	// The controller is the sole owner until stop joins it. Exact mappings,
+	// args and placement are retained BEFORE the first ready publication byte.
+	u.config, u.providerRetained = next, ready
+	for key, target := range targets {
+		u.targets[key] = target
+	}
+	return nil
+}
+
+func (u *popupRenameUpdates) publishProviders(ctx context.Context, root *os.Root) error {
+	for kind, update := range u.providerRetained {
+		if ctx.Err() != nil {
+			return nil
+		}
+		if update == nil || u.providerPublished[kind] {
+			continue
+		}
+		data, err := json.Marshal(update)
+		if err != nil {
+			return err
+		}
+		_, u.providerPublished[kind], err = transferRenameSlot(root, providerUpdateFiles[kind], data)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (u *popupRenameUpdates) readProviderDemands(ctx context.Context, root *os.Root, config Config) error {
+	for kind, demand := range u.providerDemands {
+		if ctx.Err() != nil || demand != nil {
+			continue
+		}
+		data, ready, err := transferRenameSlot(root, providerDemandFiles[kind], nil)
+		if err != nil {
+			return err
+		}
+		if !ready {
+			continue
+		}
+		var next renameDemand
+		if err := decodeRuntime(data, &next, popupMessageLimit); err != nil {
+			return err
+		}
+		if err := validateProviderDemand(next, u.invocation, kind, config); err != nil {
+			return err
+		}
+		u.providerDemands[kind] = &next
+	}
+	return nil
 }
 
 func (u *popupRenameUpdates) readDemands(ctx context.Context, root *os.Root, config Config, demands *[2]*renameDemand) (bool, error) {
@@ -306,17 +396,41 @@ func (u *popupRenameUpdates) publish(ctx context.Context, root *os.Root, demands
 	return nil
 }
 
+func (u *popupRenameUpdates) validateProviderSelection(event MenuEvent, mapping Mapping) error {
+	for kind, update := range u.providerRetained {
+		if update == nil {
+			continue
+		}
+		for _, row := range update.Rows {
+			if row.Keys != mapping.Keys || row.Action == "" {
+				continue
+			}
+			if !u.providerPublished[kind] || event.provider == nil || *event.provider != update.Binding {
+				return errors.New("whichkey: provider selection has no matching retained ready publication")
+			}
+			return nil
+		}
+	}
+	if event.provider != nil {
+		return errors.New("whichkey: unexpected provider selection binding")
+	}
+	return nil
+}
+
 // Called only after stop. The binding adds no resource/action authority: keys
 // still select the original retained mapping/args and exact origin target.
 func (u *popupRenameUpdates) validateSelection(event MenuEvent, config Config) error {
 	if event.Dismissed {
-		if event.update != nil {
+		if event.update != nil || event.provider != nil {
 			return errRuntimeStartup
 		}
 		return nil
 	}
 	mapping, err := retainedNativeMapping(event, config)
 	if err != nil {
+		return err
+	}
+	if err := u.validateProviderSelection(event, mapping); err != nil {
 		return err
 	}
 	kind := renameKind(mapping)

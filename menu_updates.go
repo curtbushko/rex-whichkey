@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strings"
 )
 
 // This context value carries an owned root, not a reader goroutine. Only the
@@ -120,6 +121,183 @@ func validateRenameUpdate(update renameUpdate, demand renameDemand) error {
 	}
 	if update.State == renameStateUnavailable && (update.Initial != "" || update.Problem == "") {
 		return errors.New("whichkey: invalid unavailable rename presentation")
+	}
+	return nil
+}
+
+type menuProviderUpdates struct {
+	base       Config
+	invocation string
+	wanted     [4]*renameDemand
+	sent       [4]bool
+	ready      [4]*providerUpdate
+}
+
+// Called only after the first successful draw, or after explicit prefix entry.
+// Hidden markers remain callable but never trigger the sessions background load.
+func (m *Menu) demandProviders(firstDraw bool) {
+	if m.providers == nil || m.Done() {
+		return
+	}
+	for _, marker := range m.providers.base.Spec {
+		kind := providerKind(marker)
+		if !marker.Enabled() || kind < 0 || m.providers.wanted[kind] != nil {
+			continue
+		}
+		background := firstDraw && kind == 0 && !marker.Hidden
+		entered := !firstDraw && (m.Prefix() == marker.Keys || strings.HasPrefix(m.Prefix(), marker.Keys))
+		if background || entered {
+			m.providers.wanted[kind] = &renameDemand{Invocation: m.providers.invocation, Kind: providerKinds[kind], Load: 1, Keys: marker.Keys}
+		}
+	}
+}
+
+func (m *Menu) pollUpdates(transport terminalRenameTransport, localJobs *metadataJobs) (bool, error) {
+	if localJobs != nil {
+		return m.pollLocalProviders(localJobs)
+	}
+	renameChanged, err := m.pollRenameUpdates(transport)
+	if err != nil {
+		return false, err
+	}
+	providerChanged, err := m.pollProviderUpdates(transport)
+	return renameChanged || providerChanged, err
+}
+
+func (m *Menu) pollLocalProviders(jobs *metadataJobs) (bool, error) {
+	for kind, demand := range m.providers.wanted {
+		jobs.wanted[kind] = demand != nil
+	}
+	changed := false
+	select {
+	case result := <-jobs.results:
+		jobs.active--
+		if err := jobs.ctx.Err(); err != nil {
+			return false, err
+		}
+		demand := m.providers.wanted[result.kind]
+		if demand == nil {
+			return false, errRuntimeStartup
+		}
+		update, _, err := buildProviderUpdate(m.providers.base, *demand, result)
+		if err != nil {
+			return false, err
+		}
+		if err := m.applyProviderUpdate(result.kind, update); err != nil {
+			return false, err
+		}
+		changed = true
+	default:
+	}
+	jobs.start()
+	return changed, nil
+}
+
+func (m *Menu) pollProviderUpdates(transport terminalRenameTransport) (bool, error) {
+	changed := false
+	for kind, demand := range m.providers.wanted {
+		if demand == nil || m.providers.ready[kind] != nil {
+			continue
+		}
+		if !m.providers.sent[kind] {
+			data, err := json.Marshal(demand)
+			if err != nil {
+				return false, err
+			}
+			_, sent, err := transferRenameSlot(transport.root, providerDemandFiles[kind], data)
+			if err != nil {
+				return false, err
+			}
+			m.providers.sent[kind] = sent
+			if !sent {
+				continue
+			}
+		}
+		data, ready, err := transferRenameSlot(transport.root, providerUpdateFiles[kind], nil)
+		if err != nil {
+			return false, err
+		}
+		if !ready {
+			continue
+		}
+		var update providerUpdate
+		if err := decodeRuntime(data, &update, popupMessageLimit); err != nil {
+			return false, err
+		}
+		if err := m.applyProviderUpdate(kind, update); err != nil {
+			return false, err
+		}
+		changed = true
+	}
+	return changed, nil
+}
+
+// Rebuild/validate off to the side, then rebind the existing interaction state
+// in one UI-loop operation. Decoder state lives outside Menu and is untouched;
+// form value/cursor/touched/error and confirmed text remain the same objects.
+func (m *Menu) applyProviderUpdate(kind int, update providerUpdate) error {
+	if m.Done() || m.providers.wanted[kind] == nil || m.providers.ready[kind] != nil {
+		return errors.New("whichkey: provider update after terminal state")
+	}
+	if err := validateProviderUpdate(m.providers.base, *m.providers.wanted[kind], update); err != nil {
+		return err
+	}
+	ready := m.providers.ready
+	ready[kind] = &update
+	config, err := providerConfig(m.providers.base, ready)
+	if err != nil {
+		return err
+	}
+	next, err := NewMenu(config.Spec)
+	if err != nil {
+		return err
+	}
+	if err := m.rebindMenu(next); err != nil {
+		return err
+	}
+	m.providers.ready = ready
+	return nil
+}
+
+func menuNodeAt(root *menuNode, keys string) *menuNode {
+	if keys == "" {
+		return root
+	}
+	tokens, err := ParseKeys(keys)
+	if err != nil {
+		return nil
+	}
+	node := root
+	for _, token := range tokens {
+		node = node.lookup[token]
+		if node == nil {
+			return nil
+		}
+	}
+	return node
+}
+
+func (m *Menu) rebindMenu(next *Menu) error {
+	current := menuNodeAt(next.current, m.Prefix())
+	if current == nil {
+		return errors.New("whichkey: provider update changed active prefix")
+	}
+	var pending, entry *menuNode
+	if m.pending != nil {
+		pending = menuNodeAt(next.current, m.pending.keys)
+		if pending == nil {
+			return errors.New("whichkey: provider update changed confirmation")
+		}
+	}
+	if m.entry != nil {
+		entry = menuNodeAt(next.current, m.entry.node.keys)
+		if entry == nil {
+			return errors.New("whichkey: provider update changed active form")
+		}
+	}
+	m.current, m.pending = current, pending
+	if m.entry != nil {
+		m.entry.node = entry
 	}
 	return nil
 }

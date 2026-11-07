@@ -7,8 +7,10 @@ There is no native session picker, app chooser, extra pane or navigation resize.
 ## Sessions → Switch
 
 The default `ws` / `session.switch` is a Go sessions-provider adapter.
-Enabled `sessions` markers use the same expansion. One bounded invocation snapshot
-is read through the frozen Rex CLI before sizing/PTY handoff:
+Enabled `sessions` markers use the same expansion. Visible enabled markers request
+one bounded list through the selected Rex CLI only after the static first draw;
+hidden enabled markers wait for explicit prefix entry. All markers share one
+in-flight attempt and terminal result, including failures:
 
 - Full typed IDs lead labels; the origin is marked `[current]`.
 - Keys 1–9 select rows; `n` opens More groups. Ordinary Tab paging,
@@ -17,7 +19,8 @@ is read through the frozen Rex CLI before sizing/PTY handoff:
   warning, not a successful empty inventory or picker fallback.
 - More than 512 resources is an error, not truncation. Expansion batches and
   combined transport have further validated bounds.
-- Redraw does not refresh inventory. Reopen to obtain a new snapshot.
+- Loading is non-executable and does not buffer keys/Enter. Redraw or re-entering
+  a prefix does not retry/refresh. Start a new invocation for a new snapshot.
 
 Destination IDs remain in the parent's retained mapping, not child-supplied
 authority. After exact cleanup, Go checks destination membership, original
@@ -26,9 +29,10 @@ placement and retained app/connection/owner and sends one unscoped
 session/block override substitutes for the destination. A removed session,
 reconnected app or uncertain effect refuses without retry or label/index fallback.
 
-Optional `windows` lists origin-session Windows with exact session/window
-selection; `panes` lists origin-session Blocks and focuses the retained Block
-only after placement revalidation. Neither is a default menu row.
+Optional `windows` and `panes` wait for first prefix entry and share the already
+captured origin session-view presentation: Windows retain exact session/window
+selection; Blocks retain exact placement and focus only after fresh revalidation.
+Neither is a default menu row.
 `known-hosts` remains listing-only. See [providers](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
 
 ## Sessions → Rename
@@ -49,11 +53,13 @@ apply to both session and tab rename.
 
 ## Evidence and history
 
-The coordinator actually observed Task2 root → Sessions → Switch with full IDs
-and current marker, Backspace to root, Escape, exit0 and exact cleanup at
-`7bdbda2` on Darwin arm64. It did **not** select a session or rename a resource.
-Final combined reviewed runtime and any benign owned selected effect remain
-pending; physical keybinding and config reload are not established.
+Phase16 final public menu/navigation/dismissal/cleanup and an exact owned inline
+rename were actually verified on Darwin arm64. Phase18 task2 additionally observed
+loading edits, ready preservation, cancel without rename, revisit/owned rename
+and exact cleanup. These runs do not certify final async provider behavior or
+session selection. Final combined source review and coordinator public
+first-frame/data-ready/action-ready, effect/cancel/cleanup checks remain pending;
+physical keybinding, installed profiles and config reload are not established.
 
 Historical bridge-era session guidance is preserved in Git at
 `cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/session-owned-ui.md`.
