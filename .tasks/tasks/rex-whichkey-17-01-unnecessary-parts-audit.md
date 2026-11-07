@@ -30,20 +30,20 @@ implementation:
       command: git diff --check
       required: true
 lifecycle:
-  state: planned
-  sourceEventID: null
-  changedAt: '2026-11-07T00:43:46.410Z'
+  state: building
+  sourceEventID: rex-whichkey-p17-t01-builder-a01/runtime/launched
+  changedAt: '2026-11-07T00:46:04.313Z'
 title: Document the evidence-backed unnecessary-parts audit
 mtnCreateRetry:
   key: rex-whichkey/phase17/task01-unnecessary-parts-audit/create/1
   intent: 222dd430a01a228668aed88cf8f720334f58d8d73980c47d0fcbffdc0eda40d3
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T00:43:47.063Z'
-dateModified: '2026-11-07T00:43:47.703Z'
+dateModified: '2026-11-07T00:46:04.968Z'
 tags:
   - task
 type: task
@@ -68,3 +68,22 @@ Acceptance 6: Supply a disposition matrix with each candidate, evidence, classif
 Acceptance 7: Preserve all production/tooling/config/dependency/lock files, tests/assertions/fixtures, hooks, lint standards, user state and history. No code/tool/dependency/config/doc-status fixes or removals; no startup profiling/benchmarks, asynchronous/goroutine/deferred-call/cache or executable-copy/hash/server-check optimization, performance or safety-policy design. No environment entry, shellHook, build, normal run, harness, experiment, activation, config/reload/restart/deployment/push or cache/worktree/history/global cleanup.
 
 Acceptance 8 and verification: Give explicit 1-8 criterion and seven-REQ traceability, source/evidence limitations, confirmed findings versus uncertainty, and a concise verification ledger. Use read-only source/Git/local-document checks plus required git diff --check only; do not invoke Task, hooks, Nix or tests indirectly. Before completion, a separate fresh reviewer must inspect the frozen report and referenced source independently for scope, classification, consumer tracing, evidence accuracy and preserved CLI-only behavior. Report reviewer findings and exact reviewed revision through the coordinator; the author must not claim independent review. Coordinator alone publishes native records, integrates and handles the requested phase commit. Only the report is writable; .tasks and parent evidence are read-only. Unavailable external/editor/platform facts remain explicit unresolved items rather than invented approval or a reason to expand scope.
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjQ1OjUxLjQzOVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiZGlzcGF0Y2giLCJyZXRyeUtleSI6InJleC13aGljaGtleS1wMTctdDAxL2Rpc3BhdGNoLzEiLCJpbnRlbnQiOiI4OGY1ZGM2Nzk2NjQ1OWJhNWU0Y2RlYjg0YjkwZmUzYjAzZDViMjhmODkzMmI4OWViN2UwYzQ5MjE5Y2FlMzVjIn0 -->
+### 2026-11-07T00:45:51.439Z · dispatch · unspecified
+
+{"allowedCommands":["read-only source/Git/native-record inspection","git diff --check","git -c core.hooksPath=/dev/null commit -- docs/unnecessary-parts-audit.md"],"allowedScope":{"interfaces":[],"paths":["docs/unnecessary-parts-audit.md"],"resources":[],"sharedPaths":[]},"attempt":1,"baseCommit":"cef25463b4dd58c99228d8f9b857ed3554a3164b","branch":"work/p17-t01-builder-a01","constraints":["No tests/build/run/benchmarks/shellHook or source/config/removal changes","Only existing coordinator publishes/integrates; one docs builder, no heavy gate","Existing unrelated parent flake.nix preserved outside worktree/commits"],"eventID":"rex-whichkey-p17-t01/dispatch/1","kind":"dispatch","readiness":"Native task/phase readiness, exact design approval and phase task plan_approved guard passed; legacy root ready-phase metadata facade unsupported and not migrated.","recordRef":"tasks/rex-whichkey-17-01-unnecessary-parts-audit.md","runID":"rex-whichkey-p17-t01-builder-a01","schemaVersion":1,"specHash":"sha256:efc85700f7bc5613ecb7c423eb19628f095c5669dec4a5e30b203c90829d74fb","targetBranch":"main","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p17-t01-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjQ2OjAwLjE5NloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNy10MDEtYnVpbGRlci1hMDEvcnVudGltZS9yZXNlcnZlZCIsImludGVudCI6IjI5N2U4MjA0ZGYzMDU3NDAwNTVlOTFhMmNlNTg0MzZlODNjNzRmM2I0ZjE5ODcyNmY4NjY1OTNhYTVmZTYwY2IifQ -->
+### 2026-11-07T00:46:00.196Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p17-t01/dispatch/1","eventID":"rex-whichkey-p17-t01-builder-a01/runtime/reserved","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-17-unnecessary-parts-audit.md","piSessionID":"rex-whichkey-p17-t01-builder-a01","piSessionName":"p17-t01-builder-a01","recordRef":"tasks/rex-whichkey-17-01-unnecessary-parts-audit.md","rexSessionName":"rex-whichkey-main","rexWindowName":"p17-t01-builder-a01","role":"builder","runID":"rex-whichkey-p17-t01-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"mtn-tasks","specHash":"sha256:efc85700f7bc5613ecb7c423eb19628f095c5669dec4a5e30b203c90829d74fb","stage":"reserved","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p17-t01-builder-a01","windowName":"p17-t01-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p17-t01-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjQ2OjAzLjU0NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNy10MDEtYnVpbGRlci1hMDEvcnVudGltZS9sYXVuY2hlZCIsImludGVudCI6IjIzNDA0Y2Y5NThiYjE5MDk0YjcwNTk0Yzk1YjU1OTZhZDAxYmIxNWRlMGFlMzYwNjNiODMwYWQ3YTU5M2QxODAifQ -->
+### 2026-11-07T00:46:03.544Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p17-t01/dispatch/1","eventID":"rex-whichkey-p17-t01-builder-a01/runtime/launched","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-17-unnecessary-parts-audit.md","piSessionID":"rex-whichkey-p17-t01-builder-a01","piSessionName":"p17-t01-builder-a01","provider":{"displayName":"p17-t01-builder-a01","name":"rex","resources":{"block":"block:01a1b378-3375-75b8-8687-5ab015ecee6f","endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","session":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","window":"window:01a1b378-3376-7829-93ba-61099a3cd6a9"}},"recordRef":"tasks/rex-whichkey-17-01-unnecessary-parts-audit.md","rexBlockID":"block:01a1b378-3375-75b8-8687-5ab015ecee6f","rexSessionID":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","rexSessionName":"rex-whichkey-main","rexWindowID":"window:01a1b378-3376-7829-93ba-61099a3cd6a9","rexWindowName":"p17-t01-builder-a01","role":"builder","runID":"rex-whichkey-p17-t01-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"mtn-tasks","specHash":"sha256:efc85700f7bc5613ecb7c423eb19628f095c5669dec4a5e30b203c90829d74fb","stage":"launched","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p17-t01-builder-a01","windowName":"p17-t01-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p17-t01-builder-a01"}
+<!-- mtn:end-entry:v1 -->

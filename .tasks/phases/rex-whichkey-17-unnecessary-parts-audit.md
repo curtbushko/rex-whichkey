@@ -19,8 +19,8 @@ scope:
       hash: 'sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b'
 lifecycle:
   state: incomplete
-  sourceEventID: rex-whichkey/phase17-task-plan/approved/1
-  changedAt: '2026-11-07T00:43:51.745Z'
+  sourceEventID: rex-whichkey-p17-planner-a01/release/launched
+  changedAt: '2026-11-07T00:46:12.455Z'
 title: 'Phase 17: Audit unnecessary parts (speed excluded)'
 mtnCreateRetry:
   key: rex-whichkey-phase17-unnecessary-parts-audit-create-v1
@@ -31,7 +31,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-06T23:49:04.081Z'
-dateModified: '2026-11-07T00:43:52.386Z'
+dateModified: '2026-11-07T00:46:13.092Z'
 tags:
   - task
 type: task
@@ -132,4 +132,16 @@ Use source/Git/native metadata inspection and a fresh independent source/report 
 ### 2026-11-07T00:43:50.999Z · plan · unspecified
 
 {"approvedBy":"coordinator under explicit user execution/bounded-decomposition authority","attempt":1,"coverage":[{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-001"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-002"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-003"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-004"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-014"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-015"},{"records":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"requirement":"REQ-016"}],"criterionCoverage":{"1":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"2":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"3":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"4":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"5":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"6":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"7":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"],"8":["tasks/rex-whichkey-17-01-unnecessary-parts-audit.md"]},"decision":"approved","decisionEvidence":"start the next phase with go-team. commit after each phase. Finish all phases; phase execution-authority/1 records accepted constraints and routine task planning authority.","documents":[{"hash":"sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b","ref":"designs/rex-whichkey-cli-only-menu.md"}],"eventID":"rex-whichkey/phase17-task-plan/approved/1","kind":"plan","normalization":"Planner proposed phase refs as typed governing documents. Kept their descriptive baseline/evidence references; typed document scope includes approved CLI-only design only, not delivery-phase records. No scope/acceptance change.","ownership":{"interfaces":[],"paths":["docs/unnecessary-parts-audit.md"],"resources":[],"sharedPaths":[]},"proposalArtifact":".mtn-tmp/p17/planner-result.json","recordRef":"phases/rex-whichkey-17-unnecessary-parts-audit.md","records":[{"dependencies":[],"ref":"tasks/rex-whichkey-17-01-unnecessary-parts-audit.md","requirements":["REQ-001","REQ-002","REQ-003","REQ-004","REQ-014","REQ-015","REQ-016"],"specHash":"sha256:efc85700f7bc5613ecb7c423eb19628f095c5669dec4a5e30b203c90829d74fb"}],"requirements":["REQ-001","REQ-002","REQ-003","REQ-004","REQ-014","REQ-015","REQ-016"],"schemaVersion":1,"specHash":"sha256:69c39657459baf2f3373a3a9b28b15a147033e2a680a5e34596777310165eb2f","verificationPolicy":"Audit/source/doc inspection and git diff --check, independent combined report/source review; no code/tool/config changes, performance or prohibited tests/build/run."}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjQ2OjA4LjMyNloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicmVsZWFzZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNy1wbGFubmVyLWEwMS9yZWxlYXNlL3Jlc2VydmVkIiwiaW50ZW50IjoiNGMzNGYwZWI5MWJiNTBmMjRmNzU2ZmY2YjE5ZmUyYWY0YTdjMTdhMTI4MTUyZjkyMmI4NTZkYWQzNGQ5MjgzNSJ9 -->
+### 2026-11-07T00:46:08.326Z · release · unspecified
+
+{"artifact":".mtn-tmp/p17/planner-result.json","attempt":1,"dispatchEventID":"rex-whichkey-p17-planner-a01/runtime/reserved","eventID":"rex-whichkey-p17-planner-a01/release/reserved","evidence":"mtn-rex result retrieved validated single final JSON only after trusted Pi exit0; successful worker auto-closed. Planner no source writes; one coherent proposal persisted as task/approved plan.","kind":"release","outcome":"finished","recordRef":"phases/rex-whichkey-17-unnecessary-parts-audit.md","runID":"rex-whichkey-p17-planner-a01","schemaVersion":1,"specHash":"sha256:69c39657459baf2f3373a3a9b28b15a147033e2a680a5e34596777310165eb2f"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjQ2OjExLjY5OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicmVsZWFzZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxNy1wbGFubmVyLWEwMS9yZWxlYXNlL2xhdW5jaGVkIiwiaW50ZW50IjoiOGU4NDk4M2M0NzM3MzVlMDk0YzFmMDFiMWNiZWI2Mzk4OWRhYWI4ODg1NTc1MWZjNWFmYmIyMDFlY2UwY2UxZSJ9 -->
+### 2026-11-07T00:46:11.699Z · release · unspecified
+
+{"artifact":".mtn-tmp/p17/planner-result.json","attempt":1,"dispatchEventID":"rex-whichkey-p17-planner-a01/runtime/launched","eventID":"rex-whichkey-p17-planner-a01/release/launched","evidence":"mtn-rex result retrieved validated single final JSON only after trusted Pi exit0; successful worker auto-closed. Planner no source writes; one coherent proposal persisted as task/approved plan.","kind":"release","outcome":"finished","recordRef":"phases/rex-whichkey-17-unnecessary-parts-audit.md","runID":"rex-whichkey-p17-planner-a01","schemaVersion":1,"specHash":"sha256:69c39657459baf2f3373a3a9b28b15a147033e2a680a5e34596777310165eb2f"}
 <!-- mtn:end-entry:v1 -->
