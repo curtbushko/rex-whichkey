@@ -64,20 +64,20 @@ implementation:
       command: task lint
       required: false
 lifecycle:
-  state: planned
-  sourceEventID: null
-  changedAt: '2026-11-07T00:54:23.800Z'
+  state: building
+  sourceEventID: rex-whichkey-p18-t02-builder-a01/runtime/launched
+  changedAt: '2026-11-07T01:28:27.002Z'
 title: '18-02: Add safe incremental UI and on-demand rename labels'
 mtnCreateRetry:
   key: rex-whichkey-p18/create/18-02/v1
   intent: 5189028b138ebcc7e36a91c8cf5c929c94648937e966e34369fa750314a2f20e
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T00:54:24.450Z'
-dateModified: '2026-11-07T00:54:27.677Z'
+dateModified: '2026-11-07T01:28:27.619Z'
 tags:
   - task
 type: task
@@ -97,3 +97,23 @@ Remove eager label fetching in prepareNativeMenu. Resolve session/tab presentati
 Introduce only the small concrete Rex session-view snapshot helper needed to share the already-required origin view and label/window/block metadata; expose detached exact typed resources, not a generic cache/port layer. Preserve strict existing field/ID/placement validation and ordinary fresh Inspect methods. T3 will consume the same invocation snapshot for inventories. Existing non-label inventories may remain eager in this intermediate revision; document this honestly rather than claim final first-frame behavior. No background inventory implementation or broad resource rewrite is required here.
 
 Acceptance: independent frozen source/concurrency/lifetime review must trace producer-before-consumer retention, single UI writer, bounded cancellation/join, stale-result rejection, unchanged authoritative result matching, rename editing and pre-effect safety. Run owned-file gofmt/whitespace, task build and task lint:vet with the pinned budget; no tests/harnesses. Coordinator combined public run must show real menu, enter an owned-resource rename form, edit/cancel while presentation is pending where ordinarily observable, revisit and complete one benign inline rename on an explicitly disposable owned tab/session, observe the exact renamed ID and cleanup-before-effect, plus ordinary cancellation/dismissal/restoration/private cleanup. Do not artificially delay/stub APIs to manufacture pending state; report any unobservable transition as a runtime limitation supported only by source review. Do not edit user config, reload, use a private ACK, or claim remaining eager inventories are asynchronous.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjI4OjEzLjY1MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiZGlzcGF0Y2giLCJyZXRyeUtleSI6InJleC13aGljaGtleS1wMTgtdDAyL2Rpc3BhdGNoLzEiLCJpbnRlbnQiOiI1MzYwYWMzZjYzN2ZiOWM3MWUxZGEwODJlY2Q3YmZhMGZmZTU0YTQ4NDY5ZWZkNWZlOTg0MTE5OTgyZTk2NDJjIn0 -->
+### 2026-11-07T01:28:13.650Z · dispatch · unspecified
+
+{"allowedCommands":["owned source/format/whitespace","task build","task lint:vet","optional unchanged lint diagnostic","per-command hooksPath=/dev/null commit"],"allowedScope":{"interfaces":["STARTUP-UI-UPDATES","REX-SESSION-VIEW-SNAPSHOT"],"paths":["rex/snapshot.go","rex/session.go","rex/block.go","rex/window.go","native.go","popup.go","runtime_bootstrap.go","popup_updates.go","menu_updates.go","terminal.go","menu.go","render.go","text_entry.go","native_text_entry.go","docs/runtime-bootstrap.md","docs/launch-contract.md","docs/tab-rename-input.md"],"resources":[],"sharedPaths":[]},"attempt":1,"baseCommit":"9b04332759fb0132cab4d4d5a26daae87afb8dec","branch":"work/p18-t02-builder-a01","constraints":["No tests/harnesses/benchmarks/fake delays, all assertions/standards protected","Coordinator alone native writes/integrates/actual public owned runtime","No config/reload/deploy/remote/pins/profile changes; separate flake.nix preserved","Real on-demand rename vertical slice, no dormant update framework; inventories remain later task"],"eventID":"rex-whichkey-p18-t02/dispatch/1","kind":"dispatch","limits":{"builders":1,"cpu":14,"gates":1,"goMemoryLimit":"5GiB","integrations":1,"reviewers":1,"totalMemoryGiB":6},"prerequisiteProof":"Task18-01 exact completed summary/source ancestor/native done; current native dependency ready. Current approved task plan/doc fingerprints unchanged.","recordRef":"tasks/rex-whichkey-18-02-incremental-ui.md","runID":"rex-whichkey-p18-t02-builder-a01","schemaVersion":1,"specHash":"sha256:20ffc690aaef3b181e58c5353f9f658edd0dff80cf9f6b10cab1b30d9c1de15d","targetBranch":"main","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t02-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjI4OjIyLjYwNFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOC10MDItYnVpbGRlci1hMDEvcnVudGltZS9yZXNlcnZlZCIsImludGVudCI6IjQ4NGRkYzYxZmJhMzgxZTIxZGQ0NDI0ZTY1YzNjN2IzNGQ1YjA1YTFiZTY2MzI5MmM5NTM4NmJjNzhiZTY5OWEifQ -->
+### 2026-11-07T01:28:22.604Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p18-t02/dispatch/1","eventID":"rex-whichkey-p18-t02-builder-a01/runtime/reserved","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-18-startup-speed.md","piSessionID":"rex-whichkey-p18-t02-builder-a01","piSessionName":"p18-t02-builder-a01","recordRef":"tasks/rex-whichkey-18-02-incremental-ui.md","rexSessionName":"rex-whichkey-main","rexWindowName":"p18-t02-builder-a01","role":"builder","runID":"rex-whichkey-p18-t02-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-builder","specHash":"sha256:20ffc690aaef3b181e58c5353f9f658edd0dff80cf9f6b10cab1b30d9c1de15d","stage":"reserved","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p18-t02-builder-a01","windowName":"p18-t02-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t02-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjI4OjI2LjE2MFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOC10MDItYnVpbGRlci1hMDEvcnVudGltZS9sYXVuY2hlZCIsImludGVudCI6IjBkM2IwNjNiMDE0NzcwNDJiNTUyMzUwYmViN2Y2Njc2ZjI5ZGE4YWNhNWU0YTY1NjQxMWYyMDIzNDRkZGI0MWYifQ -->
+### 2026-11-07T01:28:26.160Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p18-t02/dispatch/1","eventID":"rex-whichkey-p18-t02-builder-a01/runtime/launched","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-18-startup-speed.md","piSessionID":"rex-whichkey-p18-t02-builder-a01","piSessionName":"p18-t02-builder-a01","provider":{"displayName":"p18-t02-builder-a01","name":"rex","resources":{"block":"block:01a1b39e-ff21-72ab-a42f-9ea213e7b9ce","endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","session":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","window":"window:01a1b39e-ff22-738a-a5f0-9abc68a0a4a9"}},"recordRef":"tasks/rex-whichkey-18-02-incremental-ui.md","rexBlockID":"block:01a1b39e-ff21-72ab-a42f-9ea213e7b9ce","rexSessionID":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","rexSessionName":"rex-whichkey-main","rexWindowID":"window:01a1b39e-ff22-738a-a5f0-9abc68a0a4a9","rexWindowName":"p18-t02-builder-a01","role":"builder","runID":"rex-whichkey-p18-t02-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-builder","specHash":"sha256:20ffc690aaef3b181e58c5353f9f658edd0dff80cf9f6b10cab1b30d9c1de15d","stage":"launched","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p18-t02-builder-a01","windowName":"p18-t02-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t02-builder-a01"}
+<!-- mtn:end-entry:v1 -->
