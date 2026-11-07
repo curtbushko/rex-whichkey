@@ -1,89 +1,95 @@
-# Release evidence: CLI-only Phase16
+# Release evidence: CLI-only delivery and async startup
 
-## Current scope and status
+## Verified delivery versus current candidate
 
-Accepted direction `REXWHICHKEY-20261106-114935`: Go reads data, expands
-providers, owns menu/lifecycle and performs Rex CLI operations; Lua only starts
-the binary. Functions/callbacks/hooks are deferred, not implemented or credited
-as REQ-005 completion. Historical Lua registration/bridge requirements are not
-startup prerequisites.
+Accepted CLI-only direction `REXWHICHKEY-20261106-114935`: Go owns data,
+providers, menu/lifecycle and Rex CLI operations; Lua only starts the binary.
+Functions/callbacks/hooks remain deferred, not credited as REQ-005 completion.
+Accepted startup refinement `REXWHICHKEY-20261106-191113` permits PATH-only
+executables, draw-first async/on-demand metadata and invocation query reuse.
+Neither document intent nor a build is runtime proof.
 
-Task1 delivered strict version-1 JSON loading/defaults/action/provider contracts.
-Task2 delivered the real public Go menu and was actually observed by the
-coordinator. Task3 reduces Lua, retires obsolete production modules, supplies
-ordinary package/HM assets and updates migration/active docs.
-**Task3 source readiness is not task/phase completion.** Independent combined
-source review, integration build and final coordinator-observed public runtime
-remain pending at this documentation revision.
+**Phase16 is complete**, not waiting on a package/launcher cutover. Final main
+`9fa9310b1398672fdc0f78823d96cff0f6ec0292` was built and run through the
+ordinary no-argument public path on Darwin arm64. Evidence:
+`.mtn-tmp/p16/final-main-public-runtime-evidence.json` in the coordinator
+checkout, plus its linked `.mtn-tmp/p16/task3-public-runtime-evidence.json`.
+Observed root, full-ID/current-marker Switch inventory, navigation, Escape,
+exit0, terminal restoration, exact popup/private cleanup and origin focus.
+An exact disposable owned tab was renamed to `p16-owned-cli-rename` in the
+linked owned-effect run. Earlier task2 observation at `7bdbda2` remains valid
+historical prerequisite evidence, not the final Phase16 boundary.
 
-## Observed delivered prerequisite: Task2
+Phase17's independent audit at `b1902ca` is a baseline-bound recommendations
+report, not authority for unrelated cleanup in this task.
 
-- Summary: `rex-whichkey-p16-t02/summary/2`.
-- Reviewed source: `eaec24a`; integrated observed candidate:
-  `7bdbda2b1e1e9d55ced9d26cc03204d61f505c00`.
-- Binary SHA256:
-  `7e2dd251be2f5847d45e772b6e4be01e59ed71b21aecf5655d44238fd28b4a62`.
-- Evidence: `.mtn-tmp/p16/task2-public-runtime-evidence.json` in the coordinator
-  checkout; preserved binary `.mtn-tmp/p16/task2-observed-rex-whichkey`.
-- Entry: normal `task run`, no public args, Darwin arm64, explicitly
-  coordinator-owned validation terminal/window in the existing Rex session.
-- Observed: default root, Sessions, Go Switch session choices with full IDs,
-  current marker and two-session inventory; Backspace to root; ordinary Escape.
-- Observed cleanup: exit0, parent primary terminal, exact owned popup Layer/Block
-  removed, origin focus restored, invocation-private directory removed.
-  Coordinator subsequently closed only its owned validation window.
-- Not exercised: selected action effect/rename, custom JSON/provider matrix,
-  physical key, user config reload, Linux/remote or Nix/HM installation.
-  This is prerequisite evidence, **not** this final combined candidate's run.
+## Phase18 delivered prerequisites
 
-Task2's original build-path worktree was removed after delivery; the preserved
-binary/evidence identify what was actually observed. Historical tests were not
-run. Optional full lint retained inherited diagnostics, not a global green claim.
+Artifacts below are coordinator-owned under `.mtn-tmp/p18/`:
 
-## Task3 source and validation inventory
-
-| Surface | Source intent / evidence boundary |
+| Revision/evidence | Actually observed scope |
 | --- | --- |
-| `lua/rex_whichkey.lua` | Documented detached argument-array start only; exact context env with missing IDs removed; immediate error, handled true; start handle is not display proof |
-| Example keybinding | Function rex.bind, example key only, no user's key installed/reloaded |
-| Retired Lua config/evaluate/mapping/dispatch/defaults/anchor | Exact original tree archived under tests/fixtures/phase15-lua, excluded from package and unreachable from launcher |
-| Three tests/lua scripts | Only package.path plumbing redirected; every old assertion/body preserved; no harness execution or current-launch coverage claim |
-| All Go tests/standards/Taskfile/hooks | Unchanged; no tests, skips, suppression or suite execution |
-| Ordinary Nix package | Real bin image, optional libexec Rex symlink, minimal launcher/examples/docs; pins/platform/native assets retained; no runtime policy/wrapper/helper layout |
-| Home Manager | Opt-in package plus one conflict-safe file link, no recursive namespace/init/data/config-directory ownership |
-| Migration | Manual literal-data conversion with explicit unsupported functions/hooks; no silent user-data discard or automatic Lua execution/conversion |
+| Baseline `9634246b7e4edbc8bed59210466cac492ddf2f0f`; `baseline-public-evidence.json` | Ordinary public root, later full-ID/current-marker Switch inventory and owned rename form (cancel only), dismissal/cleanup. Coarse observed first-visible-frame upper bound about **2.74s**, not exact rendering latency. |
+| Task1 `cc3a320dbbf3ef05bbb959f71feed4f3dae1bced`; `task1-public-evidence.json` | Reviewed/integrated PATH-only path; actual public root/inventory/owned rename form cancel/dismissal/exact cleanup. Coarse upper bound about **0.80s**; REX_BIN_DIR removal was intentional PATH-policy verification. Inventories/labels were still eager. |
+| Task2 `6c5c9ed67c8adde938a620cd86d55f777f665b18`; `task2-public-evidence.json` | Reviewed/integrated incremental rename path; actual loading form with Enter disabled and user edits, exact text preserved on ready, cancel without rename, revisit/one exact owned tab rename, separate dismissal, exit0/origin focus/exact popup/private cleanup. Inventories remained eager. |
 
-Allowed leaf gates are whitespace, Nix parse-only, alejandra check and normal
-Go compilation via `task build`, with exact commands/results in the builder's
-revision-bound build payload. This prose does not claim an unrecorded gate pass,
-source review approval, Nix evaluation/build/activation or deployed package result.
+Task2's native completion summary is committed at `17eb2f2`, the task3 source
+base. The timing observations include CLI capture latency and poll jitter;
+the previous negative observation is not a strict lower bound. Data/action
+completion timestamps were not separately measured. There is **no approved
+numeric SLA** and no final async speedup claim. No synthetic delays or fake APIs
+were used to manufacture loading.
+
+## Current async source acceptance map
+
+Task3 implements the remaining production consumers, not a new service:
+
+| Criterion | Source boundary |
+| --- | --- |
+| First draw before nonessential waits | `native.go` captures required endpoint/origin/app intent and a matching session view; no eager provider expansion remains. `terminal.go` writes the validated static root before demanding sessions or starting standalone jobs. `popup_initial.go` sizes static/loading groups once. |
+| Scheduling and terminal reuse | `menu_updates.go` demands visible enabled sessions after successful first draw; hidden sessions/windows/panes/hosts on enabled prefix entry. `popup_updates.go` validates fixed demands; `providers.go` runs at most two metadata jobs, five once-only kinds, two result slots. All markers share a kind result/error, with no reopen retry. Disabled/absent markers do no work. |
+| Query reuse versus freshness | `rex/snapshot.go` detached lists/lookups serve captured placement, window/pane rows and rename labels. Prior presentation-only Session + Windows/Blocks inspect pairs are removed. Sessions list and hosts each load once. Fresh Inspect/native-origin/app-generation/destination/pre-create geometry/liveness/cleanup checks remain uncached. Built-in actions are read only after selection. |
+| Parent authority and atomic UI | `popup_updates.go` retains complete mappings/args/pane targets before writing ready bytes. Provider selections carry only keys/confirmation/invocation-kind-load binding. `menu_updates.go` validates complete batches, then rebinds the same prefix/page/confirmation/form state; only the UI loop writes the terminal. Partial decoding and edited value/cursor survive; pending/error rows cannot execute or replay Enter. |
+| Bounds and cleanup | 512 resources, existing child/key-byte/4-MiB and known-host bounds remain; overflow/conflict fails, not truncates. No navigation/update resize. Jobs and transport cancel/join on exits; controller/root errors propagate before exact popup/focus/files/image retirement and effects. All twelve update/demand slots are in fixed cleanup. Standalone remains result-only with demand-only hosts, not fabricated native targets. |
+
+This map is source evidence for independent frozen review, **not** review approval
+or observed final async behavior. Required leaf checks are owned-file gofmt,
+whitespace, normal `task build` and `task lint:vet`, recorded against the exact
+committed head/tree in the build payload. Optional full unchanged lint reports
+actual inherited diagnostics; no lint/test/Taskfile/hooks/dependency standard is
+changed. No tests were run.
 
 ## Pending final combined coordinator gate
 
-After source review and normal build, the coordinator must run the actual public
-candidate in its explicitly owned Rex origin, record binary/revision/resource IDs,
-observe a real menu and navigation/dynamic display, dismiss normally, and verify
-exit, terminal restoration, exact owned popup/terminal/private cleanup.
-One benign Go-owned dynamic selection or inline rename may use **only** an
-explicitly coordinator-owned disposable resource within actual-run authority.
-Never rename/close a real user's resource merely for evidence.
+After independent source review and integration, repeat the ordinary public
+no-argument run in a comparable explicitly owned origin, with recorded
+host/PATH/endpoint, defaults/config, GUI intent and terminal context. Record
+**first visible static frame**, **required data ready** and **relevant actions
+ready** separately, with observation limits. Earlier task timings are not a
+substitute for this final run.
 
-Record exactly which entrypoint/actions were exercised and failures/limitations.
-A zero exit, detached start handle, compile, private child or old run is not
-substitute display evidence. Physical keybinding remains source-documented only
-unless separately authorized/observed; do not require a user reload for direct
-public validation. Failed runtime leaves completion pending.
+Observe naturally occurring loading/input/dismissal responsiveness, provider
+navigation during/after loads, full IDs/current markers/pagination, rename
+correctness, one benign effect on an exact disposable owned resource, normal
+dismissal and cancellation, no duplicate dispatch, worker/child exit, terminal
+restoration, origin focus and exact popup/private-slot/directory cleanup before
+effects. Use the existing public config interface and an explicitly owned
+disposable JSON data file for optional nondefault providers if useful; never
+edit user config/reload, probe remote hosts or manufacture loading/errors.
+Keep optional-provider cases separate from the baseline-comparable default run.
+Unobservable branches and actual CLI failures must be reported honestly.
+A compile/help/private ACK or source-only review does not complete this gate.
 
 ## Residual limits and authoritative guides
 
-No tests/TDD/race/Lua/parser/FIFO harnesses, benchmarks, broad remote experiments,
-Nix evaluation/build/check, activation, pin/dependency update, user-config mutation,
-Rex reload/restart, deployment or push is part of this leaf delivery.
-No all-action/platform/remote/physical-key or guaranteed post-crash cleanup claim.
-
-Native Rex control hiding (REQ-026) remains unresolved; Phase15's failed bridge
-history and unrelated phase statuses are not fixed or completed by this work.
-Read-only checks and effects are not atomic, and uncertain effects are not retried.
+No leaf live app/Rex/timing run, unit/race/TDD/Lua/parser/FIFO harness, benchmark,
+fake server/delay, remote trial, user-config/reload, Nix eval/build/profile/input
+update, deployment or push is part of this delivery. Physical keybinding,
+installed-profile, Linux/remote and all-action/provider coverage are not claimed.
+REQ-026 native controls remain unresolved. Phase15's original bridge failure is
+not retroactively fixed. Fresh checks and effects are not atomic; uncertain
+effects are never retried. Final async runtime/effect/cancel/cleanup checks remain
+**pending**, not failed merely because they belong to coordinator integration.
 
 Current contracts: [data/actions/providers](mapping-format.md),
 [launch/cleanup](launch-contract.md), [discovery/package](runtime-bootstrap.md),
