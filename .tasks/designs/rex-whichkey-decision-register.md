@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-07T14:58:29.489Z'
+dateModified: '2026-11-07T16:00:02.464Z'
 tags:
   - task
 type: task
@@ -20,6 +20,7 @@ id: 944be7fb-2bf1-4dee-8864-9686519b06a0
 
 | Permanent ID | State | Decision | Rationale / relationships |
 | --- | --- | --- | --- |
+| REXWHICHKEY-20261107-105542 | Accepted | Always run automated tests and full lint after changes; fix current failures before quality acceptance. | Explicit user correction and fix-the-problems authorization supersede earlier test prohibitions and diagnostic-only final lint acceptance. Other architecture/safety/deployment constraints unchanged. |
 | REXWHICHKEY-20261106-232754 | Refined | Execute Phase19: Lua owns native float presentation policy/sizing/launch; direct Go owns menus/palette/CLI effects; remove Go controller and route actual make run through Lua. | Original explicit execution direction refined by accepted234819/234820 below: native chrome customization deferred/defaults accepted, detached host may survive dispatch until Go exits. All other safeguards/history remain. Original accepted scope and Open blocker entries below are history, not current unresolved requirements. |
 | REXWHICHKEY-20261106-234819 | Accepted | Accept default Rex native chrome for now; defer REQ-026 titlebar/border/corners/shadow customization pending supported per-float API. | Explicit user1a: yes, accept it for now. Refines232754; current default-policy/docs delivery does not implement or credit deferred native controls. Original Open proposal below preserved. |
 | REXWHICHKEY-20261106-234820 | Accepted | Visible float/TTY/workers/exact original focus cleaned and verified before effects; detached Go host may remain during dispatch and retire after Go exits. | Explicit user1b: yes. Refines232754 and old all-owned-block pre-effect ordering only; post-exit cleanup failure cannot suppress an earlier effect, all other exact identity/config/confirmation/no-retry safeguards remain. Original Open proposal below preserved. |
@@ -178,6 +179,13 @@ Documented detach closes a sole-block visible float but keeps Go host alive duri
 
 User replies: 1a - yes, accept it for now; 1b - yes. Decision REXWHICHKEY-20261106-234819 is Accepted: native chrome customization is deferred, use unchanged Rex defaults without false implementation credit. Decision REXWHICHKEY-20261106-234820 is Accepted: exact visible float/TTY/workers/origin focus retire before effect, detached Go execution host may remain through dispatch and retires after Go exits; post-exit cleanup cannot suppress a prior effect. Original Open entries above are history, replaced by this explicit acceptance. Refines REXWHICHKEY-20261106-232754 and prior all-owned-block pre-effect ordering only for this direct-host lifecycle; all other identity/config/confirmation/no-retry safeguards stand. Four-task vertical implementation plan refined routinely under original execute/commit/actual-make-run authority. No test, user-config/deploy or unsupported Rex chrome permission inferred.
 
+
+
+
+
+## REXWHICHKEY-20261107-105542 — Mandatory quality gates and repair
+
+The user states they do not remember a no-tests instruction and explicitly directs: You should always run the tests and linting after a change; fix the problems. This is authoritative current policy. Earlier restrictions remain historical, NOT current. Phase19 reopened: build passes, four Lua fixture test groups fail in unit and race suites, full lint has53 diagnostics/AI not yet reached. New Tasks05/06 repair tests then all full-lint stages without suppressions/assertion weakening. Original functional source/review/runtime history is not erased or retroactively called a suite pass. Supplement designs/rex-whichkey-quality-gates.md. ID assigned at capture, not claimed exact historical message time.
 
 
 <!-- mtn:evidence:v1 -->
