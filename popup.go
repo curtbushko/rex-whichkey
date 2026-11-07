@@ -3,6 +3,7 @@ package whichkey
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"io"
@@ -34,6 +35,8 @@ type popupRequest struct {
 	ConnectedAt   string
 	image         *runtimeImage
 	placement     *rex.Block
+	snapshot      *rex.SessionSnapshot
+	invocationID  string
 	selection     *rex.CLISelection
 	noColor       bool
 	ascii         bool
@@ -136,7 +139,10 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 ) (outcome error) {
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
+	ctx, cancelLifecycle := context.WithCancelCause(ctx)
+	defer cancelLifecycle(nil)
 	request.selection = selection
+	request.invocationID = rand.Text()
 
 	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: request.Server,
 		Session: request.SessionID, Timeout: 3 * time.Second})
@@ -155,6 +161,15 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	var layer rex.Layer
 	var directory string
 	var lease *os.File
+	var updates *popupRenameUpdates
+	updatesStopped := false
+	stopUpdates := func() error {
+		if updates == nil || updatesStopped {
+			return nil
+		}
+		updatesStopped = true
+		return updates.stop()
+	}
 	closed, attempted, focusAttempted := false, false, false
 	closePopup := func(cleanup context.Context) error {
 		if closed || layer.BlockID == "" {
@@ -204,6 +219,7 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 		// window, session or label-based cleanup is safe or attempted.
 		cleanup, done := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer done()
+		outcome = errors.Join(outcome, stopUpdates())
 		outcome = errors.Join(outcome, closePopup(cleanup))
 		if !attempted && !focusAttempted {
 			outcome = errors.Join(outcome, focusOrigin(cleanup))
@@ -233,6 +249,11 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	if err := writePopupFile(directory, "result.json", nil); err != nil {
 		return err
 	}
+	for _, name := range [4]string{renameDemandFiles[0], renameDemandFiles[1], renameUpdateFiles[0], renameUpdateFiles[1]} {
+		if slotErr := writePopupFile(directory, name, nil); slotErr != nil {
+			return slotErr
+		}
+	}
 	imageCtx, finishImage := context.WithTimeout(ctx, 20*time.Second)
 	imageErr := request.preparePopupImage(imageCtx, directory)
 	finishImage()
@@ -259,6 +280,10 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	if err != nil {
 		return err
 	}
+	updates, err = startPopupRenameUpdates(ctx, cancelLifecycle, directory, request, client, config)
+	if err != nil {
+		return err
+	}
 	layer, err = origin.NewLayerWithSize(ctx, initialBounds, command, initialSize)
 	if err != nil {
 		return errors.New("whichkey: popup creation failed or uncertain; not retried")
@@ -266,12 +291,15 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	// Keep the initial rectangle for this invocation. Navigation and redraws
 	// adapt content to the terminal cells, never change owned layer bounds.
 	err = waitPopup(ctx, request, client, layer.BlockID, originBlock)
-	if err != nil {
+	if err = errors.Join(err, stopUpdates(), context.Cause(ctx)); err != nil {
 		return err
 	}
 
 	message, err := readNativePopupResult(directory, config)
 	if err != nil {
+		return err
+	}
+	if err := updates.validateSelection(message, config); err != nil {
 		return err
 	}
 	if err := closePopup(ctx); err != nil {
@@ -398,7 +426,8 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile, runtimeImageName, "runtime.json"} {
+	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile, runtimeImageName, "runtime.json",
+		renameDemandFiles[0], renameDemandFiles[1], renameUpdateFiles[0], renameUpdateFiles[1]} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -446,10 +475,14 @@ func readNativePopupResult(directory string, config Config) (event MenuEvent, ou
 	if err != nil || len(data) > popupMessageLimit {
 		return MenuEvent{}, errors.New("whichkey: popup result exceeds transport bound")
 	}
+	return decodeNativePopupResult(data, config)
+}
+
+func decodeNativePopupResult(data []byte, config Config) (event MenuEvent, err error) {
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 		return MenuEvent{Dismissed: true}, nil
 	}
-	fields, err := completionObject(data, "keys", "confirmed", "text")
+	fields, err := completionObject(data, "keys", "confirmed", "text", "update")
 	if err != nil {
 		return MenuEvent{}, err
 	}
@@ -469,7 +502,18 @@ func readNativePopupResult(directory string, config Config) (event MenuEvent, ou
 		}
 		text = &value
 	}
-	return retainedNativeEvent(config, keys, confirmed, text)
+	event, err = retainedNativeEvent(config, keys, confirmed, text)
+	if err != nil {
+		return MenuEvent{}, err
+	}
+	if raw, present := fields["update"]; present {
+		var binding renameBinding
+		if err := decodeRuntime(raw, &binding, popupMessageLimit); err != nil {
+			return MenuEvent{}, err
+		}
+		event.update = &binding
+	}
+	return event, nil
 }
 
 // The retained record, never the result's labels/action/args, defines execution.
@@ -567,6 +611,7 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 	}
 	ctx, cancel := context.WithCancelCause(parent)
 	defer cancel(nil)
+	watchCtx, cancelWatch := context.WithCancel(ctx)
 	stopped := make(chan struct{})
 	go func() {
 		defer close(stopped)
@@ -586,20 +631,21 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 				return
 			}
 			select {
-			case <-ctx.Done():
+			case <-watchCtx.Done():
 				return
 			case <-ticker.C:
 			}
 		}
 	}()
-	defer func() {
-		cancel(nil)
+	stopWatcher := func() {
+		cancelWatch()
 		<-stopped
-	}()
-	return runPopupTerminal(ctx, directory, noColor, ascii)
+	}
+	defer stopWatcher()
+	return runPopupTerminal(ctx, directory, noColor, ascii, stopWatcher)
 }
 
-func runPopupTerminal(parent context.Context, directory string, noColor, ascii bool) (outcome error) {
+func runPopupTerminal(parent context.Context, directory string, noColor, ascii bool, stopWatcher func()) (outcome error) {
 	root, invocation, err := openVerifiedPopupDirectory(parent, directory)
 	if err != nil {
 		return err
@@ -623,12 +669,14 @@ func runPopupTerminal(parent context.Context, directory string, noColor, ascii b
 	// Presence is explicit: an absent/bad popup selection cannot become a
 	// standalone menu's initial environment/PATH capture.
 	ctx := context.WithValue(parent, terminalRuntimeKey{}, terminalRuntime{invocation.CLI, invocation.Endpoint})
+	ctx = context.WithValue(ctx, terminalRenameKey{}, terminalRenameTransport{root, invocation.Invocation})
 	// The layer already carries the requested position. Anchor popup content
 	// at its top rather than centering it again inside the fixed rectangle.
 	// This local copy does not change standalone RunTerminal positioning.
 	config.Position = "top"
 	event, err := RunTerminal(ctx, config, noColor, ascii)
-	if err != nil {
+	stopWatcher() // No lifetime reader survives terminal teardown/result commit.
+	if err = errors.Join(err, context.Cause(parent)); err != nil {
 		return err
 	}
 	return commitPopupResult(ctx, root, event, config)

@@ -297,7 +297,7 @@ func (r popupRequest) preparePopupImage(ctx context.Context, directory string) e
 	if checkErr := r.image.copy(ctx, directory); checkErr != nil {
 		return checkErr
 	}
-	invocation, err := json.Marshal(popupRuntime{CLI: selection, Endpoint: endpoint})
+	invocation, err := json.Marshal(popupRuntime{CLI: selection, Endpoint: endpoint, Invocation: r.invocationID})
 	if err != nil || len(invocation) > runtimeLimit {
 		return errRuntimeStartup
 	}
@@ -348,8 +348,9 @@ func commitPopupResult(ctx context.Context, root *os.Root, event MenuEvent, conf
 // popupRuntime is private invocation context, not binary/API evidence. The
 // endpoint is independent of the selected PATH executable.
 type popupRuntime struct {
-	CLI      *rex.CLISelection `json:"cli"`
-	Endpoint string            `json:"endpoint"`
+	CLI        *rex.CLISelection `json:"cli"`
+	Endpoint   string            `json:"endpoint"`
+	Invocation string            `json:"invocation"`
 }
 
 func readPopupRuntime(ctx context.Context, root *os.Root, directory string) (_ *popupRuntime, outcome error) {
@@ -362,7 +363,8 @@ func readPopupRuntime(ctx context.Context, root *os.Root, directory string) (_ *
 		return nil, errRuntimeStartup
 	}
 	var invocation popupRuntime
-	if checkErr := readRuntime(file, &invocation, runtimeLimit); checkErr != nil || invocation.CLI == nil {
+	if checkErr := readRuntime(file, &invocation, runtimeLimit); checkErr != nil || invocation.CLI == nil || len(invocation.Invocation) < 26 || len(invocation.Invocation) > 64 ||
+		strings.Trim(invocation.Invocation, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567") != "" {
 		return nil, errRuntimeStartup
 	}
 	endpoint, err := rex.CanonicalEndpoint(invocation.Endpoint)

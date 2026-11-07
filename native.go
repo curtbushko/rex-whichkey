@@ -39,9 +39,12 @@ func launchNativePopup(parent context.Context, origin launchOrigin, selection *r
 		return errors.New("whichkey: cannot construct captured endpoint/session client")
 	}
 	inspect, done := context.WithTimeout(ctx, 3*time.Second)
-	request := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID}
-	placement, err := request.resourceOriginBlock(inspect, client)
+	snapshot, err := client.SessionSnapshot(inspect, origin.SessionID)
 	done()
+	if err != nil {
+		return err
+	}
+	placement, err := snapshot.Block(origin.BlockID)
 	if err != nil {
 		return err
 	}
@@ -49,11 +52,11 @@ func launchNativePopup(parent context.Context, origin launchOrigin, selection *r
 	if appErr != nil && requested != "" {
 		return appErr
 	}
-	config, targets, err := prepareNativeMenu(ctx, client, origin, placement, config)
+	config, targets, err := prepareNativeMenu(ctx, client, origin, config)
 	if err != nil {
 		return err
 	}
-	message, err := nativePopupSelection(ctx, origin, selection, config, placement, noColor, ascii)
+	message, err := nativePopupSelection(ctx, origin, selection, config, placement, &snapshot, noColor, ascii)
 	// No effects until terminal, owned popup, focus, pipe, files and captured
 	// source image retirement have succeeded. Uncertain cleanup is not retried.
 	err = errors.Join(err, origin.image.retire())
@@ -86,28 +89,14 @@ func captureNativeApp(ctx context.Context, client *rex.Client, origin launchOrig
 	return origin, nil
 }
 
-func prepareNativeMenu(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, config Config) (Config, map[string]providerTarget, error) {
+func prepareNativeMenu(ctx context.Context, client *rex.Client, origin launchOrigin, config Config) (Config, map[string]providerTarget, error) {
 	config, targets, err := nativeSessionMenu(ctx, client, origin, config)
 	if err != nil {
 		return Config{}, nil, err
 	}
-	nameCtx, done := context.WithTimeout(ctx, 3*time.Second)
-	defer done()
-	session, err := client.Session(nameCtx, origin.SessionID)
-	if err != nil {
-		return Config{}, nil, errors.New("whichkey: cannot inspect captured session label")
-	}
-	window, err := session.Window(nameCtx, placement.WindowID)
-	if err != nil {
-		return Config{}, nil, errors.New("whichkey: cannot inspect captured tab label")
-	}
-	config.textEntry = &textEntrySpec{Initial: window.Label, SessionInitial: session.Label}
-	if len(config.textEntry.Initial) > renameTextLimit || validateText(config.textEntry.Initial) != nil {
-		config.textEntry.Initial = ""
-	}
-	if len(config.textEntry.SessionInitial) > renameTextLimit || validateText(config.textEntry.SessionInitial) != nil {
-		config.textEntry.SessionInitial = ""
-	}
+	// Enable inline forms, but do not fetch labels before interaction. The
+	// demand worker shares the already-required origin view when a form opens.
+	config.textEntry = &textEntrySpec{}
 	return config, targets, nil
 }
 
@@ -268,13 +257,13 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 // nativePopupSelection only captures finish's validated result. No app lookup,
 // action, or second interactive UI can run inside finish's short operation context.
 // Returning success also requires the lifecycle's deferred cleanup to succeed.
-func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config, placement rex.Block, noColor, ascii bool) (MenuEvent, error) {
+func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, config Config, placement rex.Block, snapshot *rex.SessionSnapshot, noColor, ascii bool) (MenuEvent, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return MenuEvent{}, errors.New("whichkey: cannot encode native menu configuration")
 	}
 	request := popupRequest{Configuration: string(data), Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-		image: origin.image, placement: &placement, noColor: noColor, ascii: ascii}
+		image: origin.image, placement: &placement, snapshot: snapshot, noColor: noColor, ascii: ascii}
 	var retained MenuEvent
 	lifecycleErr := runPopupLifecycle(ctx, request, config, selection, func(_ context.Context, message MenuEvent) error {
 		if !message.Dismissed {
