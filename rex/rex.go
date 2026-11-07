@@ -103,23 +103,8 @@ func (c *Client) Selection() *CLISelection {
 // A timeout or decode error does not mean the operation had no effect; callers
 // must not blindly retry mutations.
 func (c *Client) Call(ctx context.Context, method string, arguments, result any) error {
-	if c == nil || c.executable == "" || c.server == "" || c.timeout <= 0 {
-		return errors.New("rex: client must be constructed with New")
-	}
-	if ctx == nil {
-		return errors.New("rex: call requires a context")
-	}
-	if err := ctx.Err(); err != nil {
-		return errors.Join(errors.New("rex: API call canceled; not retried"), err)
-	}
-	if strings.TrimSpace(method) == "" || strings.ContainsRune(method, '\x00') {
-		return errors.New("rex: API method must not be empty or contain NUL")
-	}
-	if result != nil {
-		value := reflect.ValueOf(result)
-		if value.Kind() != reflect.Pointer || value.IsNil() {
-			return fmt.Errorf("rex: invalid result destination: %w", &json.InvalidUnmarshalError{Type: value.Type()})
-		}
+	if err := c.validateCall(ctx, method, result); err != nil {
+		return err
 	}
 
 	argv := []string{
@@ -154,6 +139,29 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 	if err := json.Unmarshal(output, result); err != nil {
 		return errors.New("rex: invalid API result (operation may have succeeded); not retried")
 	}
+	return nil
+}
+
+func (c *Client) validateCall(ctx context.Context, method string, result any) error {
+	if c == nil || c.executable == "" || c.server == "" || c.timeout <= 0 {
+		return errors.New("rex: client must be constructed with New")
+	}
+	if ctx == nil {
+		return errors.New("rex: call requires a context")
+	}
+	if err := ctx.Err(); err != nil {
+		return errors.Join(errors.New("rex: API call canceled; not retried"), err)
+	}
+	if strings.TrimSpace(method) == "" || strings.ContainsRune(method, '\x00') {
+		return errors.New("rex: API method must not be empty or contain NUL")
+	}
+	if result != nil {
+		value := reflect.ValueOf(result)
+		if value.Kind() != reflect.Pointer || value.IsNil() {
+			return fmt.Errorf("rex: invalid result destination: %w", &json.InvalidUnmarshalError{Type: value.Type()})
+		}
+	}
+
 	return nil
 }
 

@@ -47,21 +47,7 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	}
 	header := menuHeader(menu, config, theme)
 
-	entries := menu.Entries()
-	items := make([]menuLine, 0, max(1, len(entries)))
-	for _, entry := range entries {
-		items = append(items, menuEntryLine(entry, config, theme))
-	}
-	pending, confirming := menu.Confirmation()
-	if menu.entry != nil {
-		items = []menuLine{menu.textEntryLine(theme, width)}
-	} else if confirming {
-		// Keep confirmation keys on the content row as well as help: content
-		// is the only guaranteed row in an extremely short terminal.
-		items = []menuLine{{menuText(ThemeCritical, "y=yes / other=cancel: "+pending.Label)}}
-	} else if len(items) == 0 {
-		items = []menuLine{{menuText(ThemeMuted, "No visible mappings")}}
-	}
+	items, confirming := menuItems(menu, config, theme, width)
 	itemWidths := make([]int, len(items))
 	for i, item := range items {
 		itemWidths[i] = uniseg.StringWidth(item.plain())
@@ -81,6 +67,42 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	if layout.topSpace {
 		frame.Lines = append(frame.Lines, "")
 	}
+	frame.Lines = append(frame.Lines, menuRows(items, theme, layout)...)
+	if layout.bottomSpace {
+		frame.Lines = append(frame.Lines, "")
+	}
+	if layout.help {
+		role := ThemeMuted
+		if confirming || menu.entry != nil && menu.entry.problem != "" {
+			role = ThemeCritical
+		}
+		help := menuHelp(menu, confirming, layout.page, layout.pages, layout.width)
+		frame.Lines = append(frame.Lines, menuStatus(menuLine{menuText(role, help)}, theme, layout.width))
+	}
+	return frame
+}
+
+func menuItems(menu *Menu, config Config, theme Theme, width int) ([]menuLine, bool) {
+	entries := menu.Entries()
+	items := make([]menuLine, 0, max(1, len(entries)))
+	for _, entry := range entries {
+		items = append(items, menuEntryLine(entry, config, theme))
+	}
+	pending, confirming := menu.Confirmation()
+	if menu.entry != nil {
+		items = []menuLine{menu.textEntryLine(theme, width)}
+	} else if confirming {
+		// Keep confirmation keys on the content row as well as help: content
+		// is the only guaranteed row in an extremely short terminal.
+		items = []menuLine{{menuText(ThemeCritical, "y=yes / other=cancel: "+pending.Label)}}
+	} else if len(items) == 0 {
+		items = []menuLine{{menuText(ThemeMuted, "No visible mappings")}}
+	}
+	return items, confirming
+}
+
+func menuRows(items []menuLine, theme Theme, layout menuLayout) []string {
+	var lines []string
 	cellWidth := (layout.width - (layout.columns-1)*menuColumnGap) / layout.columns
 	start := layout.page * layout.capacity
 	end := start + min(layout.capacity, len(items)-start)
@@ -98,20 +120,9 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 				line.WriteString(theme.Style(ThemePrimary, strings.Repeat(" ", cellWidth-used+menuColumnGap)))
 			}
 		}
-		frame.Lines = append(frame.Lines, line.String())
+		lines = append(lines, line.String())
 	}
-	if layout.bottomSpace {
-		frame.Lines = append(frame.Lines, "")
-	}
-	if layout.help {
-		role := ThemeMuted
-		if confirming || menu.entry != nil && menu.entry.problem != "" {
-			role = ThemeCritical
-		}
-		help := menuHelp(menu, confirming, layout.page, layout.pages, layout.width)
-		frame.Lines = append(frame.Lines, menuStatus(menuLine{menuText(role, help)}, theme, layout.width))
-	}
-	return frame
+	return lines
 }
 
 func menuHeader(menu *Menu, config Config, theme Theme) menuLine {
@@ -180,28 +191,7 @@ func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
 			"Esc: cancel",
 		}
 	} else {
-		navigation := "back"
-		if menu.Prefix() == "" {
-			navigation = "quit"
-		}
-		navigationHint := "Esc/Backspace: " + navigation
-		full := navigationHint + "  key: select/open"
-		if menu.QuitWithQ() {
-			full += "  q: quit"
-		}
-		if pages > 1 {
-			counter := fmt.Sprintf("%d/%d", page+1, pages)
-			paging := counter + " Tab: next  "
-			hints = []string{
-				paging + full,
-				paging + navigationHint,
-				counter + " Tab Esc: " + navigation,
-				counter + " Tab Esc",
-				"Tab Esc",
-			}
-		} else {
-			hints = []string{full, navigationHint, "Esc: " + navigation}
-		}
+		hints = menuNavigationHints(menu, page, pages)
 	}
 	for _, hint := range hints {
 		if uniseg.StringWidth(hint) <= width {
@@ -209,6 +199,33 @@ func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
 		}
 	}
 	return "Esc"
+}
+
+func menuNavigationHints(menu *Menu, page, pages int) []string {
+	var hints []string
+	navigation := "back"
+	if menu.Prefix() == "" {
+		navigation = "quit"
+	}
+	navigationHint := "Esc/Backspace: " + navigation
+	full := navigationHint + "  key: select/open"
+	if menu.QuitWithQ() {
+		full += "  q: quit"
+	}
+	if pages > 1 {
+		counter := fmt.Sprintf("%d/%d", page+1, pages)
+		paging := counter + " Tab: next  "
+		hints = []string{
+			paging + full,
+			paging + navigationHint,
+			counter + " Tab Esc: " + navigation,
+			counter + " Tab Esc",
+			"Tab Esc",
+		}
+	} else {
+		hints = []string{full, navigationHint, "Esc: " + navigation}
+	}
+	return hints
 }
 
 func menuTextEntryHelp(menu *Menu) []string {

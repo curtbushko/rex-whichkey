@@ -123,10 +123,7 @@ func dispatchNativeApp(parent context.Context, client *rex.Client, origin launch
 	return nil
 }
 
-// nativeNewTab compiles only Go-owned new-tab intent after popup cleanup and the
-// caller's session.select registration check. Creation and app activation are
-// distinct effects, never a retryable transaction.
-func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested string, selection *rex.CLISelection, mapping Mapping) error {
+func validateNativeNewTab(mapping Mapping) error {
 	if mapping.Action != menuTabNew {
 		return errors.New("whichkey: native new tab refused: invalid retained new-tab intent")
 	}
@@ -134,6 +131,16 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 		if _, err := completionObject(mapping.Args); err != nil {
 			return errors.New("whichkey: native new tab refused: retained new-tab arguments must be empty")
 		}
+	}
+	return nil
+}
+
+// nativeNewTab compiles only Go-owned new-tab intent after popup cleanup and the
+// caller's session.select registration check. Creation and app activation are
+// distinct effects, never a retryable transaction.
+func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, placement rex.Block, requested string, selection *rex.CLISelection, mapping Mapping) error {
+	if err := validateNativeNewTab(mapping); err != nil {
+		return err
 	}
 	unscoped, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: bound.Server,
 		Timeout: 3 * time.Second})

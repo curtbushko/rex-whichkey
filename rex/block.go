@@ -87,7 +87,7 @@ func (b Block) Focus(ctx context.Context) error {
 		return err
 	}
 	return b.client.Call(ctx, "session.focus_block", map[string]string{
-		"session_id": b.client.session,
+		fieldSession: b.client.session,
 		"block_id":   b.blockID,
 	}, nil)
 }

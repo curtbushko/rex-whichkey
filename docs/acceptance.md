@@ -121,32 +121,61 @@ native GUI pixel measurements or universal palette/contrast proof.
 
 ### Current verification boundary
 
-This Task04 refresh edits documentation only. Go/Lua/Taskfile/Makefile/package
-source remains byte-identical to its base `d4d917a4a9c6916d936526b54d887b994074cf71`
-and the Task03 observed source above. This leaf ran no product or compilation.
-Fresh independent docs/source/evidence review, combined equality/whitespace and
-a final actual `make run` on rebuilt main after integration remain coordinator
-gates before full phase completion. Task03's actual observations are delivered,
-not pending and not a substitute for that final recheck. `rex do`/make launch ACK
-is not eventual Go exit, display or cleanup proof; exact native watchers and
-`session.list_blocks` establish only the observed cases.
+The user's current instruction requires tests and full lint after changes, with
+failures repaired. It supersedes earlier no-unit/race/TDD/Lua/parser/FIFO-test
+restrictions, which remain historical records below, not current acceptance.
+Task05's native summary records the authentic matching historical fixture repair
+at integrated `88e8f9ae98adf7677a14fac1bf63bf257c5e18dd`: all 42 original
+scenarios/assertions retained, full unit/race suites passing. Historical fixtures
+remain test-only; they are not restored into the production control path.
 
-Task04's required gate is `git diff --check`; Nix/Lua were not changed. Task03's
-static Nix formatter/syntax parse and coordinator Go build/vet remain separately
-recorded, not Nix evaluation/build/install/check/activation. Tests/unit/race/TDD/
-Lua/parser/FIFO harnesses/benchmarks/fake servers/synthetic delays were not run.
-Protected assertions, quality commands/hooks/dependencies/pins/lint configuration
-remain unchanged, as does the parent's separate dirty `flake.nix`.
+Task06 builder checks now pass in the isolated `p19-t06-builder-a01` checkout:
 
-The current full-lint diagnostic is **53 diagnostics, exit 201; AI lint not reached**
-(`current-main-full-lint.log`, `task3-public-evidence.json`). Full lint is not green;
-no inherited-only classification is asserted. Phase18's historical 62 below stays
-verbatim and is not the current count. There is no new latency statistic, benchmark
-or performance SLA. No every-failure/action/platform, physical-keybinding/profile,
-install/reload, remote/deploy, phase-completion or native-customization claim
-follows from this documentation. Do not use older no-argument/controller commands
-below as current usage: see [README](../README.md), [launch](launch-contract.md),
-[package/discovery](runtime-bootstrap.md) and [appearance](appearance.md).
+| Actual command | Result |
+| --- | --- |
+| `task build` | pass, exit 0 |
+| `task test` | pass, exit 0; both `test:unit` and `test:race` |
+| `task lint` | pass, exit 0; `lint:vet`, `lint:golangci` and `lint:ai` |
+
+Evidence is under `.mtn-tmp/p19/quality-fix/task6-builder-evidence/` in the
+authoritative coordinator checkout: `pre-doc-{build,test,lint}.log` records the
+green code before this documentation update; `final-{build,test,lint}.log` and
+`final-source-identity.log` bind final delivery. The builder payload
+`rex-whichkey-p19-t06/build/1` supplies the exact commit/tree, commands and
+regression coverage. These are builder results, not an independent review or
+coordinator integration/phase-completion claim.
+
+All 53 golangci baseline diagnostics and both subsequent AI findings were
+repaired in code, without rule/config/Taskfile/hook/dependency/pin changes,
+suppressions, skipped tests or deleted/weakened original assertions. New tests
+cover parser UTF-8/escape/paste/edit/report framing, palette color/reply handling,
+render pagination/confirmation, strict JSON/Unicode/4 MiB admission, bounded
+once-per-kind metadata/error results, late rename edits/readiness, retained exact
+provider bindings/targets, popup exclusion/current markers, CLI argv/no retry,
+and canceled/bounded display cleanup. The isolated Darwin PTY test checks all
+configured termios fields except observed kernel-transient PENDIN; production
+restores the captured state unchanged. This is not every-failure/platform proof.
+
+The system AI 1.0.0 binary was built with Go 1.25 and cannot analyze Go 1.26.
+The coordinator rebuilt the **same unchanged original 1.0.0 source/dependencies**
+using existing pinned Go 1.26.8 and `-mod=readonly`, then supplied its PATH.
+Original NAR hash: `sha256-y2G7dTZqM/rEQaALu54bHigBeO1xxRIblBJ7QxOffW4=`.
+Provenance is in `.mtn-tmp/p19/quality-fix/tools/{source-hash,rebuilt-build-info,source-hash-after-build}.txt`.
+No tool version, profile, package pin or lint policy was changed to obtain green.
+
+Fresh independent exact-source full-test/full-lint review remains pending.
+Coordinator reviewed-combined/main `task build`, `task test`, full `task lint`
+and actual `make run`/owned rename/cancel/cleanup remain pending before phase
+green. Earlier Task03 observations above retain their original revision limits;
+launch ACKs are not display, eventual Go exit or cleanup proof. No leaf live Rex
+action, profile/config/activation/reload/install/remote/deploy/push, benchmark,
+native customization or universal platform pass is claimed. The parent's
+separate dirty `flake.nix` remains untouched. No architecture gate is configured.
+
+Phase18's historical 62 diagnostics below remain verbatim, not the current count.
+Use [README](../README.md), [launch](launch-contract.md),
+[package/discovery](runtime-bootstrap.md) and [appearance](appearance.md) for
+current usage rather than older controller commands.
 
 ## Historical Phase16/18 delivery record (verbatim)
 

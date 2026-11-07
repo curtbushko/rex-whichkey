@@ -21,6 +21,18 @@ func (v SessionSnapshot) DirectPopup(ownID string, origin Block) (Layer, Session
 	if err != nil || own.WindowID != origin.WindowID || own.LayerID == origin.LayerID {
 		return Layer{}, SessionSnapshot{}, errors.New("rex: own terminal is not a separate float in the original window")
 	}
+	filtered, err := v.withoutDirectPopup(own)
+	if err != nil {
+		return Layer{}, SessionSnapshot{}, err
+	}
+	// Creation took focus. Provider current markers describe invocation intent,
+	// not the popup's new focus, without altering the raw ownership snapshot.
+	filtered.restoreOriginMarkers(origin)
+	return Layer{ID: own.LayerID, BlockID: ownID, WindowID: own.WindowID,
+		client: own.client, layerID: own.LayerID, blockID: ownID}, filtered, nil
+}
+
+func (v SessionSnapshot) withoutDirectPopup(own Block) (SessionSnapshot, error) {
 	filtered := v
 	filtered.layers = make([]placedLayer, 0, len(v.layers)-1)
 	found := false
@@ -29,26 +41,26 @@ func (v SessionSnapshot) DirectPopup(ownID string, origin Block) (Layer, Session
 			filtered.layers = append(filtered.layers, layer)
 			continue
 		}
-		if layer.kind != "floating" || len(layer.blocks) != 1 || layer.blocks[0].ID != ownID {
-			return Layer{}, SessionSnapshot{}, errors.New("rex: own popup must be the sole block in its floating layer")
+		if layer.kind != "floating" || len(layer.blocks) != 1 || layer.blocks[0].ID != own.ID {
+			return SessionSnapshot{}, errors.New("rex: own popup must be the sole block in its floating layer")
 		}
 		found = true
 	}
 	if !found {
-		return Layer{}, SessionSnapshot{}, errors.New("rex: own popup layer is missing")
+		return SessionSnapshot{}, errors.New("rex: own popup layer is missing")
 	}
-	// Creation took focus. Provider current markers describe invocation intent,
-	// not the popup's new focus, without altering the raw ownership snapshot.
-	filtered.windows = v.Windows()
-	for i := range filtered.windows {
-		window := &filtered.windows[i]
+	return filtered, nil
+}
+
+func (v *SessionSnapshot) restoreOriginMarkers(origin Block) {
+	v.windows = v.Windows()
+	for i := range v.windows {
+		window := &v.windows[i]
 		window.Active = window.ID == origin.WindowID
 		if window.ID == origin.WindowID {
 			window.FocusedBlockID = origin.ID
 		}
 	}
-	return Layer{ID: own.LayerID, BlockID: ownID, WindowID: own.WindowID,
-		client: own.client, layerID: own.LayerID, blockID: ownID}, filtered, nil
 }
 
 // Detach retires only the bound sole-block float, keeping its program alive.
@@ -63,7 +75,7 @@ func (l Layer) Detach(ctx context.Context) error {
 		return err
 	}
 	if err := l.client.Call(ctx, "session.detach_block", map[string]string{
-		"session_id": l.client.session, "block_id": l.blockID,
+		fieldSession: l.client.session, "block_id": l.blockID,
 	}, nil); err != nil {
 		return fmt.Errorf("rex: popup detach failed or is uncertain; not retried: %w", err)
 	}
@@ -94,7 +106,7 @@ func (l Layer) terminalPlacement(ctx context.Context, placement string) error {
 			Flavor    string `json:"flavor"`
 		} `json:"blocks"`
 	}
-	if err := l.client.Call(ctx, "session.list_blocks", map[string]string{"session_id": l.client.session}, &result); err != nil {
+	if err := l.client.Call(ctx, "session.list_blocks", map[string]string{fieldSession: l.client.session}, &result); err != nil {
 		return err
 	}
 	if result.Blocks == nil {

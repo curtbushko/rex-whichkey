@@ -82,7 +82,7 @@ func layoutMenu(width, height int, position string, itemWidths []int, requestedP
 	layout.height = layout.rows + chrome
 	layout.y = (height - layout.height) / 2
 	switch position {
-	case "top":
+	case positionTop:
 		layout.y = 0
 	case "bottom":
 		layout.y = height - layout.height

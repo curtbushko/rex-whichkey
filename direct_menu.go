@@ -30,21 +30,9 @@ type DirectOptions struct {
 // RunDirectMenu runs inside the Lua-created terminal. It creates no menu child,
 // image copy, private transport or nested popup. Rex owns terminal exit cleanup.
 func RunDirectMenu(parent context.Context, options DirectOptions) error {
-	if parent == nil || !popupResourceID(options.OriginSession, "session") ||
-		!popupResourceID(options.OriginBlock, "block") || !popupResourceID(options.OriginWindow, "window") ||
-		!popupResourceID(options.OriginLayer, "layer") {
-		return errors.New("whichkey: direct requires full original session/block/window/layer IDs captured before popup creation")
-	}
-	ownID := os.Getenv("REX_BLOCK")
-	if os.Getenv("REX_SESSION") != options.OriginSession || !popupResourceID(ownID, "block") || ownID == options.OriginBlock {
-		return errors.New("whichkey: direct must run in its own popup terminal, not the original pane")
-	}
-	requested := ""
-	if options.Client != nil {
-		if !popupResourceID(*options.Client, "client") {
-			return errors.New("whichkey: direct --client must be an original full client ID")
-		}
-		requested = *options.Client
+	ownID, requested, err := directInvocation(parent, options)
+	if err != nil {
+		return err
 	}
 	// Never read the popup's REX_CLIENT as original app intent.
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM,
@@ -84,8 +72,8 @@ func RunDirectMenu(parent context.Context, options DirectOptions) error {
 	if message.Dismissed {
 		return nil
 	}
-	if err := ctx.Err(); err != nil {
-		return err
+	if contextErr := ctx.Err(); contextErr != nil {
+		return contextErr
 	}
 	mapping, err := state.validateSelection(message)
 	if err != nil {
@@ -122,7 +110,7 @@ func directSelection(ctx context.Context, client *rex.Client, origin launchOrigi
 		return MenuEvent{}, bound, appErr, err
 	}
 	config.textEntry = &textEntrySpec{}
-	config.Position = "top" // Lua already placed the fixed outer viewport.
+	config.Position = positionTop // Lua already placed the fixed outer viewport.
 	state.request = popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 		selection: origin.selection, placement: &placement, snapshot: &snapshot}
 	state.client = client
@@ -145,11 +133,11 @@ func retireDirectPopup(ctx context.Context, client *rex.Client, origin launchOri
 	if origin.ClientID != "" {
 		bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 			ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}
-		if err := validatePaneAppOrigin(ctx, client, bound, placement, requested); err != nil {
-			return err
+		if originErr := validatePaneAppOrigin(ctx, client, bound, placement, requested); originErr != nil {
+			return originErr
 		}
 	}
-	if err := current.Focus(ctx); err != nil {
+	if focusErr := current.Focus(ctx); focusErr != nil {
 		return errors.New("whichkey: original focus restoration failed or is uncertain; no effect, no retry")
 	}
 	view, err := client.SessionSnapshot(ctx, origin.SessionID)
@@ -167,6 +155,83 @@ func retireDirectPopup(ctx context.Context, client *rex.Client, origin launchOri
 	if origin.ClientID != "" {
 		return validatePaneAppOrigin(ctx, client, popupRequest{Server: origin.Server, SessionID: origin.SessionID,
 			BlockID: origin.BlockID, ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}, placement, requested)
+	}
+	return nil
+}
+
+func directInvocation(parent context.Context, options DirectOptions) (string, string, error) {
+	if parent == nil || !popupResourceID(options.OriginSession, "session") ||
+		!popupResourceID(options.OriginBlock, "block") || !popupResourceID(options.OriginWindow, "window") ||
+		!popupResourceID(options.OriginLayer, "layer") {
+		return "", "", errors.New("whichkey: direct requires full original session/block/window/layer IDs captured before popup creation")
+	}
+	ownID := os.Getenv("REX_BLOCK")
+	if os.Getenv("REX_SESSION") != options.OriginSession || !popupResourceID(ownID, "block") || ownID == options.OriginBlock {
+		return "", "", errors.New("whichkey: direct must run in its own popup terminal, not the original pane")
+	}
+	requested := ""
+	if options.Client != nil {
+		if !popupResourceID(*options.Client, "client") {
+			return "", "", errors.New("whichkey: direct --client must be an original full client ID")
+		}
+		requested = *options.Client
+	}
+	return ownID, requested, nil
+}
+
+func (state *directMenuState) applyInventory(menu *Menu, result metadataResult) error {
+	demand := menu.providers.wanted[result.kind]
+	if demand == nil {
+		return errors.New("whichkey: unexpected in-process inventory result")
+	}
+	update, targets, err := buildProviderUpdate(menu.providers.base, *demand, result)
+	if err != nil {
+		return err
+	}
+	ready := state.providers
+	ready[result.kind] = &update
+	next, err := providerConfig(menu.providers.base, ready)
+	if err != nil {
+		return err
+	}
+	state.config, state.providers = next, ready
+	for key, target := range targets {
+		state.targets[key] = target
+	}
+	return menu.applyProviderUpdate(result.kind, update)
+}
+
+func (state *directMenuState) applyRenameLabels(menu *Menu) (bool, error) {
+	changed := false
+	if state.labels != nil {
+		for kind, demand := range menu.updates.wanted {
+			if demand == nil || state.rename[kind] != nil {
+				continue
+			}
+			update := renameUpdate{Demand: *demand, State: renameStateReady,
+				Initial: state.labels.initial[kind], Problem: state.labels.problem[kind]}
+			if state.labels.err != nil {
+				update.State, update.Initial, update.Problem = renameStateUnavailable, "", "Rename context unavailable; Esc: back"
+			}
+			if err := validateRenameUpdate(update, *demand); err != nil {
+				return false, err
+			}
+			state.rename[kind] = &update
+			menu.applyRenameUpdate(kind, update)
+			changed = true
+		}
+	}
+	return changed, nil
+}
+
+func (state *directMenuState) validateRenameSelection(mapping Mapping, event MenuEvent) error {
+	if kind := renameKind(mapping); kind >= 0 {
+		update := state.rename[kind]
+		if update == nil || update.State != renameStateReady || event.update == nil || *event.update != update.Demand.binding() {
+			return errors.New("whichkey: rename selection lacks retained ready metadata")
+		}
+	} else if event.update != nil {
+		return errors.New("whichkey: unexpected rename metadata on selection")
 	}
 	return nil
 }
@@ -204,49 +269,18 @@ func (state *directMenuState) poll(menu *Menu, jobs *metadataJobs) (bool, error)
 		if result.kind == metadataRenameKind {
 			state.labels = &result.labels
 		} else {
-			demand := menu.providers.wanted[result.kind]
-			if demand == nil {
-				return false, errors.New("whichkey: unexpected in-process inventory result")
-			}
-			update, targets, err := buildProviderUpdate(menu.providers.base, *demand, result)
-			if err != nil {
-				return false, err
-			}
-			ready := state.providers
-			ready[result.kind] = &update
-			next, err := providerConfig(menu.providers.base, ready)
-			if err != nil {
-				return false, err
-			}
-			state.config, state.providers = next, ready
-			for key, target := range targets {
-				state.targets[key] = target
-			}
-			if err := menu.applyProviderUpdate(result.kind, update); err != nil {
+			if err := state.applyInventory(menu, result); err != nil {
 				return false, err
 			}
 			changed = true
 		}
 	default:
 	}
-	if state.labels != nil {
-		for kind, demand := range menu.updates.wanted {
-			if demand == nil || state.rename[kind] != nil {
-				continue
-			}
-			update := renameUpdate{Demand: *demand, State: renameStateReady,
-				Initial: state.labels.initial[kind], Problem: state.labels.problem[kind]}
-			if state.labels.err != nil {
-				update.State, update.Initial, update.Problem = renameStateUnavailable, "", "Rename context unavailable; Esc: back"
-			}
-			if err := validateRenameUpdate(update, *demand); err != nil {
-				return false, err
-			}
-			state.rename[kind] = &update
-			menu.applyRenameUpdate(kind, update)
-			changed = true
-		}
+	renameChanged, err := state.applyRenameLabels(menu)
+	if err != nil {
+		return false, err
 	}
+	changed = changed || renameChanged
 	jobs.start()
 	return changed, nil
 }
@@ -256,14 +290,16 @@ func (state *directMenuState) validateSelection(event MenuEvent) (Mapping, error
 	if err != nil {
 		return Mapping{}, err
 	}
-	if kind := renameKind(mapping); kind >= 0 {
-		update := state.rename[kind]
-		if update == nil || update.State != renameStateReady || event.update == nil || *event.update != update.Demand.binding() {
-			return Mapping{}, errors.New("whichkey: rename selection lacks retained ready metadata")
-		}
-	} else if event.update != nil {
-		return Mapping{}, errors.New("whichkey: unexpected rename metadata on selection")
+	if err := state.validateRenameSelection(mapping, event); err != nil {
+		return Mapping{}, err
 	}
+	if err := state.validateProviderSelection(mapping, event); err != nil {
+		return Mapping{}, err
+	}
+	return mapping, nil
+}
+
+func (state *directMenuState) validateProviderSelection(mapping Mapping, event MenuEvent) error {
 	for _, update := range state.providers {
 		if update == nil {
 			continue
@@ -271,14 +307,14 @@ func (state *directMenuState) validateSelection(event MenuEvent) (Mapping, error
 		for _, row := range update.Rows {
 			if row.Keys == mapping.Keys && row.Action != "" {
 				if event.provider == nil || *event.provider != update.Binding {
-					return Mapping{}, errors.New("whichkey: inventory selection lacks retained ready metadata")
+					return errors.New("whichkey: inventory selection lacks retained ready metadata")
 				}
-				return mapping, nil
+				return nil
 			}
 		}
 	}
 	if event.provider != nil {
-		return Mapping{}, errors.New("whichkey: unexpected inventory metadata on selection")
+		return errors.New("whichkey: unexpected inventory metadata on selection")
 	}
-	return mapping, nil
+	return nil
 }

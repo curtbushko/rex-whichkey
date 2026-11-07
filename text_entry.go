@@ -8,7 +8,10 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-const renameTextLimit = 4096
+const (
+	renameTextLimit   = 4096
+	terminalDeleteKey = "\x1b[3~"
+)
 
 // textEntrySpec is Go-owned inline rename presentation, not a Mapping option
 // or callback argument. Direct dispatch retains the executable target identity.
@@ -38,16 +41,16 @@ type menuTextEntry struct {
 
 func validateRenameText(value string) error {
 	if len(value) > renameTextLimit {
-		return errors.New("Name exceeds 4096 bytes")
+		return errors.New("name exceeds 4096 bytes")
 	}
 	if err := validateText(value); err != nil {
-		return errors.New("Name must be valid text without control characters")
+		return errors.New("name must be valid text without control characters")
 	}
 	if utf8.RuneCountInString(value) > 128 {
 		return errors.New("name exceeds Rex's 128-character limit")
 	}
 	if strings.TrimSpace(value) == "" {
-		return errors.New("Name cannot be empty")
+		return errors.New("name cannot be empty")
 	}
 	return nil
 }
@@ -108,10 +111,10 @@ func (m *Menu) handleTextKey(key string) MenuEvent {
 			e.cursor = nextTextBoundary(e.value, e.cursor)
 		}
 		e.selected = false
-	case "\b", "\x7f", "\x1b[3~":
+	case "\b", "\x7f", terminalDeleteKey:
 		if e.selected {
 			e.value, e.cursor = "", 0
-		} else if key == "\x1b[3~" {
+		} else if key == terminalDeleteKey {
 			end := nextTextBoundary(e.value, e.cursor)
 			e.value = e.value[:e.cursor] + e.value[end:]
 		} else {

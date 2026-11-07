@@ -15,6 +15,8 @@ import (
 	"unicode/utf8"
 )
 
+const positionTop = "top"
+
 // Icons supplies the breadcrumb separator and submenu marker.
 // An explicitly empty string suppresses that marker.
 type Icons struct {
@@ -132,7 +134,7 @@ func ResolveConfig(defaults Config, imported, inline *ConfigOptions) (Config, er
 // this compatibility method alone does not validate a public menu file.
 func (c Config) Validate() error {
 	switch c.Position {
-	case "top", "bottom", "left", "right", "center":
+	case positionTop, "bottom", "left", "right", "center":
 	default:
 		return fmt.Errorf("whichkey: invalid position %q", c.Position)
 	}
@@ -268,13 +270,8 @@ func (m Mapping) validate() error {
 		return errors.New("action and callback_ref are mutually exclusive")
 	}
 	actionable := m.Action != "" || m.CallbackRef != ""
-	if m.Provider != "" {
-		if !knownMenuProvider(m.Provider) {
-			return errors.New("unknown mapping provider")
-		}
-		if actionable || m.Group == nil || len(m.Args) != 0 || m.Confirm {
-			return errors.New("provider requires a group without action, callback_ref, args or confirm")
-		}
+	if err := m.validateProvider(actionable); err != nil {
+		return err
 	}
 	if (m.Action != "" && strings.TrimSpace(m.Action) == "") ||
 		(m.CallbackRef != "" && strings.TrimSpace(m.CallbackRef) == "") {
@@ -286,6 +283,22 @@ func (m Mapping) validate() error {
 	if !actionable && (len(m.Args) != 0 || m.Confirm) {
 		return errors.New("only actions may carry args or confirm")
 	}
+	return m.validateFields()
+}
+
+func (m Mapping) validateProvider(actionable bool) error {
+	if m.Provider != "" {
+		if !knownMenuProvider(m.Provider) {
+			return errors.New("unknown mapping provider")
+		}
+		if actionable || m.Group == nil || len(m.Args) != 0 || m.Confirm {
+			return errors.New("provider requires a group without action, callback_ref, args or confirm")
+		}
+	}
+	return nil
+}
+
+func (m Mapping) validateFields() error {
 	for _, text := range []string{m.Desc, m.Icon, m.Action, m.CallbackRef} {
 		if err := validateText(text); err != nil {
 			return err
@@ -352,8 +365,15 @@ func completionString(data []byte) (string, error) {
 	if len(data) == 0 || data[0] != '"' || json.Unmarshal(data, &value) != nil {
 		return "", invalid
 	}
-	// encoding/json replaces unpaired UTF-16 surrogates with U+FFFD. Reject
-	// those instead of accidentally selecting a different, valid U+FFFD key.
+	if !validCompletionSurrogates(data) {
+		return "", invalid
+	}
+	return value, nil
+}
+
+// encoding/json replaces unpaired UTF-16 surrogates with U+FFFD. Reject
+// them rather than selecting a different valid U+FFFD key. Input is valid JSON.
+func validCompletionSurrogates(data []byte) bool {
 	for i := 1; i < len(data)-1; i++ {
 		if data[i] != '\\' {
 			continue
@@ -364,24 +384,28 @@ func completionString(data []byte) (string, error) {
 		}
 		r, err := strconv.ParseUint(string(data[i+1:i+5]), 16, 16)
 		if err != nil {
-			return "", invalid
+			return false
 		}
 		i += 4
 		if r >= 0xDC00 && r <= 0xDFFF {
-			return "", invalid
+			return false
 		}
 		if r >= 0xD800 && r <= 0xDBFF {
-			if i+6 >= len(data) || data[i+1] != '\\' || data[i+2] != 'u' {
-				return "", invalid
-			}
-			low, err := strconv.ParseUint(string(data[i+3:i+7]), 16, 16)
-			if err != nil || low < 0xDC00 || low > 0xDFFF {
-				return "", invalid
+			if !completionLowSurrogate(data, i) {
+				return false
 			}
 			i += 6
 		}
 	}
-	return value, nil
+	return true
+}
+
+func completionLowSurrogate(data []byte, i int) bool {
+	if i+6 >= len(data) || data[i+1] != '\\' || data[i+2] != 'u' {
+		return false
+	}
+	low, err := strconv.ParseUint(string(data[i+3:i+7]), 16, 16)
+	return err == nil && low >= 0xDC00 && low <= 0xDFFF
 }
 
 func keyLiteral(key string) string {
