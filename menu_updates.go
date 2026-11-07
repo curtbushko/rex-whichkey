@@ -6,9 +6,8 @@ import (
 )
 
 type menuRenameUpdates struct {
-	invocation string
-	wanted     [2]*renameDemand
-	ready      [2]*renameUpdate
+	wanted [2]*renameDemand
+	ready  [2]*renameUpdate
 }
 
 func (u *menuRenameUpdates) demand(node *menuNode) {
@@ -16,7 +15,7 @@ func (u *menuRenameUpdates) demand(node *menuNode) {
 	if kind < 0 || u.wanted[kind] != nil {
 		return
 	}
-	u.wanted[kind] = &renameDemand{Invocation: u.invocation, Kind: renameKindName(kind), Load: 1, Keys: node.keys}
+	u.wanted[kind] = &renameDemand{Kind: renameKindName(kind), Load: 1, Keys: node.keys}
 }
 
 func (m *Menu) renameReady(node *menuNode) bool {
@@ -60,10 +59,9 @@ func validateRenameUpdate(update renameUpdate, demand renameDemand) error {
 }
 
 type menuProviderUpdates struct {
-	base       Config
-	invocation string
-	wanted     [4]*renameDemand
-	ready      [4]*providerUpdate
+	base   Config
+	wanted [4]*renameDemand
+	ready  [4]*providerUpdate
 }
 
 // Called only after the first successful draw, or after explicit prefix entry.
@@ -80,7 +78,7 @@ func (m *Menu) demandProviders(firstDraw bool) {
 		background := firstDraw && kind == 0 && !marker.Hidden
 		entered := !firstDraw && (m.Prefix() == marker.Keys || strings.HasPrefix(m.Prefix(), marker.Keys))
 		if background || entered {
-			m.providers.wanted[kind] = &renameDemand{Invocation: m.providers.invocation, Kind: providerKinds[kind], Load: 1, Keys: marker.Keys}
+			m.providers.wanted[kind] = &renameDemand{Kind: providerKinds[kind], Load: 1, Keys: marker.Keys}
 		}
 	}
 }

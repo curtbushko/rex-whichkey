@@ -445,18 +445,6 @@ func buildProviderUpdate(base Config, demand renameDemand, result metadataResult
 	return update, targets, nil
 }
 
-func validateProviderDemand(demand renameDemand, invocation string, kind int, config Config) error {
-	if demand.Invocation != invocation || demand.Kind != providerKinds[kind] || demand.Load != 1 {
-		return errors.New("whichkey: stale or unknown provider demand")
-	}
-	for _, marker := range config.Spec {
-		if marker.Enabled() && providerKind(marker) == kind && marker.Keys == demand.Keys {
-			return nil
-		}
-	}
-	return errors.New("whichkey: provider demand is not an enabled retained marker")
-}
-
 // Validate every complete marker expansion, its original root and all children.
 // No child can introduce another provider, escape the subtree or nominate IDs
 // for parent authority. The parent's separately retained batch is authoritative.

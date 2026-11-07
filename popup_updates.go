@@ -15,22 +15,20 @@ const (
 )
 
 type renameDemand struct {
-	Invocation string `json:"invocation"`
-	Kind       string `json:"kind"`
-	Load       int    `json:"load"`
-	Keys       string `json:"keys"`
+	Kind string `json:"kind"`
+	Load int    `json:"load"`
+	Keys string `json:"keys"`
 }
 
 // The selection binding omits demand keys: the menu already retains full keys.
 // In-process metadata supplies readiness, never action or target authority.
 type renameBinding struct {
-	Invocation string `json:"invocation"`
-	Kind       string `json:"kind"`
-	Load       int    `json:"load"`
+	Kind string `json:"kind"`
+	Load int    `json:"load"`
 }
 
 func (d renameDemand) binding() renameBinding {
-	return renameBinding{Invocation: d.Invocation, Kind: d.Kind, Load: d.Load}
+	return renameBinding{Kind: d.Kind, Load: d.Load}
 }
 
 type renameUpdate struct {
