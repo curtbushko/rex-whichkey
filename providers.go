@@ -188,9 +188,19 @@ func readPaneRows(view rex.SessionSnapshot) ([]providerRow, error) {
 	if len(blocks) > maxSessionMenuEntries {
 		return nil, errProviderOverflow
 	}
+	currentID := ""
+	for _, window := range view.Windows() {
+		if window.Active {
+			currentID = window.FocusedBlockID
+		}
+	}
 	rows := make([]providerRow, 0, len(blocks))
 	for _, block := range blocks {
-		rows = append(rows, providerRow{id: block.ID, label: "Window " + block.WindowID + " / layer " + block.LayerID,
+		label := "Window " + block.WindowID + " / layer " + block.LayerID
+		if block.ID == currentID {
+			label = "[current] " + label
+		}
+		rows = append(rows, providerRow{id: block.ID, label: label,
 			mapping: Mapping{Action: menuPaneFocus}, block: block})
 	}
 	return rows, nil
