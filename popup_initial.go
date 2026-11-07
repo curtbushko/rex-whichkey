@@ -56,6 +56,10 @@ func popupInitialSize(ctx context.Context, origin rex.Block, config Config) (rex
 	// and very large terminals to the documented terminal dimension limit.
 	columns := popupCellCount(maximum.W/columnUnit - popupHorizontalInsetCells)
 	availableRows := popupCellCount(heightCap/rowUnit - popupVerticalInsetCells - popupRounding)
+	config, err = providerConfig(config, [4]*providerUpdate{})
+	if err != nil {
+		return rex.Bounds{}, seed, err
+	}
 	menu, err := NewMenu(config.Spec)
 	if err != nil {
 		return rex.Bounds{}, seed, err

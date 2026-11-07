@@ -45,6 +45,16 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 
 // The child carries bounded name data; the parent retains action and resource.
 func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) error {
+	if event.provider != nil {
+		if event.Selection == nil || event.Dismissed || event.Selection.textInput != nil || event.update != nil {
+			return errors.New("whichkey: invalid provider result binding")
+		}
+		return json.NewEncoder(output).Encode(struct {
+			Keys      string         `json:"keys"`
+			Confirmed bool           `json:"confirmed"`
+			Provider  *renameBinding `json:"provider"`
+		}{event.Selection.mapping.Keys, event.Selection.confirmed, event.provider})
+	}
 	if event.Selection == nil || event.Selection.textInput == nil {
 		if event.update != nil {
 			return errors.New("whichkey: update binding requires inline rename text")

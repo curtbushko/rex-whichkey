@@ -36,6 +36,7 @@ type popupRequest struct {
 	image         *runtimeImage
 	placement     *rex.Block
 	snapshot      *rex.SessionSnapshot
+	retained      *nativeMenuState
 	invocationID  string
 	selection     *rex.CLISelection
 	noColor       bool
@@ -249,7 +250,7 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 	if err := writePopupFile(directory, "result.json", nil); err != nil {
 		return err
 	}
-	for _, name := range [4]string{renameDemandFiles[0], renameDemandFiles[1], renameUpdateFiles[0], renameUpdateFiles[1]} {
+	for _, name := range popupUpdateFiles() {
 		if slotErr := writePopupFile(directory, name, nil); slotErr != nil {
 			return slotErr
 		}
@@ -295,6 +296,10 @@ func runPopupLifecycle(parent context.Context, request popupRequest, config Conf
 		return err
 	}
 
+	config = updates.config // Controller and every worker have joined.
+	if request.retained != nil {
+		request.retained.config, request.retained.targets = config, updates.targets
+	}
 	message, err := readNativePopupResult(directory, config)
 	if err != nil {
 		return err
@@ -426,8 +431,7 @@ func removePopupFiles(directory string) error {
 		return err
 	}
 	var outcome error
-	for _, name := range []string{"config.json", "result.json", "lifetime", nativeTextFile, runtimeImageName, "runtime.json",
-		renameDemandFiles[0], renameDemandFiles[1], renameUpdateFiles[0], renameUpdateFiles[1]} {
+	for _, name := range append([]string{"config.json", "result.json", "lifetime", nativeTextFile, runtimeImageName, "runtime.json"}, popupUpdateFiles()...) {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			outcome = errors.Join(outcome, err)
 		}
@@ -482,7 +486,7 @@ func decodeNativePopupResult(data []byte, config Config) (event MenuEvent, err e
 	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
 		return MenuEvent{Dismissed: true}, nil
 	}
-	fields, err := completionObject(data, "keys", "confirmed", "text", "update")
+	fields, err := completionObject(data, "keys", "confirmed", "text", "update", "provider")
 	if err != nil {
 		return MenuEvent{}, err
 	}
@@ -512,6 +516,13 @@ func decodeNativePopupResult(data []byte, config Config) (event MenuEvent, err e
 			return MenuEvent{}, err
 		}
 		event.update = &binding
+	}
+	if raw, present := fields["provider"]; present {
+		var binding renameBinding
+		if err := decodeRuntime(raw, &binding, popupMessageLimit); err != nil {
+			return MenuEvent{}, err
+		}
+		event.provider = &binding
 	}
 	return event, nil
 }

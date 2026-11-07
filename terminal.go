@@ -36,20 +36,6 @@ type terminalRuntime struct {
 	endpoint  string
 }
 
-func resolveTerminalHostMenu(ctx context.Context, config Config) (Config, error) {
-	var selection *rex.CLISelection
-	if frozen, present := ctx.Value(terminalRuntimeKey{}).(terminalRuntime); present {
-		endpoint, err := rex.CanonicalEndpoint(frozen.endpoint)
-		if err != nil || endpoint != frozen.endpoint || frozen.selection == nil {
-			return Config{}, errRuntimeCompatibility
-		}
-		// The parent expanded providers before sizing and image handoff.
-		// Never let the child replace the retained executable snapshot.
-		return config, nil
-	}
-	return resolveHostMenu(ctx, config, selection)
-}
-
 // RunTerminal owns one short-lived menu on the controlling popup terminal. The
 // caller must give it exclusive terminal ownership, then dispatch its Selection
 // only after a successful return. It does not close Rex resources or run actions.
@@ -71,10 +57,12 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGHUP, syscall.SIGQUIT,
 		syscall.SIGTERM, syscall.SIGPIPE, syscall.SIGTSTP)
 	defer stop()
-	// Both the direct menu and popup child enter here on the execution/server
-	// host. Resolve inventory once before menu construction or terminal mutation;
-	// generated groups cannot add or replace a retained executable selection.
-	config, err := resolveTerminalHostMenu(ctx, config)
+	// Local validation and placeholder construction do no provider I/O.
+	base, err := canonicalMenuSnapshot(config)
+	if err != nil {
+		return MenuEvent{}, err
+	}
+	config, err = providerConfig(base, [4]*providerUpdate{})
 	if err != nil {
 		return MenuEvent{}, err
 	}
@@ -83,12 +71,19 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		return MenuEvent{}, err
 	}
 	menu.textSpec = config.textEntry
+	menu.providers = &menuProviderUpdates{base: base}
 	transport, incremental := ctx.Value(terminalRenameKey{}).(terminalRenameTransport)
 	if incremental {
 		if transport.root == nil || config.textEntry == nil {
 			return MenuEvent{}, errRuntimeStartup
 		}
 		menu.updates = &menuRenameUpdates{invocation: transport.invocation}
+		menu.providers.invocation = transport.invocation
+		frozen, present := ctx.Value(terminalRuntimeKey{}).(terminalRuntime)
+		endpoint, endpointErr := rex.CanonicalEndpoint(frozen.endpoint)
+		if !present || endpointErr != nil || endpoint != frozen.endpoint || frozen.selection == nil {
+			return MenuEvent{}, errRuntimeCompatibility
+		}
 	}
 	resize := make(chan os.Signal, 1)
 	signal.Notify(resize, syscall.SIGWINCH, syscall.SIGCONT)
@@ -172,6 +167,15 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	if err != nil {
 		return MenuEvent{}, err
 	}
+	// No metadata job or demand is eligible until the static frame was written.
+	menu.demandProviders(true)
+	var localJobs *metadataJobs
+	if !incremental {
+		// Standalone remains result-only: hosts are listing-only; resource
+		// providers cannot fabricate native origin/dispatch authority.
+		localJobs = newMetadataJobs(ctx, popupRequest{}, nil)
+		defer localJobs.stop() // Join before terminal restoration on every exit.
+	}
 	if !noColor && os.Getenv("NO_COLOR") == "" {
 		// Startup acquisition, not a blocking probe: keys/rendering never wait
 		// for a reply, and palette decoding stays installed until exit.
@@ -217,14 +221,11 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		}
 		return MenuEvent{}, nil
 	}
-	refreshRename := func() error {
-		if !incremental {
-			return nil
-		}
+	refreshUpdates := func() error {
 		if menu.entry != nil && (input.state != terminalKeyGround || input.runeN > 0 || palette.state == paletteEscape) {
 			menu.entry.touched = true // Preserve partial UTF-8/escape/paste intent.
 		}
-		changed, updateErr := menu.pollRenameUpdates(transport)
+		changed, updateErr := menu.pollUpdates(transport, localJobs)
 		if updateErr != nil {
 			return updateErr
 		}
@@ -240,7 +241,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		if err := ctx.Err(); err != nil {
 			return MenuEvent{}, err
 		}
-		if updateErr := refreshRename(); updateErr != nil {
+		if updateErr := refreshUpdates(); updateErr != nil {
 			return MenuEvent{}, updateErr
 		}
 		select {
