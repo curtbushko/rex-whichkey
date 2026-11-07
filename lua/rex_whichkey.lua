@@ -103,7 +103,7 @@ function M.launch(ctx, options)
     local client = ctx.client_id
     if client ~= nil then client = required_id(client, "client") end
     local width = fraction(options.width, .8, "width")
-    local height = fraction(options.height, .3, "height")
+    local height = fraction(options.height, .2, "height")
     for _, key in ipairs({ "ascii", "no_color" }) do
         if options[key] ~= nil and type(options[key]) ~= "boolean" then
             error("rex_whichkey: " .. key .. " must be boolean", 0)
@@ -132,6 +132,7 @@ function M.launch(ctx, options)
         bounds = { (1-width)/2, (1-height)/2, width, height },
         focus = true,
         layout = rex.layout.block{
+            label = "rex-whichkey",
             flavor = "com.superlogical.terminal.shell",
             options = { command = command, shell = "none", path_prepend = path,
                 exit = { on_completion = true, quick_exit_threshold_ms = 0 } },

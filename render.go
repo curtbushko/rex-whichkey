@@ -207,7 +207,7 @@ func menuNavigationHints(menu *Menu, page, pages int) []string {
 	if menu.Prefix() == "" {
 		navigation = "quit"
 	}
-	navigationHint := "Esc/Backspace: " + navigation
+	navigationHint := "esc/backspace: " + navigation
 	full := navigationHint + "  key: select/open"
 	if menu.QuitWithQ() {
 		full += "  q: quit"

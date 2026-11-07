@@ -21,10 +21,10 @@ const endpointTimeout = 2 * time.Second
 
 // CanonicalEndpoint validates a concrete popup transport address, never a mutable
 // Rex host label. Unix socket paths and URIs normalize to escaped unix URIs;
-// host:port and bracketed IPv6 forms retain their spelling. This does
+// qualified DNS names, host:port and bracketed IPv6 retain their spelling. This does
 // not connect, inspect files, resolve DNS or interpret opaque Lua ctx.server.
 func CanonicalEndpoint(server string) (string, error) {
-	invalid := errors.New("rex: endpoint must be an absolute Unix socket path, unix URI or host:port with a nonzero numeric port; labels and controls are not allowed")
+	invalid := errors.New("rex: endpoint must be an absolute Unix socket path, unix URI, qualified DNS name or host:port with a nonzero numeric port; labels and controls are not allowed")
 	if !utf8.ValidString(server) || strings.IndexFunc(server, unicode.IsControl) >= 0 {
 		return "", invalid
 	}
@@ -33,6 +33,9 @@ func CanonicalEndpoint(server string) (string, error) {
 	}
 	if strings.HasPrefix(server, "unix://") {
 		return canonicalUnixEndpoint(server, invalid)
+	}
+	if qualifiedEndpointName(server) {
+		return server, nil
 	}
 	host, port, err := net.SplitHostPort(server)
 	if err != nil || host == "" || port == "" || strings.Trim(port, "0123456789") != "" ||
@@ -44,6 +47,23 @@ func CanonicalEndpoint(server string) (string, error) {
 		return "", invalid
 	}
 	return server, nil
+}
+
+// A qualified address is unambiguous CLI network data, unlike a short mutable
+// host-list label. Rex owns connection defaults, including Tailscale transport.
+func qualifiedEndpointName(value string) bool {
+	if len(value) > 253 || !strings.Contains(value, ".") {
+		return false
+	}
+	for _, label := range strings.Split(value, ".") {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		if strings.Trim(label, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-") != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func canonicalUnixEndpoint(server string, invalid error) (string, error) {

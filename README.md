@@ -195,6 +195,18 @@ assets. See [examples and migration](examples/README.md).
 
 ## Use and safety
 
+The session switcher first shows `l  This Mac` and one group per remote host,
+with session counts and mnemonic host keys where available. Choose a host to
+see plain session names and the current-session marker; breadcrumbs show the
+host name without `remote:` or a repeated count. Each host has its own nine-choice
+batches and `n` More groups; Tab handles any additional viewport paging. Large
+host lists also get More groups. Session IDs and owning endpoints remain
+internal: the chosen session is revalidated on its server, then the original
+graphical app receives an unscoped `session.select`. No other app is selected from
+a remote server's client list. Remote reads share the bounded sessions job;
+unavailable or empty hosts remain visible, and warnings do not hide healthy
+local sessions or trigger retries in that invocation.
+
 | Keys | Built-ins |
 | --- | --- |
 | `wn/ws/wh/wl/wr/wx` | Session new / Go switch list / previous / next / inline rename / close |

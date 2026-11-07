@@ -69,6 +69,27 @@ func TestCallExactArgumentsAndResult(t *testing.T) {
 		"--", "--user-method", `{"name":"a; $(not a shell)"}`}, argv)
 }
 
+func TestSessionSelectionKeepsOriginalAppUnscoped(t *testing.T) {
+	const originalApp = "client:00000000-0000-0000-0000-000000000001"
+	const remoteSession = "session:00000000-0000-0000-0000-000000000002"
+	client, logPath := apiFixtureClient(t, `{"performed_by":"`+originalApp+`"}`, 0)
+	perform, err := NewContext(context.Background(), Options{Selection: client.Selection(), Server: client.Server(), Timeout: 5 * time.Second})
+	require.NoError(t, err)
+	require.NoError(t, perform.Perform(context.Background(), originalApp, "session.select", map[string]string{"session_id": remoteSession}, "", ""))
+	data, err := os.ReadFile(logPath)
+	require.NoError(t, err)
+	var argv []string
+	require.NoError(t, json.Unmarshal(data, &argv))
+	require.NotContains(t, argv, "--session")
+	require.Equal(t, client.Server(), argv[1])
+	var request map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal([]byte(argv[len(argv)-1]), &request))
+	require.NotContains(t, request, "session_id")
+	require.NotContains(t, request, "block_id")
+	require.JSONEq(t, `"`+originalApp+`"`, string(request["client_id"]))
+	require.JSONEq(t, `{"session_id":"`+remoteSession+`"}`, string(request["args"]))
+}
+
 func TestCallFailuresNeverRetry(t *testing.T) {
 	for _, test := range []struct {
 		name, output string

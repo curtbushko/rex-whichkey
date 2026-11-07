@@ -11,7 +11,7 @@ const maxSessionMenuEntries = 512
 
 // validateSessionChoice checks the full retained destination, including optional
 // window membership. No assumption about the configured key or label remains.
-func validateSessionChoice(ctx context.Context, client *rex.Client, mapping Mapping) error {
+func validateSessionChoice(ctx context.Context, client *rex.Client, mapping Mapping, retained *rex.Session) error {
 	if mapping.Action != menuSessionSelect || mapping.CallbackRef != "" {
 		return errors.New("whichkey: invalid retained session choice")
 	}
@@ -26,7 +26,15 @@ func validateSessionChoice(ctx context.Context, client *rex.Client, mapping Mapp
 	if err != nil {
 		return err
 	}
-	session, err := client.Session(ctx, id)
+	var session rex.Session
+	if retained != nil {
+		if retained.ID != id {
+			return errors.New("whichkey: session selection changed its retained destination")
+		}
+		session, err = retained.Inspect(ctx)
+	} else {
+		session, err = client.Session(ctx, id)
+	}
 	if err != nil {
 		return errors.New("whichkey: chosen session is no longer available; not retargeted")
 	}

@@ -18,6 +18,7 @@ import (
 const (
 	terminalConfirmResize = "confirmation resize"
 	terminalEditCase      = "editing"
+	terminalBackspaceCase = "initial backspace"
 	terminalEscapeCase    = "escape"
 	terminalPaletteCase   = "palette"
 	terminalPageCase      = "pagination"
@@ -50,7 +51,7 @@ func TestTerminalInteraction(t *testing.T) {
 		recordPTYResult(t, dir, event, err)
 		return
 	}
-	for _, scenario := range []string{"selection", terminalUnicodeCase, terminalEditCase, terminalEscapeCase, "reports", terminalPaletteCase, terminalPageCase, terminalConfirmResize, CompletionCancel} {
+	for _, scenario := range []string{"selection", terminalUnicodeCase, terminalEditCase, terminalBackspaceCase, terminalEscapeCase, "reports", terminalPaletteCase, terminalPageCase, terminalConfirmResize, CompletionCancel} {
 		t.Run(scenario, func(t *testing.T) {
 			sandbox := startPTYSandbox(t, "TestTerminalInteraction", scenario)
 			sandbox.expect(t, 0, "Select action")
@@ -91,6 +92,12 @@ func driveTerminalInteraction(t *testing.T, sandbox *ptySandbox, scenario string
 		sandbox.send(t, "\xa9")
 	case terminalEditCase:
 		driveTerminalEditing(t, sandbox)
+	case terminalBackspaceCase:
+		mark := sandbox.send(t, "r")
+		sandbox.expect(t, mark, "original|")
+		mark = sandbox.send(t, "\x7f")
+		sandbox.expect(t, mark, "origina|")
+		sandbox.send(t, "\r")
 	case terminalEscapeCase:
 		start := time.Now()
 		sandbox.send(t, "\x1b")
@@ -182,6 +189,10 @@ func assertTerminalInteraction(t *testing.T, scenario string, result ptyResult) 
 		require.Equal(t, "r", result.Keys)
 		require.NotNil(t, result.Text)
 		require.Equal(t, "A!猫Z", *result.Text)
+	case terminalBackspaceCase:
+		require.Equal(t, "r", result.Keys)
+		require.NotNil(t, result.Text)
+		require.Equal(t, "origina", *result.Text)
 	case terminalPaletteCase, terminalConfirmResize:
 		require.Equal(t, "c", result.Keys)
 		require.True(t, result.Confirmed)

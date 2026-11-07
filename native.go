@@ -75,11 +75,15 @@ func dispatchNativeSelection(ctx context.Context, client *rex.Client, origin lau
 		if appErr != nil {
 			return fmt.Errorf("whichkey: app action refused after cleanup: %w", appErr)
 		}
-		return dispatchNativeApp(ctx, client, origin, placement, requested, mapping)
+		destination := targets[mapping.Keys].session
+		if mapping.Action == menuSessionSelect && message.provider != nil && destination == nil {
+			return errors.New("whichkey: missing retained session destination")
+		}
+		return dispatchNativeApp(ctx, client, origin, placement, requested, mapping, destination)
 	}
 }
 
-func dispatchNativeApp(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping) error {
+func dispatchNativeApp(parent context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string, mapping Mapping, destination *rex.Session) error {
 	ctx, done := context.WithTimeout(parent, 3*time.Second)
 	defer done()
 	bound := popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID, ClientID: origin.ClientID, ConnectedAt: origin.ConnectedAt}
@@ -102,7 +106,7 @@ func dispatchNativeApp(parent context.Context, client *rex.Client, origin launch
 		return err
 	}
 	if mapping.Action == menuSessionSelect {
-		if choiceErr := validateSessionChoice(ctx, client, mapping); choiceErr != nil {
+		if choiceErr := validateSessionChoice(ctx, client, mapping, destination); choiceErr != nil {
 			return choiceErr
 		}
 	}
@@ -115,6 +119,8 @@ func dispatchNativeApp(parent context.Context, client *rex.Client, origin launch
 	}
 	sessionID, blockID := origin.SessionID, origin.BlockID
 	if mapping.Action == menuPaneSplit || mapping.Action == menuSessionSelect {
+		// Destination IDs belong in args. An outer session scope can resolve a
+		// remote ID on this server before the original app receives the action.
 		sessionID, blockID = "", ""
 	}
 	if performErr := perform.Perform(ctx, origin.ClientID, mapping.Action, args, sessionID, blockID); performErr != nil {

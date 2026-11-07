@@ -19,13 +19,18 @@ const (
 
 // providerTarget is retained in-process. A key selects this exact resource;
 // labels, terminal input and current focus supply no identity.
-type providerTarget struct{ block rex.Block }
+type providerTarget struct {
+	block   rex.Block
+	session *rex.Session
+}
 
 type providerRow struct {
 	id      string
 	label   string
+	host    string // Presentation grouping only; session retains the routing endpoint.
 	mapping Mapping
 	block   rex.Block
+	session *rex.Session
 }
 
 // canonicalMenuSnapshot validates in original order before changing spelling.
@@ -87,9 +92,16 @@ func (budget *menuKeyBudget) reserveList(prefixBytes, index int) (int, error) {
 	return prefixBytes + suffixBytes, nil
 }
 
-// providerRows formats one bounded inventory. Full IDs lead labels; metadata is
-// escaped rather than treated as a resource selector. No row is truncated.
+// providerRows formats one bounded inventory. Sessions show names only; other
+// resources retain visible IDs. Display text never supplies routing identity.
 func providerRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
+	if menuProvider(marker) == menuProviderSessions {
+		return sessionProviderRows(marker, entries)
+	}
+	return resourceProviderRows(marker, entries)
+}
+
+func resourceProviderRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
 	budget := menuKeyBudget{rowsLeft: 1024, bytesLeft: menuConfigLimit}
 	if len(entries) == 0 {
 		if err := budget.reserve(len(marker.Keys), 1); err != nil {
@@ -114,37 +126,18 @@ func providerRows(marker Mapping, entries []providerRow) ([]Mapping, error) {
 		keys := hostMenuListKey(marker.Keys, index, len(entries), menuProvider(marker), addGroup)
 		mapping := entry.mapping
 		mapping.Keys = keys
-		mapping.Desc = "[" + entry.id + "] " + hostMenuText(entry.label)
+		mapping.Desc = hostMenuText(entry.label)
+		if menuProvider(marker) != menuProviderSessions {
+			mapping.Desc = "[" + entry.id + "] " + mapping.Desc
+		}
 		add(mapping)
 	}
 	return rows, nil
 }
 
-func readSessionRows(ctx context.Context, client *rex.Client, currentID string) ([]providerRow, error) {
-	sessions, err := client.Sessions(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(sessions) > maxSessionMenuEntries {
-		return nil, errProviderOverflow
-	}
-	rows := make([]providerRow, 0, len(sessions))
-	for _, session := range sessions {
-		mapping, encodeErr := sessionRowMapping(session.ID, "")
-		if encodeErr != nil {
-			return nil, encodeErr
-		}
-		label := session.Label
-		if session.ID == currentID {
-			label = "[current] " + label
-		}
-		rows = append(rows, providerRow{id: session.ID, label: label, mapping: mapping})
-	}
-	return rows, nil
-}
-
 func readWindowRows(view rex.SessionSnapshot) ([]providerRow, error) {
-	sessionID := view.Session().ID
+	session := view.Session()
+	sessionID := session.ID
 	windows := view.Windows()
 	if len(windows) > maxSessionMenuEntries {
 		return nil, errProviderOverflow
@@ -159,7 +152,7 @@ func readWindowRows(view rex.SessionSnapshot) ([]providerRow, error) {
 		if window.Active {
 			label = "[current] " + label
 		}
-		rows = append(rows, providerRow{id: window.ID, label: label, mapping: mapping})
+		rows = append(rows, providerRow{id: window.ID, label: label, mapping: mapping, session: &session})
 	}
 	return rows, nil
 }
@@ -233,12 +226,29 @@ func expandResourceMarker(marker Mapping, entries []providerRow, readErr error) 
 	return append([]Mapping{root}, children...), nil
 }
 
-func retainPaneTargets(targets map[string]providerTarget, rows []Mapping, entries []providerRow) {
-	index := 0
+func retainProviderTargets(targets map[string]providerTarget, rows []Mapping, entries []providerRow) {
+	sessions := make(map[string]*rex.Session)
+	var panes []rex.Block
+	for _, entry := range entries {
+		if entry.mapping.Action == menuSessionSelect && entry.session != nil {
+			sessions[string(entry.mapping.Args)] = entry.session
+		}
+		if entry.mapping.Action == menuPaneFocus {
+			panes = append(panes, entry.block)
+		}
+	}
+	pane := 0
 	for _, row := range rows {
-		if row.Action == menuPaneFocus {
-			targets[row.Keys] = providerTarget{block: entries[index].block}
-			index++
+		switch row.Action {
+		case menuSessionSelect:
+			if session := sessions[string(row.Args)]; session != nil {
+				targets[row.Keys] = providerTarget{session: session}
+			}
+		case menuPaneFocus:
+			if pane < len(panes) {
+				targets[row.Keys] = providerTarget{block: panes[pane]}
+				pane++
+			}
 		}
 	}
 }
@@ -439,7 +449,7 @@ func buildProviderUpdate(base Config, demand renameDemand, result metadataResult
 		if bytesUsed > menuConfigLimit {
 			return providerUpdate{}, nil, errors.New("whichkey: provider batch exceeds 4 MiB; not truncated")
 		}
-		retainPaneTargets(targets, rows, result.entries)
+		retainProviderTargets(targets, rows, result.entries)
 		update.Rows = append(update.Rows, rows...)
 	}
 	return update, targets, nil

@@ -123,7 +123,11 @@ func (m *Menu) Entries() []MenuEntry {
 func (m *Menu) Breadcrumbs() []MenuEntry {
 	var trail []MenuEntry
 	for node := m.current; node != nil && node.parent != nil; node = node.parent {
-		trail = append(trail, node.entry())
+		entry := node.entry()
+		if node.mapping.breadcrumbLabel != "" {
+			entry.Label = node.mapping.breadcrumbLabel
+		}
+		trail = append(trail, entry)
 	}
 	slices.Reverse(trail)
 	return trail

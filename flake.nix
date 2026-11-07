@@ -78,6 +78,12 @@
       system,
     }: let
       sharedConfigs = golang-shared-configs.packages.${system}.all-configs;
+      # Darwin retains the .NET test dependency even when upstream checks are off.
+      # Its NuGet setup is unrelated to building this Python application and aborts.
+      preCommit = pkgs.pre-commit.overrideAttrs (_:
+        pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
+          dontConfigureNuget = true;
+        });
       make-wrapper = pkgs.writeShellScriptBin "make" ''
         exec ${pkgs.go-task}/bin/task "$@"
       '';
@@ -90,7 +96,7 @@
           go-task
           gotools
           golangci-lint
-          pre-commit
+          preCommit
           (go-ai-lint {inherit pkgs;})
           sharedConfigs
           make-wrapper

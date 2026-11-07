@@ -87,6 +87,14 @@ func NewContext(ctx context.Context, options Options) (*Client, error) {
 	return client, nil
 }
 
+// Server returns this client's captured concrete endpoint.
+func (c *Client) Server() string {
+	if c == nil {
+		return ""
+	}
+	return c.server
+}
+
 // Selection returns a detached path snapshot for invocation-local reuse.
 // It carries no endpoint, resource, GUI or compatibility authority.
 func (c *Client) Selection() *CLISelection {

@@ -33,8 +33,8 @@ func inlineRenameMapping(mapping Mapping) bool {
 type menuTextEntry struct {
 	node     *menuNode
 	value    string
-	cursor   int // UTF-8 byte offset at a grapheme boundary
-	selected bool
+	cursor   int  // UTF-8 byte offset at a grapheme boundary
+	selected bool // Replace untouched prefill on typing, not on deletion.
 	problem  string
 	touched  bool // Edits, cursor keys, validation or partial input forbid late prefill.
 }
@@ -112,9 +112,7 @@ func (m *Menu) handleTextKey(key string) MenuEvent {
 		}
 		e.selected = false
 	case "\b", "\x7f", terminalDeleteKey:
-		if e.selected {
-			e.value, e.cursor = "", 0
-		} else if key == terminalDeleteKey {
+		if key == terminalDeleteKey {
 			end := nextTextBoundary(e.value, e.cursor)
 			e.value = e.value[:e.cursor] + e.value[end:]
 		} else {

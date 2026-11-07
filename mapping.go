@@ -68,6 +68,10 @@ type Mapping struct {
 	// A Lua condition function returning nil is disabled: encode it as a pointer
 	// to false (or omit the disabled record), never as Cond == nil.
 	Cond *bool `json:"cond,omitempty"`
+
+	// Generated host groups show counts in the list, but only the host name
+	// in breadcrumbs. This is Go-owned presentation, not JSON routing data.
+	breadcrumbLabel string
 }
 
 // Enabled reports eligibility for both display and key dispatch. Hidden only
@@ -79,8 +83,6 @@ func (m Mapping) Enabled() bool { return m.Cond == nil || *m.Cond }
 func DefaultConfig() Config {
 	return Config{
 		Position: "center",
-		Title:    "Rex",
-		Icon:     "",
 		Icons:    Icons{Breadcrumb: "»", Group: "+"},
 	}
 }
