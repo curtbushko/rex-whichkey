@@ -2,7 +2,6 @@ package rex
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -14,10 +13,8 @@ type Block struct {
 	WindowID string
 	LayerID  string
 
-	client   *Client
-	blockID  string
-	rect     Bounds // Snapshot of window-relative leaf geometry, never layer-relative.
-	haveRect bool
+	client  *Client
+	blockID string
 }
 
 // Block finds a full block ID in this session's current layout. Detached or
@@ -104,17 +101,6 @@ func (b Block) Close(ctx context.Context) error {
 	return b.client.resourceCommand(ctx, nil, "block", "close", "--session", b.client.session, "--", b.blockID)
 }
 
-// Wait waits for this block's terminal child to exit (or a nonterminal block to
-// close), bounded by the client timeout and ctx. A nonzero child exit, missing
-// target, disconnect or timeout returns the CLI error; none triggers recreation.
-// Rex cannot always recover a vanished terminal's child exit status.
-func (b Block) Wait(ctx context.Context) error {
-	if err := b.valid(); err != nil {
-		return err
-	}
-	return b.client.resourceCommand(ctx, nil, "wait", "--session", b.client.session, "--", b.blockID)
-}
-
 func (b Block) valid() error {
 	if err := b.Session().valid(); err != nil {
 		return err
@@ -128,7 +114,6 @@ func (b Block) valid() error {
 type placedLayer struct {
 	id     string
 	kind   string
-	bounds json.RawMessage
 	blocks []Block
 }
 
@@ -162,35 +147,19 @@ func (s Session) snapshotLayers(view sessionView) ([]placedLayer, error) {
 				return nil, errors.New("rex session inspect: invalid layer placement")
 			}
 			seen[item.ID] = true
-			layer := placedLayer{id: item.ID, kind: item.Kind, bounds: item.Bounds}
-			// Geometry is optional to placement/liveness. Older or malformed
-			// layout metadata must not fabricate a full-window origin or make
-			// native display require a graphical viewer.
-			rectangles, geometryErr := layoutRectangles(item.Layout)
-			if geometryErr != nil || len(rectangles) != len(item.Blocks) {
-				rectangles = nil
-			}
-			for _, block := range item.Blocks {
-				if _, present := rectangles[block.ID]; !present {
-					rectangles = nil
-					break
-				}
-			}
+			layer := placedLayer{id: item.ID, kind: item.Kind}
+			// Keep parsing optional layout metadata, but never use it for float
+			// sizing or placement authority. Missing/malformed geometry remains
+			// nonfatal; the exact placed identities below are authoritative.
+			_, _ = layoutRectangles(item.Layout)
 			for _, block := range item.Blocks {
 				if !resourceID(block.ID, "block") || seen[block.ID] {
 					return nil, errors.New("rex session inspect: invalid or duplicate block placement")
 				}
 				seen[block.ID] = true
-				rect, haveRect := rectangles[block.ID]
-				if window.ZoomedBlockID != "" {
-					rect, haveRect = Bounds{}, false // Hidden normal layouts are not current visible geometry.
-					if window.ZoomedBlockID == block.ID {
-						rect, haveRect = Bounds{W: 1, H: 1}, true
-					}
-				}
 				layer.blocks = append(layer.blocks, Block{
 					ID: block.ID, WindowID: window.ID, LayerID: item.ID,
-					client: s.client, blockID: block.ID, rect: rect, haveRect: haveRect,
+					client: s.client, blockID: block.ID,
 				})
 			}
 			layers = append(layers, layer)
