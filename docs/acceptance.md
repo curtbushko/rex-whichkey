@@ -129,7 +129,8 @@ at integrated `88e8f9ae98adf7677a14fac1bf63bf257c5e18dd`: all 42 original
 scenarios/assertions retained, full unit/race suites passing. Historical fixtures
 remain test-only; they are not restored into the production control path.
 
-Task06 builder checks now pass in the isolated `p19-t06-builder-a01` checkout:
+Task06 fix-attempt 2 builder checks pass in the isolated
+`p19-t06-builder-a02` checkout:
 
 | Actual command | Result |
 | --- | --- |
@@ -137,13 +138,17 @@ Task06 builder checks now pass in the isolated `p19-t06-builder-a01` checkout:
 | `task test` | pass, exit 0; both `test:unit` and `test:race` |
 | `task lint` | pass, exit 0; `lint:vet`, `lint:golangci` and `lint:ai` |
 
-Evidence is under `.mtn-tmp/p19/quality-fix/task6-builder-evidence/` in the
-authoritative coordinator checkout: `pre-doc-{build,test,lint}.log` records the
-green code before this documentation update; `final-{build,test,lint}.log` and
+Current evidence is under
+`.mtn-tmp/rex/rex-whichkey-p19-t06-builder-a02/evidence/` in the authoritative
+coordinator checkout: `iteration6-{build,test,lint}.log` records green code before
+this documentation update; `final-{build,test,lint}.log` and
 `final-source-identity.log` bind final delivery. The builder payload
-`rex-whichkey-p19-t06/build/1` supplies the exact commit/tree, commands and
-regression coverage. These are builder results, not an independent review or
-coordinator integration/phase-completion claim.
+`rex-whichkey-p19-t06/build/2` supplies exact commit/tree, commands and coverage.
+Attempt 1's green gates at `c7c3156` remain in
+`.mtn-tmp/p19/quality-fix/task6-builder-evidence/`; its independent review required
+current orchestration regressions (`REX-P19-T06-001/002`). That negative review
+is not overruled by lint success. These are builder results, not fresh review
+approval or coordinator integration/phase-completion.
 
 All 53 golangci baseline diagnostics and both subsequent AI findings were
 repaired in code, without rule/config/Taskfile/hook/dependency/pin changes,
@@ -156,6 +161,24 @@ and canceled/bounded display cleanup. The isolated Darwin PTY test checks all
 configured termios fields except observed kernel-transient PENDIN; production
 restores the captured state unchanged. This is not every-failure/platform proof.
 
+Attempt 2 adds real current orchestration coverage, not just decoder helpers:
+`TestTerminalInteraction` drives `RunTerminal` in isolated controlling PTYs through
+selection/dismissal, fragmented UTF-8, inline editing/paste, lone Escape versus
+established sequences/reports, keys around fragmented palette replies, own-PTY
+resize, queued-key pagination, retained edits/confirmation, and cancellation
+with empty selection and display/termios restoration. `TestDirectLifecycle` drives
+`RunDirectMenu` through a strict executable CLI fixture (sandbox-only PATH, no
+live Rex fallback). Its ordered call log checks verified retirement and exact
+focus before one resource/app effect; zero effects on detach uncertainty,
+visible/placement retirement failure, focus failure, moved origin, changed GUI
+generation, dismissal and cancellation; uncertain mutations run once. It checks
+actual termios restoration before mutations and a blocked metadata executable
+being canceled/reaped before retirement/effect. Temporary fault mutations for
+key routing, Escape, pagination/stale queued page counts and swallowed detach
+uncertainty fail these tests; the mutations are removed. Production code is
+unchanged from attempt 1. These Darwin sandbox tests do not observe real Rex
+post-exit host deletion or replace the coordinator's live smoke.
+
 The system AI 1.0.0 binary was built with Go 1.25 and cannot analyze Go 1.26.
 The coordinator rebuilt the **same unchanged original 1.0.0 source/dependencies**
 using existing pinned Go 1.26.8 and `-mod=readonly`, then supplied its PATH.
@@ -163,7 +186,8 @@ Original NAR hash: `sha256-y2G7dTZqM/rEQaALu54bHigBeO1xxRIblBJ7QxOffW4=`.
 Provenance is in `.mtn-tmp/p19/quality-fix/tools/{source-hash,rebuilt-build-info,source-hash-after-build}.txt`.
 No tool version, profile, package pin or lint policy was changed to obtain green.
 
-Fresh independent exact-source full-test/full-lint review remains pending.
+Fresh independent exact-source full-test/full-lint review of the whole original
+Task06 diff, including these coverage fixes, remains pending.
 Coordinator reviewed-combined/main `task build`, `task test`, full `task lint`
 and actual `make run`/owned rename/cancel/cleanup remain pending before phase
 green. Earlier Task03 observations above retain their original revision limits;
