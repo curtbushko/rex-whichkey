@@ -1,4 +1,4 @@
--- Shared launch-only entry. Go owns JSON menu data, interaction and effects.
+-- Shared launch-only module. Go owns JSON menu data, interaction and effects.
 --
 -- Installed binding (no executable nomination):
 --   local whichkey = require("rex_whichkey")
@@ -7,7 +7,9 @@
 --                         ascii=false, no_color=false }.
 --
 -- Development, after `task build` in this checkout, without init.lua reload:
---   rex do "$PWD/lua/rex_whichkey.lua" --action rex_whichkey_launch development=true
+--   rex do "$PWD/lua/rex_whichkey_launch.lua" --action rex_whichkey_launch development=true
+-- Run that script, not this module: rex do serializes script returns and this
+-- module returns M (including its launch function) for installed require callers.
 -- Use explicit -s SESSION -b BLOCK and -C CLIENT when launching for an owned
 -- origin from another terminal. The action receives those as ctx, never from
 -- menu data. development=true derives ONLY this module's checkout bin directory
@@ -152,8 +154,9 @@ function M.launch(ctx, options)
     return true, created -- Preserve the function-binding handled result.
 end
 
--- One launch-only action supports rex do FILE --action without registering or
--- reloading any user configuration. This is not a menu callback registry.
+-- The sibling rex_whichkey_launch.lua script loads this one launch-only action
+-- for rex do FILE --action without registering or reloading user configuration.
+-- This is not a menu callback registry.
 rex.action{
     name = "rex_whichkey_launch",
     title = "Which-key menu",
