@@ -1,76 +1,14 @@
 package whichkey
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"temp/rex"
 )
-
-// launchBuffer retains bounded metadata/private result bytes, never diagnostics.
-type launchBuffer struct {
-	buffer    bytes.Buffer
-	remaining int
-}
-
-func (output *launchBuffer) Write(data []byte) (int, error) {
-	if len(data) > output.remaining {
-		return 0, io.ErrShortWrite
-	}
-	output.remaining -= len(data)
-	return output.buffer.Write(data)
-}
-
-// launchNativePopup owns interaction and dispatch. PTY output supplies no
-// resource/action authority; only this parent's retained snapshot supplies it.
-func launchNativePopup(parent context.Context, origin launchOrigin, selection *rex.CLISelection, requested string, config Config, noColor, ascii bool) error {
-	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT)
-	defer stop()
-	client, err := rex.NewContext(ctx, rex.Options{Selection: selection, Server: origin.Server, Session: origin.SessionID, Timeout: 3 * time.Second})
-	if err != nil {
-		return errors.New("whichkey: cannot construct captured endpoint/session client")
-	}
-	inspect, done := context.WithTimeout(ctx, 3*time.Second)
-	snapshot, err := client.SessionSnapshot(inspect, origin.SessionID)
-	done()
-	if err != nil {
-		return err
-	}
-	placement, err := snapshot.Block(origin.BlockID)
-	if err != nil {
-		return err
-	}
-	origin, appErr := captureNativeApp(ctx, client, origin, placement, requested)
-	if appErr != nil && requested != "" {
-		return appErr
-	}
-	// Forms and provider placeholders need no nonessential inventory read.
-	config.textEntry = &textEntrySpec{}
-	state := nativeMenuState{config: config}
-	message, err := nativePopupSelection(ctx, origin, selection, &state, placement, &snapshot, noColor, ascii)
-	// No effects until terminal, owned popup, focus, pipe, files and captured
-	// source image retirement have succeeded. Uncertain cleanup is not retried.
-	err = errors.Join(err, origin.image.retire())
-	if err != nil {
-		return err
-	}
-	if message.Dismissed {
-		return nil
-	}
-	mapping, err := retainedNativeMapping(message, state.config)
-	if err != nil {
-		return err
-	}
-	return dispatchNativeSelection(ctx, client, origin, placement, requested, mapping, message, state.targets, appErr)
-}
 
 // App eligibility never gates resource-only display. A successful binding is
 // frozen now, not resolved from whoever owns/focuses the pane after interaction.
@@ -86,13 +24,6 @@ func captureNativeApp(ctx context.Context, client *rex.Client, origin launchOrig
 		return origin, originErr
 	}
 	return origin, nil
-}
-
-// Set only by the lifecycle after the controller is canceled and joined.
-// No worker writes memory visible to dispatch.
-type nativeMenuState struct {
-	config  Config
-	targets map[string]providerTarget
 }
 
 func retainedNativeMapping(message MenuEvent, config Config) (Mapping, error) {
@@ -247,38 +178,4 @@ func nativeNewTab(ctx context.Context, client *rex.Client, bound popupRequest, p
 		return fmt.Errorf("whichkey: native new tab %s preserved in session %s; activation failed or is uncertain; check app Remote Control/action compatibility and select that tab manually, no retry or rollback", window.ID, bound.SessionID)
 	}
 	return nil
-}
-
-// nativePopupSelection only captures finish's validated result. No app lookup,
-// action, or second interactive UI can run inside finish's short operation context.
-// Returning success also requires the lifecycle's deferred cleanup to succeed.
-func nativePopupSelection(ctx context.Context, origin launchOrigin, selection *rex.CLISelection, state *nativeMenuState, placement rex.Block, snapshot *rex.SessionSnapshot, noColor, ascii bool) (MenuEvent, error) {
-	config := state.config
-	data, err := json.Marshal(config)
-	if err != nil {
-		return MenuEvent{}, errors.New("whichkey: cannot encode native menu configuration")
-	}
-	request := popupRequest{Configuration: string(data), Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
-		image: origin.image, placement: &placement, snapshot: snapshot, retained: state, noColor: noColor, ascii: ascii}
-	var retained MenuEvent
-	lifecycleErr := runPopupLifecycle(ctx, request, config, selection, func(_ context.Context, message MenuEvent) error {
-		if !message.Dismissed {
-			if _, selectionErr := retainedNativeMapping(message, state.config); selectionErr != nil {
-				return selectionErr
-			}
-		} else if message.Selection != nil {
-			return errors.New("whichkey: ambiguous popup dismissal")
-		}
-		retained = message
-		return nil
-	})
-	if lifecycleErr != nil {
-		return MenuEvent{}, lifecycleErr
-	}
-	if !retained.Dismissed {
-		if _, selectionErr := retainedNativeMapping(retained, state.config); selectionErr != nil {
-			return MenuEvent{}, selectionErr
-		}
-	}
-	return retained, nil
 }

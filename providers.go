@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"strings"
 	"sync"
 	"time"
@@ -18,8 +17,8 @@ const (
 	menuWindowID  = "window_id"
 )
 
-// providerTarget never crosses the PTY boundary. A key selects this exact
-// retained resource; labels, child output and current focus supply no identity.
+// providerTarget is retained in-process. A key selects this exact resource;
+// labels, terminal input and current focus supply no identity.
 type providerTarget struct{ block rex.Block }
 
 type providerRow struct {
@@ -30,7 +29,7 @@ type providerRow struct {
 }
 
 // canonicalMenuSnapshot validates in original order before changing spelling.
-// Parent matching, generated prefixes and the child trie then share one path.
+// Retained matching, generated prefixes and the menu trie then share one path.
 func canonicalMenuSnapshot(config Config) (Config, error) {
 	if err := config.Validate(); err != nil {
 		return Config{}, err
@@ -49,24 +48,6 @@ func canonicalMenuSnapshot(config Config) (Config, error) {
 	return config, nil
 }
 
-// decodePopupConfig is an internal resolved snapshot, not the legacy public
-// callback decoder. Only the parent can produce internal provider intents.
-func decodePopupConfig(input io.Reader) (Config, error) {
-	var config Config
-	if err := readRuntime(input, &config, menuConfigLimit); err != nil {
-		return Config{}, err
-	}
-	if err := config.Validate(); err != nil {
-		return Config{}, err
-	}
-	for _, mapping := range config.Spec {
-		if mapping.CallbackRef != "" {
-			return Config{}, errors.New("whichkey: invalid executable popup snapshot")
-		}
-	}
-	return canonicalMenuSnapshot(config)
-}
-
 func menuSnapshotBound(config Config) error {
 	data, err := json.Marshal(config)
 	if err != nil || len(data) > menuConfigLimit {
@@ -75,7 +56,7 @@ func menuSnapshotBound(config Config) error {
 	return nil
 }
 
-// menuKeyBudget admits complete canonical keys before any child concatenation.
+// menuKeyBudget admits complete canonical keys before generated concatenation.
 // Subtraction keeps both the byte sum and pagination arithmetic overflow-safe.
 // Serialized batch/combined-menu bounds remain separate checks.
 type menuKeyBudget struct {
@@ -267,8 +248,6 @@ func retainPaneTargets(targets map[string]providerTarget, rows []Mapping, entrie
 const metadataRenameKind = 4
 
 var providerKinds = [4]string{menuProviderSessions, menuProviderWindows, menuProviderPanes, menuProviderHosts}
-var providerDemandFiles = [4]string{"sessions-demand.json", "windows-demand.json", "panes-demand.json", "hosts-demand.json"}
-var providerUpdateFiles = [4]string{"sessions-update.json", "windows-update.json", "panes-update.json", "hosts-update.json"}
 
 func providerKind(mapping Mapping) int {
 	for kind, name := range providerKinds {
@@ -292,7 +271,7 @@ type metadataResult struct {
 	err     error
 }
 
-// Only the owning controller/UI loop changes scheduling state. Workers receive
+// Only the owning UI loop changes scheduling state. Workers receive
 // captured read-only context and send one detached value. There are at most two
 // executing goroutines, two result slots and five once-only jobs; no work queue
 // can grow with key presses or repeated markers.
