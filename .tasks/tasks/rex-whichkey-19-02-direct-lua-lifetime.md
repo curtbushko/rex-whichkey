@@ -27,6 +27,7 @@ implementation:
   language: go
   ownership:
     paths:
+      - cmd/controller_legacy_support_test.go
       - cmd/main.go
       - controller_legacy_support_test.go
       - direct_menu.go
@@ -47,6 +48,7 @@ implementation:
       - popup_updates.go
       - providers.go
       - rex/block.go
+      - rex/controller_legacy_support_test.go
       - rex/direct_popup.go
       - rex/layer.go
       - rex/session.go
@@ -91,7 +93,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:48:23.279Z'
-dateModified: '2026-11-07T07:21:42.259Z'
+dateModified: '2026-11-07T08:30:20.619Z'
 tags:
   - task
 type: task
