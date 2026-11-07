@@ -22,7 +22,7 @@ type DirectOptions struct {
 	LaunchOptions
 }
 
-// RunDirectMenu runs inside the Lua-created terminal. It creates no process,
+// RunDirectMenu runs inside the Lua-created terminal. It creates no menu child,
 // image copy, private transport or nested popup. Rex owns terminal exit cleanup.
 func RunDirectMenu(parent context.Context, options DirectOptions) error {
 	if parent == nil || !popupResourceID(options.OriginSession, "session") ||
