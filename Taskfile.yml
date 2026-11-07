@@ -8,8 +8,6 @@ vars:
     sh: go env GOOS
   ARCH:
     sh: go env GOARCH
-  BINARY:
-    sh: basename -s .git $(git remote get-url origin)
 
 tasks:
   default:
@@ -20,14 +18,31 @@ tasks:
   build:
     desc: Build the binary
     cmds:
-      - mkdir -p {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}
-      - GOOS={{.OS}} GOARCH={{.ARCH}} go build -o {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}} ./cmd
-      - chmod +x {{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}}
+      - mkdir -p {{.ROOT_DIR | shellQuote}}/bin/{{.OS}}-{{.ARCH}}
+      - GOOS={{.OS}} GOARCH={{.ARCH}} go build -o {{.ROOT_DIR | shellQuote}}/bin/{{.OS}}-{{.ARCH}}/rex-whichkey ./cmd
+      - chmod +x {{.ROOT_DIR | shellQuote}}/bin/{{.OS}}-{{.ARCH}}/rex-whichkey
 
   run:
-    desc: Run the binary
+    desc: Build this checkout and launch the shared Lua float from an explicit Rex origin
     cmds:
-      - "{{.ROOT_DIR}}/bin/{{.OS}}-{{.ARCH}}/{{.BINARY}}"
+      - |
+        set -eu
+        : "${REX_SESSION:?task run requires the originating REX_SESSION}"
+        : "${REX_BLOCK:?task run requires the originating REX_BLOCK}"
+        command -v rex >/dev/null
+      - task: build
+      - |
+        set -eu
+        source_directory={{.ROOT_DIR | shellQuote}}
+        build_directory={{.ROOT_DIR | shellQuote}}/bin/{{.OS}}-{{.ARCH}}
+        set --
+        if [ "${REX_CLIENT+x}" = x ]; then
+          : "${REX_CLIENT:?REX_CLIENT must be an original full client ID when present}"
+          set -- -C "$REX_CLIENT"
+        fi
+        exec rex "$@" do "$source_directory/lua/rex_whichkey.lua" \
+          -s "$REX_SESSION" -b "$REX_BLOCK" --action rex_whichkey_launch \
+          {{.CLI_ARGS}} development_directory="$build_directory"
 
   clean:
     desc: Clean /bin directory

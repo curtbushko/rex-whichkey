@@ -1,7 +1,9 @@
 # Go-owned session switch and rename screens
 
-The direct public binary and minimal function keybinding use the same Go menu.
-JSON configuration can place the supported intents at any valid full key.
+Source `make run`, installed script and optional require binding use the same
+shared Lua float launcher and one direct Go menu process. Bare Go is not a
+launcher; `menu` is UI/result-only. JSON configuration can place supported intents
+at any valid full key.
 There is no native session picker, app chooser, extra pane or navigation resize.
 
 ## Sessions → Switch
@@ -17,13 +19,13 @@ in-flight attempt and terminal result, including failures:
   Escape/Backspace and focus redraw retain fixed bounds.
 - Empty inventory has a non-executable message; read failure has an explicit
   warning, not a successful empty inventory or picker fallback.
-- More than 512 resources is an error, not truncation. Expansion batches and
-  combined transport have further validated bounds.
+- More than 512 resources is an error, not truncation. In-process expansion
+  batches and combined menu data retain further validated bounds.
 - Loading is non-executable and does not buffer keys/Enter. Redraw or re-entering
   a prefix does not retry/refresh. Start a new invocation for a new snapshot.
 
-Destination IDs remain in the parent's retained mapping, not child-supplied
-authority. After exact cleanup, Go checks destination membership, original
+Destination IDs remain in the direct Go owner's retained mapping, not
+presentation-supplied authority. After exact cleanup, Go checks destination membership, original
 placement and retained app/connection/owner and sends one unscoped
 `client.perform session.select` with exact destination args. No outer origin
 session/block override substitutes for the destination. A removed session,
@@ -41,8 +43,11 @@ Default `wr` / `session.rename` opens the existing popup's text-entry page,
 prefilled from the captured Session label. It follows the same Go resource/text
 flow as tab rename, including custom keys, optional confirmation and strict
 nonblank UTF-8/4096-byte/128-character validation.
-Escape returns without mutation; Enter validates. After complete cleanup, Go
-revalidates retained placement and calls `Session.Rename` once.
+Escape returns without mutation; Enter validates. After workers/tty/visible
+float/original-focus cleanup, Go revalidates retained placement and calls
+`Session.Rename` once. Under accepted user1b, the detached host may remain through
+dispatch until Go exits/Rex deletes it; post-exit cleanup cannot suppress an
+earlier effect. Go cannot verify its own deletion; observe exact `list_blocks`.
 No implicit GUI is needed; explicit app intent remains strict.
 
 There is no original-Lua completion/receipt/callback route, custom executable
@@ -53,13 +58,12 @@ apply to both session and tab rename.
 
 ## Evidence and history
 
-Phase16 final public menu/navigation/dismissal/cleanup and an exact owned inline
-rename were actually verified on Darwin arm64. Phase18 task2 additionally observed
-loading edits, ready preservation, cancel without rename, revisit/owned rename
-and exact cleanup. These runs do not certify final async provider behavior or
-session selection. Final combined source review and coordinator public
-first-frame/data-ready/action-ready, effect/cancel/cleanup checks remain pending;
-physical keybinding, installed profiles and config reload are not established.
+Phase19 tasks1/2 have native revision-bound direct-source provider/owned rename/
+cancel/dismissal/own-PTY resize and pre-effect visible/post-exit host cleanup
+observations. New Task03 actual make-route checks on reviewed combined source
+and rebuilt main remain coordinator gates. These are not every-provider/session-
+selection, physical-key, installed-profile or config-reload certification.
+Older Phase16/18 observations remain historical in acceptance.
 
 Historical bridge-era session guidance is preserved in Git at
 `cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/session-owned-ui.md`.

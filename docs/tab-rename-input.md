@@ -30,32 +30,29 @@ redraw apply. No app chooser or native control/font setting is changed.
 
 ## Retained resource and cleanup
 
-[launchNativePopup](../native.go) enables forms without extra eager label reads.
-The required origin session-view snapshot supplies detached label/window/block
-metadata on form demand through [popup_updates.go](../popup_updates.go).
-`native-input.json` enables private inline presentation, while the four fixed
-rename demand/update slots carry the bounded one-shot publications described by
-the [private contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates).
-These are not public menu schema or replacement identity. [text_entry.go](../text_entry.go)
-handles input; [menu_updates.go](../menu_updates.go) is UI-loop-only application;
-[native_text_entry.go](../native_text_entry.go) validates private text/results.
-Provider inventories now use the same bounded invocation lifecycle. The shared
-scheduler executes at most two metadata jobs, including rename labels. Window,
-pane and rename presentation reuse the captured matching origin view; session
-lists and known hosts each have one independent invocation result. See
-[provider scheduling](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
+[`RunDirectMenu`](../direct_menu.go) enables forms without eager label reads.
+The required matching origin view supplies label/window/block presentation on
+form demand, excluding the menu's own popup. [text_entry.go](../text_entry.go)
+handles input; [menu_updates.go](../menu_updates.go) applies updates only on the
+UI owner. The [in-process contract](launch-contract.md#in-process-menu-metadata-startup-ui-updates)
+uses bounded detached results, not private files or child IPC. The scheduler
+executes at most two jobs, including labels. Window/pane/rename presentation
+reuses that matching origin view; sessions-list and hosts have independent
+once-per-invocation results. See [provider scheduling](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
 
-The Go parent retains endpoint/session/block/window/layer, canonical menu mapping
-and confirmation. The terminal returns keys, confirmation, authorized bounded
-text and a minimal invocation/kind/load binding to the retained demand prefix.
-That binding must match a parent-retained ready publication; it cannot supply an
-action, callback, replacement ID or app
-generation. Unknown, stale, malformed or pending rename selections refuse.
-After terminal restoration, exact popup close, valid origin-focus restoration,
-pipe/private-file removal and image-handle retirement, the parent rechecks
-original placement and calls typed `Window.Rename` or `Session.Rename` once.
-Text is one label argument, never shell code. See
-[cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory).
+The single Go owner retains endpoint/session/block/window/layer, canonical
+mapping, confirmation and ready publication. Selection text/bindings cannot
+supply replacement action/ID/generation authority. Unknown, stale, malformed or
+pending selection refuses. After worker join, tty restoration, exact visible
+float detach/verification and exact original-focus restoration, Go rechecks
+placement and calls typed `Window.Rename` or `Session.Rename` once. Text is one
+label argument, never shell code. There is no parent/renderer, image copy,
+lifetime pipe, private demand/update/result file or source-handle cleanup.
+
+Accepted user1b permits the detached execution-host Block through dispatch until
+Go exits/Rex deletes it. Go cannot observe its own deletion; coordinator must
+inspect exact `session.list_blocks` after exit. A later cleanup failure cannot
+suppress/undo an earlier rename. See [cleanup](launch-contract.md#fixed-owned-cleanup-inventory).
 
 Resource rename does not need an implicit GUI app. Explicit client intent remains
 strict and is revalidated, including its connection generation.
@@ -71,13 +68,13 @@ Configured rename takes empty args and follows action intent at any valid key.
 Functions/callbacks/custom Lua actions are deferred, not silently converted into
 rename. See [data catalogue](mapping-format.md).
 
-Phase16 final delivery includes an actual owned inline rename. Phase18 task2's
-coordinator observed an editable loading form with Enter disabled, exact edited
-text preserved on ready, cancel without effect, revisit/one owned tab rename and
-separate dismissal/cleanup on Darwin arm64. See [acceptance](acceptance.md) for
-revision-bound artifacts. Final async combined review and comparable public
-runtime/effect/cancel/cleanup remain pending. No tests, live runs, probes,
-physical key/reload, user-resource rename or deployment were performed by this leaf.
+Phase19 Task01/02 native summaries bind direct-source owned inline rename,
+edit cancellation, default dismissal and verified pre-effect visible retirement/
+post-exit host deletion. Earlier Phase16/18 results remain historical. New Task03
+make-route runtime on reviewed combined source and rebuilt main remains a
+coordinator gate; this leaf ran no product invocation. No physical-key/reload,
+installed-profile, arbitrary user-resource rename or platform-wide result follows.
+See [acceptance](acceptance.md) for revision-bound artifacts.
 
 The old bridge-specific rename contract remains historical at
 `cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/tab-rename-input.md`.

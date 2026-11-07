@@ -1,50 +1,104 @@
 # Rex WhichKey
 
 A short-lived keyboard menu for [Rex](https://www.superlogical.com/rex).
-Go reads JSON menu data, builds dynamic resource lists, renders the popup and
-performs operations through the Rex CLI. Lua only starts the installed binary.
-There is no daemon, executable Lua configuration or hook/callback facility.
+Shared Lua creates one centered floating terminal; one Go process inside it reads
+JSON menu data, renders the menu and performs operations through the Rex CLI.
+There is no Go launcher/controller, renderer child, image copy, private IPC,
+daemon or executable Lua menu configuration.
 
-**Evidence:** Phase16 CLI-only delivery is complete, including actual public
-menu/navigation/owned rename/dismissal/cleanup on Darwin arm64. Phase18 tasks1/2
-also have reviewed, integrated public-run evidence, including rename edits while
-loading and preservation after ready. Phase18 async source `d60c976` passed
-independent source review; coordinator public runs on combined candidate
-`397ce9a` captured coarse first-visible upper bounds of 2.69s baseline versus
-0.54s candidate, provider readiness/navigation, an exact owned rename and
-cancel/dismissal/cleanup. These are CLI/capture/poll observations, not exact
-render/load timestamps, a benchmark or an SLA. Later documentation-only revisions
-preserve the reviewed Go bytes; native task/phase summaries bind final delivery.
-No installed-profile, physical-keybinding, all-provider or cross-platform success
-is claimed. See [acceptance](docs/acceptance.md) for exact revisions and limits.
+**Evidence:** Phase19 tasks1/2 have reviewed, integrated direct Lua/Go runs,
+including providers, an exact owned rename, cancel/dismissal, real own-PTY resize,
+pre-effect visible retirement and observed post-exit host deletion. The new
+`make run` route below still needs coordinator observation on the exact reviewed
+combined checkout and rebuilt main. Build/help/creation acknowledgment is not
+menu-display or exit proof. No installed-profile, physical-keybinding, remote or
+all-platform success is claimed. See [acceptance](docs/acceptance.md).
+
+## Run this checkout
+
+From the **originating execution-host Rex terminal**, with Go, Task and a
+compatible licensed `rex` already available:
+
+```sh
+make build
+make run
+```
+
+`make run` always builds this checkout first, then invokes the current
+`lua/rex_whichkey.lua` script with `--action rex_whichkey_launch`. It requires
+nonempty originating `REX_SESSION` and `REX_BLOCK` and passes them explicitly as
+`-s`/`-b`; outside Rex it fails rather than using whichever block is focused.
+A present `REX_CLIENT` is forwarded as the original `-C` intent, never replaced
+with the popup's client. It must be a full ID and an eligible graphical app;
+a CLI caller ID is not permission to impersonate an app. Without explicit app
+intent, Go can use the original pane's validated owner for app operations.
+Do not copy this builder's or another terminal's IDs.
+
+Task computes the known absolute `bin/GOOS-GOARCH` directory from this checkout
+and supplies it as `development_directory` data. Lua prepends that single directory
+to this terminal's PATH and starts the fixed program `rex-whichkey direct` with
+separate original IDs. Lua does no source-path probing, `go env` discovery or
+executable nomination. No installed old module/binary or init.lua reload is needed.
+
+Two `make` implementations have different extra-argument syntax:
+
+```sh
+# Current development PATH: make is a tiny wrapper that execs Task.
+make run -- width=0.8 height=0.3 config=/absolute/path/menu.json ascii=true no_color=true
+# Task directly (same route):
+task run -- width=0.8 height=0.3 config=/absolute/path/menu.json
+# Conventional GNU make reads Makefile and delegates to Task:
+/usr/bin/make run ARGS='width=0.8 height=0.3 config=/absolute/path/menu.json'
+```
+
+Use your actual GNU make path if it differs; `command -v make` identifies the PATH
+entry. Extra arguments are Lua action `key=value` data, **not Go root flags**.
+Shell-quote paths containing spaces normally (and retain quoting inside GNU
+make's `ARGS`). Omit `development_directory` from user arguments: the source task
+supplies it. Defaults are centered width `.8`, height `.3`; dimensions must be
+finite fractions in `(0,1]`. `ascii`/`no_color` are optional booleans.
+
+The equivalent explicit source entry, after `task build`, is:
+
+```sh
+: "${REX_SESSION:?originating Rex session required}"
+: "${REX_BLOCK:?originating Rex block required}"
+set --
+if [ "${REX_CLIENT+x}" = x ]; then
+  : "${REX_CLIENT:?original full client ID required when present}"
+  set -- -C "$REX_CLIENT"
+fi
+rex "$@" do "$PWD/lua/rex_whichkey.lua" -s "$REX_SESSION" -b "$REX_BLOCK" \
+  --action rex_whichkey_launch \
+  development_directory="$PWD/bin/$(go env GOOS)-$(go env GOARCH)"
+```
+
+Run that from the checkout root; `make run` supplies its root independently of
+shell cwd. `rex do` returns the created IDs, not the eventual Go exit status.
+The menu has no idle deadline. Observe the exact popup, terminal exit and
+`session.list_blocks` after completion to establish cleanup; see the
+[launch contract](docs/launch-contract.md).
 
 ## Install on the Rex server host
 
-The binary and compatible licensed Rex CLI must be available on the
-**execution/server host**, not merely the machine displaying Rex.
-The package installs ordinary assets:
+Both executables belong on the **execution/server host**, not just the viewer.
+The existing package installs ordinary assets:
 
 ```text
-bin/rex-whichkey                         # real executable
+bin/rex-whichkey                         # real Go executable
 bin/rex                                # optional licensed CLI symlink
-share/rex-whichkey/lua/rex_whichkey.lua   # launch only
-share/rex-whichkey/examples/             # JSON data and keybinding examples
+share/rex-whichkey/lua/rex_whichkey.lua   # shared module/script
+share/rex-whichkey/examples/             # JSON and keybinding examples
 share/doc/rex-whichkey/                  # documentation
 ```
 
-The flake exports `packages.<system>.rex-whichkey` and `default` for
-x86_64/aarch64 Linux and macOS. These are declared outputs, not platform
-certification. Pinned official CLI artifacts exist for x86_64/aarch64 Linux and
-aarch64 macOS, **not Intel macOS**. A legitimate `rex-cli` package override
-can supply `bin/rex`; otherwise provide a legitimate `rex` on the
-execution-host PATH. Licensing/unfree policy still applies.
-Linux loader/PAM/terminfo/SSH assets and the released Darwin signature are
-preserved. Nix installs inputs; Go alone owns runtime discovery and policy.
-No wrapper, Lua-tree binary, anchor or generated helper layout is required.
-A source-only Go build supplies neither the licensed CLI nor installed Lua/assets;
-provide `rex` separately and expose the named `rex-whichkey` binary on PATH.
-The optional package CLI is the same pinned dependency, now exposed as `bin/rex`;
-no dependency, pin or profile change is implied.
+The flake declares x86_64/aarch64 Linux and macOS package outputs, not runtime
+certification. Pinned official CLI artifacts cover x86_64/aarch64 Linux and
+Apple Silicon macOS, **not Intel macOS**. A legitimate `rex-cli` override or
+execution-host PATH CLI can supply `rex`; licensing/unfree policy applies.
+Pins/vendor hash, Linux loader/PAM/terminfo/SSH assets and Darwin signature
+preservation are unchanged. Nix installs assets, not runtime discovery policy.
+A Go source build alone installs neither the CLI nor Lua/assets.
 
 Optional Home Manager integration:
 
@@ -55,138 +109,113 @@ Optional Home Manager integration:
 }
 ```
 
-It contributes the package and **only** `rex_whichkey.lua` beside the user's
-Rex `init.lua` (default `${config.xdg.configHome}/rex`).
-`programs.rex-whichkey.package` and `configDirectory` are overridable.
-It does not manage the whole Rex directory, menu JSON, init.lua or a binding.
-Conflicting unmanaged files are not forcibly replaced. Importing is opt-in;
-nothing here activates a profile, reloads Rex or changes a running environment.
-See the [Home Manager source guide](tests/packaging/home-manager/README.md).
+It contributes the package and **only** `rex_whichkey.lua` beside user-owned
+`init.lua` (default `${config.xdg.configHome}/rex`). `package` and
+`configDirectory` are overridable. It does not own the whole Rex directory,
+JSON, init.lua or bindings, forcibly replace conflicts, activate a profile or
+reload/restart Rex. See the [source guide](tests/packaging/home-manager/README.md).
 
-## Launch
+## Installed public launch
 
-Inside the originating execution-host Rex terminal:
+With the package bin directory already on the Rex server's PATH, the shared
+script is directly usable without user action registration or reload:
 
 ```sh
-rex-whichkey
-# Optional public flags:
-rex-whichkey --config /absolute/path/menu.json --ascii --no-color
+: "${REX_SESSION:?originating Rex session required}"
+: "${REX_BLOCK:?originating Rex block required}"
+# PACKAGE is the absolute package output.
+set --
+if [ "${REX_CLIENT+x}" = x ]; then
+  : "${REX_CLIENT:?original full client ID required when present}"
+  set -- -C "$REX_CLIENT"
+fi
+rex "$@" do "$PACKAGE/share/rex-whichkey/lua/rex_whichkey.lua" \
+  -s "$REX_SESSION" -b "$REX_BLOCK" --action rex_whichkey_launch
 ```
 
-Public flags are `--config PATH`, `--server ENDPOINT`, `--client FULL_ID`,
-`--ascii`, `--no-color`, and `--help`/`-h`.
-Full `REX_SESSION` and `REX_BLOCK` are required; no current/focused-pane
-fallback exists. Help has no effects.
-
-For a user-chosen key, the [example binding](examples/rex-whichkey-keybinding.lua)
-uses Rex's documented function binding:
+Installed launches **omit `development_directory`** and use ordinary PATH.
+Alternatively choose a key yourself in your normal user-owned configuration:
 
 ```lua
 local whichkey = require("rex_whichkey")
 rex.bind("ctrl+space", function(ctx)
-    return whichkey.launch(ctx)
+    return whichkey.launch(ctx, { width = .8, height = .3 })
 end)
 ```
 
-The key is **only an example**. It has not been installed or pressed as part of
-this delivery. Choose and wire it yourself through your normal configuration
-lifecycle; a binding may replace an existing shortcut. The server process must
-already find both `rex-whichkey` and `rex` on its execution-host PATH.
-Installing a package or updating a terminal profile does not change a running
-server's inherited environment. No command palette registration is added.
+The same module accepts optional `config`, `ascii` and `no_color` data.
+Only canonical `require("rex_whichkey")` receives the function table; ordinary
+script execution returns no function for Rex to serialize. The script defines
+`rex_whichkey_launch` locally for `--action`; it is not a prerequisite global
+registration, menu callback or command-palette takeover. This example key has
+not been installed or pressed. Installing a package or changing a terminal
+profile does not update an already-running server's environment.
 
-The launch function calls `rex.exec.start({ "rex-whichkey" }, { detach = true,
-env = ... })`. It passes exact context session/block/client IDs and explicitly
-removes missing ones from the inherited environment. It never queries Rex,
-stringifies `ctx.server`, waits for the menu, or supplies a command timeout.
-Immediate start errors raise an error; a returned process handle proves only
-process start, not a displayed menu or eventual success. The binding returns true.
-Both entrypoints use the same ordinary Go path.
+Bare `rex-whichkey` and old root launcher flags are rejected safely. `direct`
+is the explicit Lua-created-terminal entry, **not** a command to paste into an
+ordinary pane: it requires original session/block/window/layer IDs distinct from
+its own popup `REX_*` identity. `rex-whichkey menu [--config PATH] [--ascii]
+[--no-color]` is in-terminal UI/result-only and performs no selected operation.
 
 ## Menu data and migration
 
-Built-ins need no file. Go overlays exactly one version-1 JSON file, selected by:
+Built-ins need no file. Go overlays one strict version-1 JSON file, selected by:
 
-1. Present `--config PATH`.
-2. Nonempty `REX_WHICHKEY_CONFIG`.
+1. Present launch `config` (passed to Go `direct --config PATH`).
+2. Nonempty rendering-host `REX_WHICHKEY_CONFIG`.
 3. `$XDG_CONFIG_HOME/rex-whichkey/config.json`, or
    `$HOME/.config/rex-whichkey/config.json` when XDG_CONFIG_HOME is absent.
 
-Only a missing implicit default means built-ins. Empty explicit paths, invalid
-XDG paths, missing selected files or invalid data fail, not silently fall back.
-No configuration is written. `spec` and `icons` replace whole values;
-`spec: []` deliberately clears mappings. See the complete
-[data/action/provider contract](docs/mapping-format.md) and
-[JSON example](examples/my_whichkey.json).
+Only a missing implicit default means built-ins. Invalid/empty explicit paths,
+missing selected files or invalid data fail; nothing writes configuration.
+`spec` and `icons` replace whole values; `spec: []` clears mappings.
+See the [data contract](docs/mapping-format.md) and [JSON example](examples/my_whichkey.json).
+The server-created terminal's environment, not a caller's new exports, governs
+implicit data and `NO_COLOR`; explicit launch data avoids that ambiguity.
 
-For migration, preserve your old Lua files first. Manually flatten literal full
-key sequences/groups/labels/boolean conditions into JSON and check every action
-against the closed catalogue. Replace old `M.new/setup/register_launch`,
-runtime/completion registrations and helper-path wiring with the function binding.
-`examples/my_whichkey.lua` is retired; JSON is data, not an executable import.
-There is **no automatic conversion** or promise to retain unsupported Lua
-semantics. Functions, callbacks, custom Lua actions, computed labels/conditions,
-nested inheritance and hooks are deferred; do not silently drop them from a
-user's configuration. Retain the old file until you have accounted for its data.
-Historical source is preserved in Git and test-only
-`tests/fixtures/phase15-lua`, never shipped or loaded by the launcher.
+Preserve old Lua files before migration. Manually flatten literal keys/groups/
+labels/boolean conditions to JSON and check every action against the closed
+catalogue. Replace old `M.new/setup/register_launch/register_completion`, helper
+paths and bare-binary launch bindings with the shared module/script. No automatic
+conversion is provided. Functions, callbacks, custom Lua actions, computed values,
+nested inheritance and hooks remain deferred; never silently discard them.
+Historical Lua stays in Git and test-only `tests/fixtures/phase15-lua`, not runtime
+assets. See [examples and migration](examples/README.md).
 
-## Use the menu
+## Use and safety
 
-| Keys | Current built-ins |
+| Keys | Built-ins |
 | --- | --- |
 | `wn/ws/wh/wl/wr/wx` | Session new / Go switch list / previous / next / inline rename / close |
 | `tn/th/tl/tr/tx` | Tab new / previous / next / inline rename / close |
 | `v/s` | Split right / down |
 | `x/e/c` | Close pane / sidebar / command palette |
 
-Close actions require `y` confirmation; any other prompt key cancels.
-Esc/Backspace go up, then dismiss at root. Unmapped `q` dismisses at any depth;
-Tab pages and wraps. Hidden/off-page mappings stay active.
-There is no Zoom, directional-focus menu, numbered-tab list, app chooser or
-default hosts row. Optional providers are sessions/windows/panes/known-hosts;
-hosts are informational only. Inline rename uses the existing popup, not a
-native dialog. See [actions](docs/actions.md) and [rename](docs/tab-rename-input.md).
+Close requires `y`; another prompt key cancels. Esc/Backspace go up, then dismiss
+at root; unmapped `q` dismisses. Tab pages/wraps; hidden/off-page mappings remain
+active. Providers are sessions/windows/panes/known-hosts (hosts listing-only).
+Inline rename uses this same menu. Lua keeps one fixed fractional rectangle;
+Go fits its own PTY cells and handles SIGWINCH/pagination without resizing it.
+Native chrome uses Rex defaults **for now**: user1a explicitly deferred REQ-026
+native titlebar/border/corners/shadow customization; it is not implemented.
 
-Go retains one initial popup rectangle through navigation; larger menus paginate.
-There is no idle menu expiry. Per-operation deadlines, cancellation and bounded
-cleanup remain. Terminal focus-in repaints; switching tabs alone is not dismissal.
-Native Rex controls are **not hidden** (REQ-026 remains unresolved).
-See [appearance](docs/appearance.md).
+Go selects `rex` once by ordinary execution-host PATH and independently selects
+its endpoint: explicit direct `--server` > nonempty `REX_SERVER` > bounded
+no-autostart native Linux/macOS `whoami`. There is no `REX_BIN_DIR` lookup,
+Nix runtime resolver, binary hash/status/version/schema preflight or retry route.
+Original session/block/window/layer and explicit client intent are retained;
+popup `REX_CLIENT` is never treated as original GUI intent. App actions require
+fresh exact app connection/owner/generation and Rex permissions, not current focus.
 
-## Targeting and safety
+Before an effect, Go joins workers, restores the tty, detaches/verifies the exact
+sole-block float and restores/verifies exact original focus/placement. Uncertain
+pre-effect cleanup suppresses effects. User1b permits the detached execution-host
+Block to remain through dispatch until Go exits and Rex deletes it. Go cannot
+verify its own post-exit deletion; a later cleanup failure cannot undo or suppress
+an already-issued effect. No uncertain mutation is retried. SIGKILL/server loss
+can leave resources; there is no broad cleanup guarantee.
 
-Go selects the first `rex` found by ordinary execution-host PATH lookup, then
-reuses that path for the invocation and private child. `REX_BIN_DIR`, private
-libexec layouts and executable overrides are not search authorities. There is
-no binary hashing/receipt, startup version/API/schema negotiation or per-command
-server.status/config-generation sandwich. Actual CLI failures are reported
-without retrying or selecting another binary/server; selected-action metadata
-and strict functional result/identity checks remain.
-Endpoint precedence is present `--server` > nonempty `REX_SERVER` >
-bounded no-autostart native Linux/macOS `whoami` discovery. No viewing-host socket
-or Lua server object is authority. See [discovery](docs/runtime-bootstrap.md).
-
-A present `--client`/`REX_CLIENT` must be a full valid app ID and stays strict.
-Without it, display/resource-only actions do not require a GUI; app actions use
-the captured pane's validated app owner and connection generation, never whichever
-app is focused. CLI identity is not GUI identity or additional permission.
-Rex authentication and Remote Control still apply.
-
-The terminal, exact returned popup, origin focus, lifetime pipe, private files and
-captured image handle are cleaned before selected effects. Failure or uncertain
-cleanup suppresses effects; uncertain mutations are never retried. New Tab creates
-one exact source-session window and activates its returned ID; a failed activation
-preserves that tab for manual inspection, not rollback or duplicate creation.
-
-For diagnosis, distinguish invalid data, missing/stale origin, CLI/endpoint
-discovery, app ownership/Remote Control, and uncertain cleanup/effects. Do not
-repair failures by selecting a focused resource, reloading the user's config or
-closing resources by label. SIGKILL/server loss can leave owned artifacts; cleanup
-is bounded best effort. Read the [launch contract](docs/launch-contract.md),
-[CLI/GUI boundary](docs/cli-gui-delegation.md) and
-[remote limitations](docs/remote-compatibility.md) before acting on an error.
-
-Historical Phase15 bridge guidance is not a startup prerequisite. This work does
-not mark Phase15 or unrelated blocked requirements complete, and claims no tests,
-Nix build/activation, deployment, remote trial or physical-key observation.
+See [launch/lifetime](docs/launch-contract.md), [discovery](docs/runtime-bootstrap.md),
+[CLI/GUI](docs/cli-gui-delegation.md), [appearance](docs/appearance.md) and
+[remote limits](docs/remote-compatibility.md). This source delivery claims no
+prohibited tests, Nix build/activation, deployment, physical key or phase completion.

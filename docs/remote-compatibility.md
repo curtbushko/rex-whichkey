@@ -2,107 +2,107 @@
 
 ## What runs where
 
-Install/run `rex-whichkey` and a compatible licensed `rex` CLI on the
-**execution/server host** in the originating Rex context. A graphical Mac viewing
-a Linux session supplies neither Linux binaries nor configuration/socket paths.
-No remote deployment, attach, SSH, Wake-on-LAN, binary copying or connection
-management is implemented.
+Shared Lua and `rex-whichkey`/compatible licensed `rex` belong on the
+**execution/server host**, not merely the graphical viewer. Lua creates one
+native floating terminal and starts fixed `rex-whichkey direct` there; Go owns
+menu data, providers, palette, own-PTY sizing and CLI effects. No Go launching
+parent, renderer child, copied image, private transport or remote deployment,
+attach, SSH, Wake-on-LAN or connection management is implemented.
 
-Direct terminal and minimal keybinding launch use the same ordinary Go entrypoint.
-The binding starts the installed binary via Rex's execution-host PATH and forwards
-exact session/block/client context IDs, explicitly clearing missing inherited IDs.
-It does not query metadata, stringify `ctx.server`, choose viewing-host paths or
-load executable menu data. There is no original-VM/private-file relay dependency.
+Installed require binding and explicit script action use the same shared file.
+Source `make run` builds the current checkout, invokes that file with explicit
+origin `-s/-b` and supplies its absolute target-bin directory for a terminal-scoped
+PATH prepend. It does not require global registration, installed stale modules,
+init.lua edits or reload. Installed launch omits the development directory.
+See [source commands](../README.md#run-this-checkout).
 
-Go owns an invocation-local PTY child and private files on its execution host.
-A network endpoint or matching pathname alone does not establish that host's
-runtime/files/origin authority. Use the actual originating execution-host terminal
-or its keybinding; cross-host public invocation is not certified.
+A matching remote pathname/network endpoint alone does not establish that host's
+program/environment/origin authority. Use the actual originating execution-host
+context. Cross-host public launch is not certified.
 
-## Frozen CLI and endpoint
+## CLI, endpoint and environment
 
-See [discovery](runtime-bootstrap.md): ordinary execution-host PATH lookup
-selects the first `rex` executable once, then all invocation consumers reuse
-that path. No `REX_BIN_DIR`, private libexec discovery, executable override,
-runtime Nix resolver, anchor, helper path, shell/store/home scan or alternate
-binary retry is supported. The launching server must already inherit PATH for
-both `rex-whichkey` and `rex`; package installation or a changed terminal profile
-does not update a running process's environment.
+Go selects `rex` once via ordinary execution-host PATH. There is no `REX_BIN_DIR`,
+private executable override, Nix runtime lookup, anchor, wrapper, hash/status/
+version/schema preflight or alternate binary retry. The installed server's PATH
+must already contain both program names; package/profile changes do not update
+an existing process environment. Source launch changes only its new terminal's
+PATH for the known current-checkout `rex-whichkey` name.
 
-Endpoint selection is present `--server` > nonempty `REX_SERVER` >
-bounded no-autostart native Linux/macOS Rex `whoami`. Explicit empty/malformed
-intent fails. Accepted values are concrete Unix paths/URIs or numeric-port
-host:port, not mutable host labels or opaque Lua server objects.
-Rex, not application path guesses, owns platform runtime/home/XDG discovery.
-The selected CLI path and independent endpoint remain retained through child
-wait, cleanup and dispatch. Binary/link/content receipts, startup version/API/schema
-negotiation and per-command server.status/config-generation checks are retired.
-Strict functional result decoding, selected-action metadata and actual origin/
-resource/app-generation checks remain; no uncertain operation is retried.
+Go endpoint policy is present direct `--server` > nonempty rendering-host
+`REX_SERVER` > bounded no-autostart native Linux/macOS `whoami`. The shared Lua
+action has no server data option and never stringifies `ctx.server`; source
+`rex do` and the created terminal retain their independent execution-host endpoint
+policies. Do not treat a viewer socket or caller-only export as terminal authority.
+Concrete Unix addresses/numeric-port host:port are supported, not mutable Go host
+labels. No socket guess, autostart, reconnect retargeting or uncertain retry occurs.
+See [runtime discovery](runtime-bootstrap.md).
 
-The pinned package offers official licensed CLI artifacts for x86_64/aarch64
-Linux and aarch64 macOS, not Intel macOS. Standalone PATH remains supported with
-JSON/default menus; a legitimate `rex-cli` override can supply the same optional
-pinned dependency, exposed as ordinary `bin/rex` where available. A source-only
-Go build supplies neither the CLI nor installed Lua/assets. No platform output
-declaration or source parse proves runtime support,
-license permission or a deployed server environment.
+The pinned package declares Linux/macOS outputs, with official CLI artifacts for
+x86_64/aarch64 Linux and aarch64 macOS, **not Intel macOS**. A legitimate `rex-cli`
+override or normal PATH CLI can supply the dependency. Pins/licensing/loader/assets
+are unchanged. Static parse or a declared output does not certify installation,
+platform runtime, license permission or server environment.
 
-## Origin and app identity
+## Original resource and GUI intent
 
-Full session/block IDs are mandatory. Go captures exact Window/Layer placement,
-rechecks it, and refuses moved/missing/ambiguous origins. GUI intent is independent:
-explicit full `--client`/present `REX_CLIENT` stays strict; otherwise app actions
-retain the pane's validated live app owner and generation. No focused/first/sole
-app or session fallback exists. Resource-only display/rename/close need no implicit
-GUI app. App selectors never bypass Rex authentication or Remote Control.
-[CLI/GUI delegation](cli-gui-delegation.md) gives the details.
+Source run requires originating full `REX_SESSION/REX_BLOCK`; absence fails rather
+than allowing `rex do` to pick the focused block. A present original `REX_CLIENT`
+is forwarded with `-C`, not converted from a CLI caller to a GUI ID. The Lua
+context supplies exact original session/block/client intent before creation;
+Lua resolves original Window/Layer placement. Go receives all four original IDs
+separately from popup `REX_*` identity and validates its distinct sole-block float.
+Moved/missing/ambiguous placement fails, never retargets.
+
+Go never uses popup `REX_CLIENT` as original intent. Explicit original client is
+strict and must be a validated graphical app; a CLI connection is not one.
+Without it, app actions may use only the original pane's validated live attached
+app owner/connection generation. Display/resource rename/close need no implicit
+GUI app; explicit invalid intent still rejects. No current/first/sole-app fallback
+or chooser exists. Rex authentication and Remote Control remain required.
+See [CLI/GUI delegation](cli-gui-delegation.md).
 
 ## Lifetime, cleanup and effects
 
-The menu has no idle expiry or original Lua action lifetime. Its Go parent watches
-resource liveness and a private pipe ties the PTY to that parent. Tab switches alone
-do not cancel it. RPC checks/dispatch and cancellation-independent cleanup remain
-bounded. After terminal restoration, exact owned popup/origin-focus/private-file/
-pipe/source-handle cleanup must finish before any selected operation.
+The direct menu has no idle expiry or original-Lua action lifetime. Go watches
+captured placement/liveness, joins metadata jobs and restores tty modes before
+cleanup. Tab changes alone do not dismiss. Lua fixes fractional outer bounds;
+Go fits only its own PTY/SIGWINCH, not the origin's GUI pixel geometry.
+Native chrome uses Rex defaults for now; user1a deferred customization/REQ-026.
 
-The parent retains target IDs/actions; a key or rename text cannot replace them.
-Session/window destinations and pane placement are revalidated. New Tab creates
-one source-session Window and activates its returned ID; a failed activation
-preserves it, without retry/rollback. Inline session/tab rename uses exact resource
-methods, not a native dialog. Unknown creation identity or uncertain cleanup
-suppresses effects and may leave resources. Never close a whole user window/session,
-search labels or recursively delete unrelated paths to compensate.
-See the [fixed owned inventory](launch-contract.md#fixed-owned-cleanup-inventory).
+Exact sole-popup detach/visible retirement, detached identity and exact original
+focus/placement/app generation must be verified before effects. Uncertain
+pre-effect cleanup suppresses dispatch. Under accepted user1b, the detached host
+Block may remain through the once-only effect until Go exits/Rex deletes it.
+On-completion/zero-quick-failure exit policy is not proof of actual host deletion;
+Go cannot observe its own post-exit cleanup. A later failure cannot suppress an
+already-issued effect. Coordinator runtime evidence must inspect exact
+`session.list_blocks` after exit. See [cleanup](launch-contract.md#fixed-owned-cleanup-inventory).
 
-Checks and mutations are not atomic against external changes. SIGKILL/server loss,
-hostile same-account edits and lost acknowledgments are not guaranteed recoverable.
-No reconnect retargeting, renewed ticket, callback replay or uncertain retry exists.
+Targets/actions remain Go-retained; keys/text/labels do not replace them.
+Destinations/placement/generations are rechecked. New Tab creates one exact
+source-session Window and activates its returned ID; failed activation preserves
+it without rollback/duplicate creation. Unknown/uncertain creation or cleanup may
+leave resources. Never compensate by label cleanup, closing unrelated windows or
+recursive scavenging. Checks and mutations are separate, not atomic.
+SIGKILL/server loss is not guaranteed recoverable.
 
-## Data, host inventory and migration
+## Data, migration and evidence
 
-Go reads one version-1 JSON file after built-ins; no Lua execution, function labels/
-conditions, custom Lua action names, callbacks or hooks are supported.
-User files/init.lua/bindings remain user-owned; no automatic Lua conversion,
-silent unsupported-data loss, reload/restart or activation is performed.
-[Examples](../examples/README.md) describe manual migration.
+Go reads strict version-1 JSON/defaults; no executable Lua menu data, callbacks,
+functions/custom actions or hooks are supported. User files/init.lua/bindings stay
+user-owned. Migration is manual and must preserve unsupported data, not silently
+drop it. No conversion, reload/restart, activation or deployment is performed.
+See [examples](../examples/README.md).
 
 Only an enabled `known-hosts` provider asks Rex for execution-host/home inventory,
-once per invocation. Neither the viewer nor `--server` selects that inventory.
-Rex may synchronize/contact its home; listing is not a no-network or reachability
-guarantee. Rows/warnings are non-executable, not connect/SSH commands.
-There is no default hosts row.
+once per invocation. The viewer and `--server` do not select that inventory.
+Rex may synchronize/contact its home; listing is not a no-network/reachability
+guarantee. Rows are informational, not connect/SSH commands; no default hosts row.
 
-## Evidence and historical boundary
-
-Task2's normal public menu/navigation/dismissal/exact cleanup was observed by the
-coordinator on Darwin arm64 at `7bdbda2`; it is not a remote/Linux trial or proof
-of selected action effects, JSON probes, physical keys or Nix/HM activation.
-Final combined source/runtime validation remains a coordinator gate.
-No general minimum tested Rex build, all-platform compatibility or post-crash
-cleanup guarantee is claimed. [Acceptance](acceptance.md) separates evidence.
-
-The Phase15 bridge/anchor/receipt/completion remote guidance is historical at
-`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/remote-compatibility.md`,
-not an active dependency or permission to deploy it. History is preserved;
-Phase15 and unrelated phases are not completed by this cutover.
+Phase19 tasks1/2 have revision-bound direct-source Darwin observations; final
+Task03 make-route combined/rebuilt-main runs remain coordinator gates. No remote,
+Linux, installed-profile, physical-key or universal failure-branch coverage is
+claimed. [Acceptance](acceptance.md) preserves earlier evidence without certifying
+the current package/runtime. Phase15 bridge/anchor/completion and Phase16/18
+controller mechanics are historical, not active dependencies.
