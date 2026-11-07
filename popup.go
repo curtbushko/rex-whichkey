@@ -600,7 +600,7 @@ func RunNativePopupTerminal(parent context.Context, directory string, noColor, a
 }
 
 func runPopupTerminal(parent context.Context, directory string, noColor, ascii bool) (outcome error) {
-	root, selection, err := openVerifiedPopupDirectory(parent, directory)
+	root, invocation, err := openVerifiedPopupDirectory(parent, directory)
 	if err != nil {
 		return err
 	}
@@ -622,7 +622,7 @@ func runPopupTerminal(parent context.Context, directory string, noColor, ascii b
 	}
 	// Presence is explicit: an absent/bad popup selection cannot become a
 	// standalone menu's initial environment/PATH capture.
-	ctx := context.WithValue(parent, terminalRuntimeKey{}, terminalRuntime{selection, selection.Capabilities.Endpoint})
+	ctx := context.WithValue(parent, terminalRuntimeKey{}, terminalRuntime{invocation.CLI, invocation.Endpoint})
 	// The layer already carries the requested position. Anchor popup content
 	// at its top rather than centering it again inside the fixed rectangle.
 	// This local copy does not change standalone RunTerminal positioning.

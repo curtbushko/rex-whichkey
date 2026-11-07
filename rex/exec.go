@@ -18,13 +18,6 @@ const (
 	flagNoAutostart  = "--autostart=false"
 	flagTimeout      = "--timeout"
 	flagJSON         = "--json"
-	layoutProvenance = "layout-dependency"
-	schemaNull       = "null"
-	schemaObject     = "object"
-	schemaArray      = "array"
-	schemaString     = "string"
-	schemaBoolean    = "boolean"
-	schemaNumber     = "number"
 	fieldFocus       = "focus"
 	fieldSession     = "session_id"
 	fieldBlock       = "block_id"
@@ -51,32 +44,23 @@ func (e *ExecError) Error() string {
 // Unwrap returns a fixed failure or context cancellation, never child output.
 func (e *ExecError) Unwrap() error { return e.Err }
 
-// run is the shared resource boundary. Inventory has no endpoint; all other
-// commands require the client's retained endpoint/schema receipt. Identity loss
-// after an effect is uncertain, never permission to repeat it.
+// run is the shared resource boundary. Inventory has no endpoint; resource
+// commands carry their Client's explicit canonical endpoint and no-autostart.
+// Execute only the requested command, with no status sandwiches or retries.
 func run(ctx context.Context, executable string, argv []string, selection *CLISelection) ([]byte, error) {
-	if selection == nil || selection.Executable.Path != executable {
-		return nil, errCLIChanged
+	if selection == nil || selection.Path != executable {
+		return nil, errCLIInput
 	}
-	inventory := inventoryArgs(argv)
-	if !inventory {
-		if len(argv) < 2 || argv[0] != flagServer || selection.Capabilities == nil || argv[1] != selection.Capabilities.Endpoint {
-			return nil, errCLIChanged
+	if !inventoryArgs(argv) {
+		if len(argv) < 3 || argv[0] != flagServer || argv[2] != flagNoAutostart {
+			return nil, errCLIInput
 		}
-		if err := selection.checkServer(ctx); err != nil {
-			return nil, err
-		}
-	}
-	output, err := runSelected(ctx, selection, argv, nil, 8<<20)
-	if err != nil {
-		return nil, err
-	}
-	if !inventory {
-		if err := selection.checkServer(ctx); err != nil {
-			return nil, err
+		endpoint, err := CanonicalEndpoint(argv[1])
+		if err != nil || endpoint != argv[1] {
+			return nil, errCLIInput
 		}
 	}
-	return output, nil
+	return runSelected(ctx, selection, argv, nil, 8<<20)
 }
 
 func inventoryArgs(argv []string) bool {
@@ -87,13 +71,15 @@ func runSelected(ctx context.Context, selection *CLISelection, argv, environment
 	if ctx == nil {
 		return nil, errors.New("rex: CLI invocation requires a context")
 	}
-	// Callers own the invocation deadline (including long terminal waits).
-	// Metadata callers supply their own short discovery bound.
-	if err := selection.checkFiles(ctx); err != nil {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	// No shell: spaces, metacharacters and JSON remain single argv values.
-	command := exec.CommandContext(ctx, selection.Executable.Path, argv...)
+	if selection == nil || !selectedPath(selection.Path) {
+		return nil, errCLIInput
+	}
+	// Callers own the deadline, including long terminal waits. No shell:
+	// spaces, metacharacters and JSON remain single argv values.
+	command := exec.CommandContext(ctx, selection.Path, argv...)
 	command.Env = environment
 	var output boundedOutput
 	output.limit = limit
@@ -107,11 +93,6 @@ func runSelected(ctx context.Context, selection *CLISelection, argv, environment
 		}
 		return nil, &ExecError{ExitCode: code,
 			Err: errors.Join(errors.New("rex: CLI operation failed or uncertain; not retried"), ctx.Err())}
-	}
-	// A changed dependency/link invalidates even a read-only reply. A failed
-	// post-effect check is uncertain, never permission to repeat the command.
-	if err := selection.checkFiles(ctx); err != nil {
-		return nil, err
 	}
 	return output.buffer.Bytes(), nil
 }
@@ -128,34 +109,8 @@ func (output *boundedOutput) Write(data []byte) (int, error) {
 	return output.buffer.Write(data)
 }
 
-func decodeVersion(data []byte) (CLIVersion, error) {
-	object, err := metadataObject(data)
-	if err != nil {
-		return CLIVersion{}, compatibilityFailure("server.version", "object")
-	}
-	for _, field := range []string{"rex_version", "api_revision", "api_min_revision"} {
-		if value, present := object[field]; present && bytes.Equal(bytes.TrimSpace(value), []byte(schemaNull)) {
-			return CLIVersion{}, compatibilityFailure("server.version", field+" null")
-		}
-	}
-	var version CLIVersion
-	if json.Unmarshal(object["rex_version"], &version.Version) != nil || !metadataText(version.Version) {
-		return CLIVersion{}, compatibilityFailure("server.version", "rex_version text")
-	}
-	if value, present := object["api_revision"]; present && json.Unmarshal(value, &version.APIRevision) != nil {
-		return CLIVersion{}, compatibilityFailure("server.version", "api_revision unsigned integer/range")
-	}
-	if value, present := object["api_min_revision"]; present && json.Unmarshal(value, &version.APIMinRevision) != nil {
-		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision unsigned integer/range")
-	}
-	if version.APIMinRevision > version.APIRevision {
-		return CLIVersion{}, compatibilityFailure("server.version", "api_min_revision exceeds api_revision")
-	}
-	return version, nil
-}
-
-// Reject duplicate keys and invalid UTF-8 at metadata boundaries. Unknown
-// optional fields remain opaque; no unknown field is taken as capability proof.
+// Reject duplicate keys and invalid UTF-8 in actual action metadata results.
+// Unknown optional fields remain opaque.
 func metadataObject(data []byte) (map[string]json.RawMessage, error) {
 	if !utf8.Valid(data) || !json.Valid(data) {
 		return nil, errCLICompatibility

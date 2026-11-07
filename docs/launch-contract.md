@@ -37,8 +37,10 @@ These are published API contracts, not a physical-key observation.
 1. Load/validate version-1 [data configuration](mapping-format.md), canonicalize
    keys, and reject invalid data before process/resource startup.
 2. Require full origin session/block IDs; capture the actual running public image.
-3. Freeze the execution-host Rex CLI and endpoint, validate consumed metadata,
-   inspect exact origin Session/Block/Window/Layer placement.
+3. Select `rex` through ordinary execution-host PATH lookup and independently
+   retain a canonical endpoint; inspect exact origin Session/Block/Window/Layer
+   placement. No binary receipts, startup version/API/schema negotiation or
+   server.status/config-generation wrappers run.
 4. Capture explicit app intent or the pane owner if eligible. An explicit invalid
    or unavailable app rejects; absent implicit GUI eligibility does not gate
    resource-only display.
@@ -112,7 +114,7 @@ See [appearance](appearance.md) for measurement/focus/native-controls limits.
 ## Fixed owned cleanup inventory
 
 [popup.go](../popup.go) owns `runPopupLifecycle/removePopupFiles`;
-[runtime_bootstrap.go](../runtime_bootstrap.go) owns image identity/copy/retirement.
+[runtime_bootstrap.go](../runtime_bootstrap.go) owns source-handle capture/copy/retirement.
 Cleanup targets only:
 
 | Owned item | Boundary |
@@ -123,12 +125,16 @@ Cleanup targets only:
 | `config.json`, `result.json` | Private resolved snapshot/result, not user files |
 | `native-input.json` | Private rename labels, not identity |
 | `lifetime` | Invocation-local FIFO |
-| `runtime-image`, `runtime.json` | Invocation-local image copy and frozen CLI/image receipt, not a Lua bridge |
+| `runtime-image`, `runtime.json` | Invocation-local image copy and selected CLI path/independent endpoint context, not an executable receipt or Lua bridge |
 | Private `rex-whichkey-*` directory and open source-image handle | Remove fixed names through the owned root, then empty directory; retire source handle before effect |
 
 Directories are owned mode 0700; transport slots are owned mode 0600, the copied
-image 0700. Strict JSON, bounded input, identity/link/content/no-follow checks and
-the frozen CLI prevent child rediscovery or supplied result authority.
+image 0700. Strict JSON, bounded copy/input, fixed-slot owner/mode/link-count and
+no-follow checks preserve private transport integrity. The child reuses the
+selected CLI path without rediscovery; no binary hashing or installation/link
+receipt is required. Copy/write/close completes before start without image Sync.
+The child result cannot supply replacement action/resource authority. Result
+Sync, locking, lifetime checks and exact source-handle retirement remain.
 Unexpected directory contents prevent removal; there is no recursive scavenger.
 
 The terminal restores modes/termios before result commit. Exact popup removal,

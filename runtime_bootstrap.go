@@ -5,8 +5,6 @@ package whichkey
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -27,21 +25,15 @@ const (
 	runtimeLimit      = 8 << 20
 	runtimeImageLimit = 512 << 20
 	runtimeImageName  = "runtime-image"
-	runtimeAssets     = "rex-whichkey/go-popup/1;data-menu/1;frozen-cli/1"
 )
 
 var (
-	errRuntimeLayout        = errors.New("whichkey: popup image or installation identity is invalid or changed")
-	errRuntimeCompatibility = errors.New("whichkey: frozen CLI/endpoint or private popup contract is invalid or changed")
+	errRuntimeLayout        = errors.New("whichkey: cannot capture a bounded regular popup source image")
+	errRuntimeCompatibility = errors.New("whichkey: selected CLI/endpoint or private popup contract is invalid")
 	errRuntimePreparation   = errors.New("whichkey: private popup preparation failed")
 	errRuntimeRelay         = errors.New("whichkey: private popup file identity or access failed")
 	errRuntimeStartup       = errors.New("whichkey: private popup startup or result failed")
 )
-
-func runtimeHash(data []byte) string {
-	digest := sha256.Sum256(data)
-	return hex.EncodeToString(digest[:])
-}
 
 // Runtime field names are lowercase ASCII, not merely Unicode lowercase:
 // encoding/json also matches struct fields through Unicode SimpleFold. Restrict
@@ -100,8 +92,8 @@ func runtimeJSONField(decoder *json.Decoder, seen map[string]bool, args bool) (s
 	return name, nil
 }
 
-// Private image receipts and resolved popup snapshots check exact field names
-// before struct decoding; JSON strings containing metadata remain opaque.
+// Private invocation context and resolved popup snapshots check exact field
+// names before struct decoding; JSON strings containing metadata remain opaque.
 func decodeRuntime(data []byte, value any, limit int) error {
 	if checkErr := checkRuntimeJSON(data, limit); checkErr != nil {
 		return checkErr
@@ -151,24 +143,11 @@ func readRuntime(input io.Reader, value any, limit int) error {
 	return decodeRuntime(bytes.TrimSpace(data), value, limit)
 }
 
-// runtimeFile records only application-owned components. Rex discovery and its
-// proprietary dependency identity remain owned by rex.CLISelection.
-type runtimeFile struct {
-	Source      string `json:"source"`
-	Path        string `json:"path"`
-	SHA256      string `json:"sha256"`
-	LinksSHA256 string `json:"links_sha256"`
-	Device      uint64 `json:"device"`
-	Inode       uint64 `json:"inode"`
-	Size        int64  `json:"size"`
-	ModifiedNS  int64  `json:"modified_ns"`
-	Mode        uint32 `json:"mode"`
-	Owner       uint32 `json:"owner"`
-}
-
+// runtimeImage holds the public image open until exact owned cleanup. It is
+// copied from this handle, never reopened through an installation receipt.
 type runtimeImage struct {
-	identity runtimeFile
-	file     *os.File
+	file *os.File
+	size int64
 }
 
 type runtimeSourceReader struct {
@@ -183,83 +162,17 @@ func (reader runtimeSourceReader) Read(data []byte) (int, error) {
 	return reader.file.Read(data)
 }
 
-func runtimePath(path string) bool {
-	if path == "" || len(path) > 4096 || validateText(path) != nil || strings.Contains(path, "\\") {
-		return false
+func captureSelf(ctx context.Context) (_ *runtimeImage, outcome error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
-		if part == ".." {
-			return false
-		}
-	}
-	return true
-}
-
-// Link metadata is frozen too. Namespace symlinks are supported but updates
-// invalidate this invocation even when another link reaches the same inode.
-func runtimeLinks(source string) (string, error) {
-	type link struct {
-		Path   string `json:"path"`
-		Device uint64 `json:"device"`
-		Inode  uint64 `json:"inode"`
-		Target string `json:"target"`
-	}
-	var links []link
-	remaining := filepath.Clean(source)
-	for range 256 {
-		parts := strings.Split(strings.TrimPrefix(remaining, string(filepath.Separator)), string(filepath.Separator))
-		path := string(filepath.Separator)
-		followed := false
-		for index, part := range parts {
-			path = filepath.Join(path, part)
-			info, err := os.Lstat(path)
-			if err != nil {
-				return "", errRuntimeLayout
-			}
-			stat, ok := info.Sys().(*syscall.Stat_t)
-			if !ok || stat.Uid != 0 && stat.Uid != uint32(os.Geteuid()) {
-				return "", errRuntimeLayout
-			}
-			if info.Mode()&os.ModeSymlink == 0 {
-				if info.Mode().Perm()&0022 != 0 && info.Mode()&os.ModeSticky == 0 {
-					return "", errRuntimeLayout
-				}
-				continue
-			}
-			target, err := os.Readlink(path)
-			if err != nil {
-				return "", errRuntimeLayout
-			}
-			links = append(links, link{path, uint64(stat.Dev), stat.Ino, target})
-			if !filepath.IsAbs(target) {
-				target = filepath.Join(filepath.Dir(path), target)
-			}
-			remaining = filepath.Join(append([]string{target}, parts[index+1:]...)...)
-			followed = true
-			break
-		}
-		if !followed {
-			data, err := json.Marshal(links)
-			if err != nil {
-				return "", errRuntimeLayout
-			}
-			return runtimeHash(data), nil
-		}
-	}
-	return "", errRuntimeLayout
-}
-
-func captureRuntimeFile(ctx context.Context, source string, executable bool) (_ *runtimeImage, outcome error) {
-	if !runtimePath(source) || !filepath.IsAbs(source) || ctx.Err() != nil {
+	source, err := os.Executable()
+	if err != nil {
 		return nil, errRuntimeLayout
 	}
 	canonical, err := filepath.EvalSymlinks(source)
 	if err != nil {
 		return nil, errRuntimeLayout
-	}
-	links, err := runtimeLinks(source)
-	if err != nil {
-		return nil, err
 	}
 	file, err := os.OpenFile(canonical, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
@@ -271,108 +184,50 @@ func captureRuntimeFile(ctx context.Context, source string, executable bool) (_ 
 		}
 	}()
 	info, err := file.Stat()
-	if err != nil {
+	if err != nil || !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > runtimeImageLimit || info.Mode().Perm()&0111 == 0 {
 		return nil, errRuntimeLayout
 	}
-	stat, err := trustedRuntimeFile(info, executable)
-	if err != nil {
-		return nil, err
-	}
-	hasher := sha256.New()
-	size, err := io.Copy(hasher, io.LimitReader(runtimeSourceReader{ctx, file}, runtimeImageLimit+1))
-	if err != nil || !runtimeSourceUnchanged(ctx, file, source, canonical, links, info, size) {
-		return nil, errRuntimeLayout
-	}
-	identity := runtimeFile{Source: source, Path: canonical, SHA256: hex.EncodeToString(hasher.Sum(nil)), LinksSHA256: links,
-		Device: uint64(stat.Dev), Inode: stat.Ino, Size: size, ModifiedNS: info.ModTime().UnixNano(), Mode: uint32(info.Mode()), Owner: stat.Uid}
-	return &runtimeImage{identity: identity, file: file}, nil
-}
-
-func trustedRuntimeFile(info os.FileInfo, executable bool) (*syscall.Stat_t, error) {
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0022 != 0 || info.Size() <= 0 || info.Size() > runtimeImageLimit || executable && info.Mode().Perm()&0111 == 0 {
-		return nil, errRuntimeLayout
-	}
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok || stat.Uid != 0 && stat.Uid != uint32(os.Geteuid()) {
-		return nil, errRuntimeLayout
-	}
-	return stat, nil
-}
-
-func runtimeSourceUnchanged(ctx context.Context, file *os.File, source, canonical, links string, before os.FileInfo, size int64) bool {
-	after, err := file.Stat()
-	linked, linkErr := os.Stat(source)
-	path, pathErr := filepath.EvalSymlinks(source)
-	afterLinks, linksErr := runtimeLinks(source)
-	if err != nil || linkErr != nil || pathErr != nil || linksErr != nil || ctx.Err() != nil {
-		return false
-	}
-	return path == canonical && links == afterLinks && os.SameFile(before, after) && os.SameFile(after, linked) &&
-		size == before.Size() && size == after.Size() && before.Mode() == after.Mode() && before.ModTime().Equal(after.ModTime())
-}
-
-func captureSelf(ctx context.Context) (*runtimeImage, error) {
-	source, err := os.Executable()
-	if err != nil {
-		return nil, errRuntimeLayout
-	}
-	return captureRuntimeFile(ctx, source, true)
-}
-
-func checkRuntimeFile(ctx context.Context, expected runtimeFile, executable bool) error {
-	image, err := captureRuntimeFile(ctx, expected.Source, executable)
-	if err != nil {
-		return err
-	}
-	closeErr := image.file.Close()
-	if image.identity != expected || closeErr != nil {
-		return errRuntimeLayout
-	}
-	return nil
+	return &runtimeImage{file: file, size: info.Size()}, nil
 }
 
 func (image *runtimeImage) copy(ctx context.Context, directory string) (outcome error) {
-	if checkErr := checkRuntimeFile(ctx, image.identity, true); checkErr != nil {
-		return checkErr
+	if image == nil || image.file == nil || image.size <= 0 || image.size > runtimeImageLimit {
+		return errRuntimePreparation
 	}
 	if _, err := image.file.Seek(0, io.SeekStart); err != nil {
 		return errRuntimePreparation
 	}
-	file, err := os.OpenFile(filepath.Join(directory, runtimeImageName), os.O_WRONLY|os.O_CREATE|os.O_EXCL|unix.O_NOFOLLOW, 0700)
+	root, err := openRuntimeDirectory(directory)
+	if err != nil {
+		return err
+	}
+	defer func() { outcome = errors.Join(outcome, root.Close()) }()
+	file, err := root.OpenFile(runtimeImageName, os.O_WRONLY|os.O_CREATE|os.O_EXCL|unix.O_NOFOLLOW, 0700)
 	if err != nil {
 		return errRuntimePreparation
 	}
 	defer func() { outcome = errors.Join(outcome, file.Close()) }()
-	hasher := sha256.New()
-	size, err := io.Copy(io.MultiWriter(file, hasher), io.LimitReader(runtimeSourceReader{ctx, image.file}, runtimeImageLimit+1))
-	if err != nil || size != image.identity.Size || hex.EncodeToString(hasher.Sum(nil)) != image.identity.SHA256 {
+	size, err := io.Copy(file, io.LimitReader(runtimeSourceReader{ctx, image.file}, runtimeImageLimit+1))
+	if err != nil || size != image.size || ctx.Err() != nil {
 		return errRuntimePreparation
 	}
-	if checkErr := file.Sync(); checkErr != nil {
-		return errRuntimePreparation
-	}
-	return checkRuntimeFile(ctx, image.identity, true)
+	// Keep fixed-slot ownership/mode checks, not executable receipts. Deferred
+	// closes must succeed before process start; power-loss Sync is unnecessary.
+	return checkPrivateImage(root)
 }
 
-func verifyRuntimeCopy(ctx context.Context, directory string, expected runtimeFile) error {
-	root, err := openPopupDirectory(directory)
+func checkPrivateImage(root *os.Root) (outcome error) {
+	file, err := root.OpenFile(runtimeImageName, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return errRuntimeStartup
 	}
-	if checkErr := root.Close(); checkErr != nil {
+	defer func() { outcome = errors.Join(outcome, file.Close()) }()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0700 || info.Size() <= 0 || info.Size() > runtimeImageLimit {
 		return errRuntimeStartup
 	}
-	image, err := captureRuntimeFile(ctx, filepath.Join(directory, runtimeImageName), true)
-	if err != nil {
-		return errRuntimeStartup
-	}
-	stat, statErr := image.file.Stat()
-	closeErr := image.file.Close()
-	if statErr != nil || closeErr != nil || image.identity.SHA256 != expected.SHA256 || image.identity.Size != expected.Size || image.identity.Owner != uint32(os.Geteuid()) || stat.Mode().Perm() != 0700 {
-		return errRuntimeStartup
-	}
-	owner, ok := stat.Sys().(*syscall.Stat_t)
-	if !ok || owner.Nlink != 1 {
+	owner, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
 		return errRuntimeStartup
 	}
 	return nil
@@ -431,36 +286,34 @@ func (image *runtimeImage) retire() error {
 }
 
 func (r popupRequest) preparePopupImage(ctx context.Context, directory string) error {
-	request := r
-	if request.image == nil {
-		return errRuntimeStartup
-	}
-	if checkErr := request.image.copy(ctx, directory); checkErr != nil {
-		return checkErr
-	}
-	if checkErr := verifyRuntimeCopy(ctx, directory, request.image.identity); checkErr != nil {
-		return checkErr
-	}
-	if request.selection == nil || request.selection.Capabilities == nil || request.selection.Capabilities.Endpoint != request.Server {
+	endpoint, err := rex.CanonicalEndpoint(r.Server)
+	if err != nil || endpoint != r.Server || r.selection == nil {
 		return errRuntimeCompatibility
 	}
-	imageReceipt, err := json.Marshal(popupImageReceipt{request.image.identity, runtimeHash([]byte(runtimeAssets)), request.selection, request.Server})
-	if err != nil || len(imageReceipt) > runtimeLimit {
+	selection, err := rex.ResolveCLI(ctx, rex.CLIOptions{Selection: r.selection})
+	if err != nil {
+		return errors.Join(errRuntimeCompatibility, err)
+	}
+	if checkErr := r.image.copy(ctx, directory); checkErr != nil {
+		return checkErr
+	}
+	invocation, err := json.Marshal(popupRuntime{CLI: selection, Endpoint: endpoint})
+	if err != nil || len(invocation) > runtimeLimit {
 		return errRuntimeStartup
 	}
-	return writePopupFile(directory, "runtime.json", imageReceipt)
+	return writePopupFile(directory, "runtime.json", invocation)
 }
 
-func openVerifiedPopupDirectory(ctx context.Context, directory string) (*os.Root, *rex.CLISelection, error) {
+func openVerifiedPopupDirectory(ctx context.Context, directory string) (*os.Root, *popupRuntime, error) {
 	root, err := openRuntimeDirectory(directory)
 	if err != nil {
 		return nil, nil, err
 	}
-	selection, checkErr := verifyPopupImage(ctx, root, directory)
+	invocation, checkErr := readPopupRuntime(ctx, root, directory)
 	if checkErr != nil {
 		return nil, nil, errors.Join(checkErr, root.Close())
 	}
-	return root, selection, nil
+	return root, invocation, nil
 }
 
 func commitPopupResult(ctx context.Context, root *os.Root, event MenuEvent, config Config) (outcome error) {
@@ -492,14 +345,14 @@ func commitPopupResult(ctx context.Context, root *os.Root, event MenuEvent, conf
 	return nil
 }
 
-type popupImageReceipt struct {
-	Component   runtimeFile       `json:"component"`
-	AssetSHA256 string            `json:"asset_sha256"`
-	CLI         *rex.CLISelection `json:"cli"`
-	Endpoint    string            `json:"endpoint"`
+// popupRuntime is private invocation context, not binary/API evidence. The
+// endpoint is independent of the selected PATH executable.
+type popupRuntime struct {
+	CLI      *rex.CLISelection `json:"cli"`
+	Endpoint string            `json:"endpoint"`
 }
 
-func verifyPopupImage(ctx context.Context, root *os.Root, directory string) (_ *rex.CLISelection, outcome error) {
+func readPopupRuntime(ctx context.Context, root *os.Root, directory string) (_ *popupRuntime, outcome error) {
 	file, err := root.OpenFile("runtime.json", os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, errRuntimeStartup
@@ -508,27 +361,28 @@ func verifyPopupImage(ctx context.Context, root *os.Root, directory string) (_ *
 	if statErr := checkPopupSlot(file, false); statErr != nil {
 		return nil, errRuntimeStartup
 	}
-	var expected popupImageReceipt
-	if checkErr := readRuntime(file, &expected, runtimeLimit); checkErr != nil || expected.AssetSHA256 != runtimeHash([]byte(runtimeAssets)) ||
-		expected.CLI == nil || expected.CLI.Capabilities == nil || expected.Endpoint != expected.CLI.Capabilities.Endpoint {
+	var invocation popupRuntime
+	if checkErr := readRuntime(file, &invocation, runtimeLimit); checkErr != nil || invocation.CLI == nil {
 		return nil, errRuntimeStartup
 	}
-	selection, err := rex.ResolveCLI(ctx, rex.CLIOptions{Selection: expected.CLI})
+	endpoint, err := rex.CanonicalEndpoint(invocation.Endpoint)
+	if err != nil || endpoint != invocation.Endpoint {
+		return nil, errRuntimeCompatibility
+	}
+	invocation.CLI, err = rex.ResolveCLI(ctx, rex.CLIOptions{Selection: invocation.CLI})
 	if err != nil {
 		return nil, errors.Join(errRuntimeCompatibility, err)
 	}
-	if checkErr := checkRuntimeFile(ctx, expected.Component, true); checkErr != nil {
-		return nil, checkErr
-	}
-	image, err := captureSelf(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { outcome = errors.Join(outcome, image.file.Close()) }()
-	if image.identity.Path != filepath.Join(directory, runtimeImageName) || image.identity.SHA256 != expected.Component.SHA256 || image.identity.Size != expected.Component.Size {
+	// A private child must run from its invocation's fixed, owned image slot.
+	// Do not hash it or reopen/revalidate the parent's original installation.
+	self, err := os.Executable()
+	if err != nil || self != filepath.Join(directory, runtimeImageName) {
 		return nil, errRuntimeStartup
 	}
-	return selection, verifyRuntimeCopy(ctx, directory, expected.Component)
+	if checkErr := checkPrivateImage(root); checkErr != nil {
+		return nil, checkErr
+	}
+	return &invocation, nil
 }
 
 func runtimeLock(ctx context.Context, file *os.File, exclusive bool) error {

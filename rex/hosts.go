@@ -13,8 +13,6 @@ import (
 // Unlike Options, it has no server or session target: rex hosts ignores --server
 // and REX_SERVER when choosing the servers that own its effective inventory.
 type InventoryOptions struct {
-	// Executable follows the same execution-host resolution rules as Options.
-	Executable string
 	// Selection reuses the same frozen execution-host CLI as the launcher.
 	Selection *CLISelection
 	// Timeout bounds the CLI process. Zero uses ten seconds; an earlier context
@@ -84,11 +82,7 @@ func Hosts(ctx context.Context, options InventoryOptions) (HostInventory, error)
 	if options.Timeout == 0 {
 		options.Timeout = defaultTimeout
 	}
-	selectionOptions := CLIOptions{Selection: options.Selection}
-	if options.Executable != "" {
-		selectionOptions.Executable = &options.Executable
-	}
-	selection, err := ResolveCLI(ctx, selectionOptions)
+	selection, err := ResolveCLI(ctx, CLIOptions{Selection: options.Selection})
 	if err != nil {
 		return HostInventory{}, fmt.Errorf("rex hosts: %w", err)
 	}
@@ -97,7 +91,7 @@ func Hosts(ctx context.Context, options InventoryOptions) (HostInventory, error)
 	defer cancel()
 	// No --server, session selector, or API call: these do not select the
 	// effective inventory. Do not start a missing local server for a menu.
-	output, err := run(ctx, selection.Executable.Path, []string{
+	output, err := run(ctx, selection.Path, []string{
 		flagNoAutostart, flagTimeout, options.Timeout.String(),
 		"hosts", flagJSON,
 	}, selection)
