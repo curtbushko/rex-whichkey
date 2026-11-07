@@ -11,20 +11,28 @@ import (
 	whichkey "temp"
 )
 
-// direct is the Lua-created, in-popup public entry. The no-argument controller
-// remains transitional; menu is result-only and popup is its private PTY child.
+// Only an explicit direct invocation can retire an owned Lua-created float.
+// Bare or ambiguous use never grants authority over the caller's terminal.
 func run(ctx context.Context, args []string, output, diagnostics io.Writer) error {
-	if len(args) > 0 {
-		switch args[0] {
-		case "direct":
-			return runDirect(ctx, args[1:], output)
-		case "popup":
-			return runPopupChild(ctx, args[1:])
-		case "menu":
-			return runMenuUI(ctx, args[1:], output, diagnostics)
-		}
+	if len(args) == 0 {
+		return errors.New("whichkey: choose direct or menu; use --help for the shared Lua launcher")
 	}
-	return runLaunch(ctx, args, output)
+	switch args[0] {
+	case "direct":
+		return runDirect(ctx, args[1:], output)
+	case "menu":
+		return runMenuUI(ctx, args[1:], output, diagnostics)
+	case "help", "--help", "-h":
+		if len(args) != 1 {
+			return errors.New("whichkey: help accepts no additional arguments")
+		}
+		if _, err := io.WriteString(output, publicHelp); err != nil {
+			return fmt.Errorf("write help: %w", err)
+		}
+		return flag.ErrHelp
+	default:
+		return errors.New("whichkey: expected direct or menu; use --help; no Go popup launcher is available")
+	}
 }
 
 const directHelp = `usage: rex-whichkey direct --origin-session ID --origin-block ID --origin-window ID --origin-layer ID [options]
@@ -73,22 +81,6 @@ func runDirect(ctx context.Context, args []string, output io.Writer) error {
 	return whichkey.RunDirectMenu(ctx, options)
 }
 
-func runPopupChild(ctx context.Context, args []string) error {
-	flags := flag.NewFlagSet("rex-whichkey popup", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	directory := flags.String("directory", "", "private popup directory")
-	native := flags.Bool("native", false, "parent lifetime pipe")
-	ascii := flags.Bool("ascii", false, "ASCII decorations")
-	noColor := flags.Bool("no-color", false, "disable colors")
-	if err := flags.Parse(args); err != nil {
-		return err
-	}
-	if flags.NArg() != 0 || !*native {
-		return errors.New("whichkey: popup requires its private parent lifetime transport")
-	}
-	return whichkey.RunNativePopupTerminal(ctx, *directory, *noColor, *ascii)
-}
-
 func runMenuUI(ctx context.Context, args []string, output, diagnostics io.Writer) error {
 	flags := flag.NewFlagSet("rex-whichkey menu", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -124,63 +116,27 @@ func runMenuUI(ctx context.Context, args []string, output, diagnostics io.Writer
 	return whichkey.WriteMenuResult(output, event)
 }
 
-const publicHelp = `usage: rex-whichkey [options]
+const publicHelp = `usage: rex-whichkey direct [options]
+       rex-whichkey menu [--config PATH] [--ascii] [--no-color]
 
-Open the Go-owned floating menu from the originating Rex terminal.
-This no-argument path retains the transitional Go controller.
-The shared Lua launcher uses the public direct entry instead:
+The shared Lua launcher creates the float and starts one direct Go menu:
   rex do /absolute/checkout/lua/rex_whichkey.lua --action rex_whichkey_launch development_directory=/absolute/checkout/bin/GOOS-GOARCH
-Supply the current build's absolute bin directory for development; omit it for
-ordinary installed PATH. See lua/rex_whichkey.lua for the source-build command.
+Build the checkout first. See lua/rex_whichkey.lua for the exact source command.
+Installed bindings use the same shared Lua module with ordinary PATH.
 
-Options:
-  --config PATH      Version 1 JSON menu data (otherwise environment/user default)
-  --server ENDPOINT  Execution-host endpoint override
-  --client FULL_ID   Exact graphical app intent (otherwise REX_CLIENT/pane owner)
-  --ascii            Use ASCII decorations
-  --no-color         Disable terminal colors
-  --help, -h         Show help without effects
+direct requires explicit original session/block/window/layer IDs and must run
+inside the distinct sole terminal of a Lua-created float. Use direct --help.
+menu is an in-terminal UI/result-only mode; it performs no selected action.
+Bare invocation and legacy popup/private-parent flags are rejected without effects.
+There is no Go float launcher, copied image, child renderer or private IPC.
 
-Requires full REX_SESSION/REX_BLOCK and a compatible execution-host Rex CLI.
-Resource-only operations do not require a GUI. App actions require the retained
-pane owner or explicit app, with a fresh connection and Remote Control permission.
-Endpoint: --server > nonempty REX_SERVER > native execution-host default.
-No focused/current-client fallback, Lua execution, or idle menu expiry.
-Configuration is never edited or reloaded. See docs/mapping-format.md.
+Native chrome uses Rex defaults; Go matches only the terminal palette.
+Visible float/TTY/workers/original focus are retired or restored before effects.
+Rex deletes the detached host after Go exits; Go cannot verify its own deletion.
+No focused/current-client fallback, configuration edits, reload or idle expiry.
+See docs/mapping-format.md for validated version 1 JSON menu data.
 `
 
-func runLaunch(ctx context.Context, args []string, output io.Writer) error {
-	flags := flag.NewFlagSet("rex-whichkey", flag.ContinueOnError)
-	flags.SetOutput(io.Discard)
-	server := flags.String("server", "", "execution-host endpoint override")
-	client := flags.String("client", "", "exact graphical app ID")
-	config := flags.String("config", "", "version 1 data configuration")
-	ascii := flags.Bool("ascii", false, "ASCII decorations")
-	noColor := flags.Bool("no-color", false, "disable colors")
-	if err := flags.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			if _, writeErr := io.WriteString(output, publicHelp); writeErr != nil {
-				return fmt.Errorf("write help: %w", writeErr)
-			}
-		}
-		return err
-	}
-	if flags.NArg() != 0 {
-		return errors.New("whichkey: expected rex-whichkey [options]; use --help")
-	}
-	options := whichkey.LaunchOptions{ASCII: *ascii, NoColor: *noColor}
-	flags.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "server":
-			options.Server = server
-		case "client":
-			options.Client = client
-		case "config":
-			options.Config = config
-		}
-	})
-	return whichkey.LaunchPopup(ctx, options)
-}
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		if errors.Is(err, flag.ErrHelp) {

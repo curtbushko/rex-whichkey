@@ -13,13 +13,18 @@ import (
 
 // DirectOptions is invocation data captured by Lua before creating the float.
 // Popup REX_SESSION/REX_BLOCK identify only the execution host, never the origin.
-// The ordinary no-argument entry remains transitional and cannot enter this mode.
+// Bare invocation is rejected; only the explicit direct command enters this mode.
 type DirectOptions struct {
 	OriginSession string
 	OriginBlock   string
 	OriginWindow  string
 	OriginLayer   string
-	LaunchOptions
+	// Nil selectors are absent; explicitly empty selectors are invalid.
+	Server  *string
+	Client  *string
+	Config  *string
+	ASCII   bool
+	NoColor bool
 }
 
 // RunDirectMenu runs inside the Lua-created terminal. It creates no menu child,
@@ -122,7 +127,6 @@ func directSelection(ctx context.Context, client *rex.Client, origin launchOrigi
 		selection: origin.selection, placement: &placement, snapshot: &snapshot}
 	state.client = client
 	ctx = context.WithValue(ctx, terminalDirectKey{}, state)
-	ctx = context.WithValue(ctx, terminalRuntimeKey{}, terminalRuntime{origin.selection, origin.Server})
 	event, outcome = RunTerminal(ctx, config, options.NoColor, options.ASCII)
 	return event, bound, appErr, outcome
 }
