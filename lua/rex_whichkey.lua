@@ -7,22 +7,22 @@
 --                         ascii=false, no_color=false }.
 --
 -- Development, after `task build` in this checkout, without init.lua reload:
---   rex do "$PWD/lua/rex_whichkey_launch.lua" --action rex_whichkey_launch development=true
--- Run that script, not this module: rex do serializes script returns and this
--- module returns M (including its launch function) for installed require callers.
+--   rex do "$PWD/lua/rex_whichkey.lua" --action rex_whichkey_launch \
+--     development_directory="$PWD/bin/$(go env GOOS)-$(go env GOARCH)"
 -- Use explicit -s SESSION -b BLOCK and -C CLIENT when launching for an owned
 -- origin from another terminal. The action receives those as ctx, never from
--- menu data. development=true derives ONLY this module's checkout bin directory
--- using `go env GOOS GOARCH`, then scopes path_prepend to this one terminal.
--- It requires an absolute script path and Go on the local execution-host PATH.
+-- menu data. The trusted source/build caller supplies its absolute bin/GOOS-GOARCH
+-- directory as data, scoped to this one terminal's path_prepend. Omit it for
+-- installed launches using ordinary PATH. Lua does not discover files or run Go.
+-- The directory is one PATH entry, not an executable path, callback or command.
 -- The terminal always starts the fixed program rex-whichkey, shell=none.
 --
 -- Native chrome uses Rex defaults. Terminal palette matching is Go's job.
 -- exit.on_completion=true with a zero quick-failure threshold lets Rex delete
 -- even a failed/detached host after Go exits. A launch result is not UI readiness
 -- or proof of eventual deletion; observe session.list_blocks after completion.
+local module_name = ...
 local M = {}
-local module_source = debug.getinfo(1, "S").source
 
 local function resource_id(value, kind)
     if type(value) ~= "string" or value:sub(1, #kind + 1) ~= kind .. ":" then
@@ -87,25 +87,12 @@ local function exact_origin(session, block)
     return found
 end
 
-local function development_path()
-    local root = module_source:match("^@(/.*)/lua/rex_whichkey%.lua$")
-    if not root then
-        error("rex_whichkey: development requires this checkout's absolute lua/rex_whichkey.lua path", 0)
-    end
-    local result, err = rex.exec({ "go", "env", "GOOS", "GOARCH" }, { timeout = 3 })
-    if not result or not result.ok then
-        error("rex_whichkey: cannot locate checkout build platform: " .. (err or "go env failed"), 0)
-    end
-    local system, arch = result.stdout:match("^([a-z0-9]+)\n([a-z0-9]+)\n$")
-    if not system or not arch then error("rex_whichkey: invalid go env platform", 0) end
-    return { root .. "/bin/" .. system .. "-" .. arch }
-end
-
 function M.launch(ctx, options)
     if type(ctx) ~= "table" then error("rex_whichkey: original invocation context is required", 0) end
-    options = options or {}
+    if options == nil then options = {} end
     if type(options) ~= "table" then error("rex_whichkey: launch options must be data", 0) end
-    local allowed = { width=true, height=true, config=true, ascii=true, no_color=true, development=true }
+    local allowed = { width=true, height=true, config=true, ascii=true, no_color=true,
+        development_directory=true }
     for key in pairs(options) do
         if not allowed[key] then error("rex_whichkey: unsupported launch option " .. tostring(key), 0) end
     end
@@ -117,14 +104,21 @@ function M.launch(ctx, options)
     if client ~= nil then client = required_id(client, "client") end
     local width = fraction(options.width, .8, "width")
     local height = fraction(options.height, .3, "height")
-    for _, key in ipairs({ "ascii", "no_color", "development" }) do
+    for _, key in ipairs({ "ascii", "no_color" }) do
         if options[key] ~= nil and type(options[key]) ~= "boolean" then
             error("rex_whichkey: " .. key .. " must be boolean", 0)
         end
     end
     local config = options.config
     if config ~= nil then config = text(config, "config path") end
-    local path = options.development and development_path() or nil
+    local path
+    if options.development_directory ~= nil then
+        local directory = text(options.development_directory, "development directory")
+        if directory:sub(1, 1) ~= "/" or directory:find(":", 1, true) then
+            error("rex_whichkey: development_directory must be one absolute PATH directory", 0)
+        end
+        path = { directory }
+    end
     local origin = exact_origin(session, block)
     local command = { "rex-whichkey", "direct", "--origin-session", session,
         "--origin-block", block, "--origin-window", origin.window, "--origin-layer", origin.layer }
@@ -154,18 +148,20 @@ function M.launch(ctx, options)
     return true, created -- Preserve the function-binding handled result.
 end
 
--- The sibling rex_whichkey_launch.lua script loads this one launch-only action
--- for rex do FILE --action without registering or reloading user configuration.
--- This is not a menu callback registry.
+-- Both rex do FILE --action and canonical require use this implementation.
+-- This launch-only action needs no installed lookup or user configuration reload;
+-- it is not a menu callback registry.
 rex.action{
     name = "rex_whichkey_launch",
     title = "Which-key menu",
     args = { width="number?", height="number?", config="string?", ascii="boolean?",
-        no_color="boolean?", development="boolean?" },
+        no_color="boolean?", development_directory="string?" },
     run = function(ctx, args)
         local _, created = M.launch(ctx, args)
         return created
     end,
 }
 
-return M
+-- require passes the module name as the chunk vararg. Only canonical require
+-- gets the function table; rex do serializes script results, so return none there.
+if module_name == "rex_whichkey" then return M end

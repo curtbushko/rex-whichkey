@@ -33,7 +33,7 @@ Run inside the sole terminal of a Lua-created float, not an ordinary pane.
 Original IDs are fixed invocation data, separate from popup REX_* identities.
 Options: --client FULL_ID --server ENDPOINT --config PATH --ascii --no-color
 No nested popup, parent process, private IPC or init reload is used.
-The shared public Lua action is rex_whichkey_launch; run lua/rex_whichkey_launch.lua.
+The shared public Lua action is rex_whichkey_launch; run lua/rex_whichkey.lua.
 `
 
 func runDirect(ctx context.Context, args []string, output io.Writer) error {
@@ -129,8 +129,9 @@ const publicHelp = `usage: rex-whichkey [options]
 Open the Go-owned floating menu from the originating Rex terminal.
 This no-argument path retains the transitional Go controller.
 The shared Lua launcher uses the public direct entry instead:
-  rex do /absolute/checkout/lua/rex_whichkey_launch.lua --action rex_whichkey_launch development=true
-See the shared module lua/rex_whichkey.lua for installed and development arguments.
+  rex do /absolute/checkout/lua/rex_whichkey.lua --action rex_whichkey_launch development_directory=/absolute/checkout/bin/GOOS-GOARCH
+Supply the current build's absolute bin directory for development; omit it for
+ordinary installed PATH. See lua/rex_whichkey.lua for the source-build command.
 
 Options:
   --config PATH      Version 1 JSON menu data (otherwise environment/user default)

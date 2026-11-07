@@ -2,8 +2,11 @@
 -- The execution host must have rex-whichkey on the Rex process's PATH.
 -- The shared module creates one float in ctx's exact window and starts Go
 -- directly. No user config reload is needed for the development entry:
--- rex do "$PWD/lua/rex_whichkey_launch.lua" --action rex_whichkey_launch development=true
--- The script loads the sibling shared module without returning its function table.
+-- rex do "$PWD/lua/rex_whichkey.lua" --action rex_whichkey_launch \
+--   development_directory="$PWD/bin/$(go env GOOS)-$(go env GOARCH)"
+-- The same file returns its function table only to canonical require below.
+-- The trusted build caller supplies a single absolute PATH directory as data;
+-- installed bindings omit it and use ordinary PATH. The program stays fixed.
 -- Width/height are finite fractions; native chrome uses Rex defaults.
 local whichkey = require("rex_whichkey")
 
