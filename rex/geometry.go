@@ -1,7 +1,6 @@
 package rex
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 )
@@ -86,33 +85,4 @@ func layoutRectangles(data json.RawMessage) (map[string]Bounds, error) {
 		return nil, err
 	}
 	return rectangles, nil
-}
-
-func (b Block) samePlacement(other Block) bool {
-	return b.WindowID == other.WindowID && b.LayerID == other.LayerID && b.haveRect == other.haveRect && b.rect == other.rect
-}
-
-// Geometry reads the exact origin's window-relative rectangle and terminal size.
-// It verifies that placement still matches this Block snapshot after reading the
-// report. Owner/ReportedAt, not nonzero seeded cells, establish measurement.
-// A move during sampling returns an error, never geometry for another window.
-func (b Block) Geometry(ctx context.Context) (Bounds, TerminalSize, error) {
-	if err := b.valid(); err != nil {
-		return Bounds{}, TerminalSize{}, err
-	}
-	if !b.haveRect {
-		return Bounds{}, TerminalSize{}, errors.New("rex: origin window rectangle is unavailable")
-	}
-	size, err := b.TerminalSize(ctx)
-	if err != nil {
-		return Bounds{}, TerminalSize{}, err
-	}
-	after, err := b.Inspect(ctx)
-	if err != nil {
-		return Bounds{}, TerminalSize{}, err
-	}
-	if !b.samePlacement(after) {
-		return Bounds{}, TerminalSize{}, errors.New("rex: origin moved during geometry sampling")
-	}
-	return b.rect, size, nil
 }
