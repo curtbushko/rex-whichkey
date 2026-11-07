@@ -8,6 +8,7 @@ structure:
 scope:
   requirements:
     - REQ-001
+    - REQ-002
     - REQ-003
     - REQ-004
     - REQ-006
@@ -16,31 +17,59 @@ scope:
     - REQ-010
     - REQ-011
     - REQ-012
+    - REQ-013
+    - REQ-016
+    - REQ-017
     - REQ-025
     - REQ-028
     - REQ-029
   documents:
     - ref: designs/rex-whichkey-lua-float-launch.md
-      hash: 'sha256:a3657116206eb455b158b9727099b7c3859882d18f759171205eb830dda163c8'
+      hash: 'sha256:f7e38d49287de319753732b09fe472a40dfadcef81e5245e2deac208e968ab70'
 implementation:
   language: go
   ownership:
     paths:
-      - terminal.go
-      - menu_updates.go
-      - providers.go
-      - menu.go
-      - text_entry.go
-      - render.go
-      - theme.go
-      - rex/snapshot.go
+      - cmd/main.go
+      - controller_legacy_support_test.go
       - direct_menu.go
+      - examples/rex-whichkey-keybinding.lua
+      - launch.go
+      - launch_legacy_support_test.go
+      - lua/rex_whichkey.lua
+      - menu.go
+      - menu_updates.go
+      - native.go
+      - native_app_owner.go
+      - native_resources.go
+      - native_sessions.go
+      - native_targets.go
+      - native_text_entry.go
+      - popup.go
+      - popup_initial.go
+      - popup_legacy_support_test.go
+      - popup_updates.go
+      - providers.go
+      - render.go
+      - rex/block.go
+      - rex/direct_popup.go
+      - rex/layer.go
+      - rex/session.go
+      - rex/snapshot.go
+      - runtime_bootstrap.go
+      - runtime_legacy_support_test.go
+      - terminal.go
+      - text_entry.go
+      - theme.go
     sharedPaths: []
     resources: []
     interfaces:
-      - P19-INPROCESS-MENU
+      - P19-DIRECT-LIFETIME
       - P19-FILTERED-ORIGIN-SNAPSHOT
+      - P19-INPROCESS-MENU
+      - P19-LUA-ORIGIN-ARGV
       - P19-OWN-PTY
+      - P19-SHARED-LUA-ENTRY
   gates:
     - ID: whitespace
       command: git diff --check
@@ -58,9 +87,9 @@ implementation:
       command: task lint
       required: false
 lifecycle:
-  state: blocked
-  sourceEventID: rex-whichkey-p19-t01/release/1
-  changedAt: '2026-11-07T04:56:19.464Z'
+  state: planned
+  sourceEventID: rex-whichkey-p19-t01/consumer-blocker/1/resume/2
+  changedAt: '2026-11-07T07:21:37.849Z'
 title: 'Phase19.1: In-process menu and own-PTY producer'
 mtnCreateRetry:
   key: rex-whichkey-p19/task-create/inprocess-menu/1
@@ -71,7 +100,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:48:21.351Z'
-dateModified: '2026-11-07T04:56:20.088Z'
+dateModified: '2026-11-07T07:21:38.481Z'
 tags:
   - task
 type: task
@@ -79,7 +108,16 @@ id: 148d116e-23cd-4431-9fa0-6568fe058ff6
 projects:
   - '[[phases/rex-whichkey-19-lua-float-launch.md]]'
 ---
-Implement concrete in-process menu support without activating a new launcher/effect path. Reuse bounded metadataJobs: at most two workers, five once-only jobs and bounded immutable results; only the UI loop changes menu/retained targets. Add a concrete origin-aware menu entry that returns the retained config, MenuEvent and exact provider targets after cancel/join and terminal restoration. Keep existing public/standalone and current private-child behavior compatible until task19.2 removes the latter; no placeholder stubs or new transport framework. Read actual own PTY size/palette, retain SIGWINCH, fixed float rectangle/pagination, rename editing/readiness, confirmations, Unicode, defaults/JSON, limits and theme behavior. Derive original current markers from retained original IDs, not popup focus. Provide a filtered post-create origin snapshot and provider inventories excluding the exact own popup block, including counts/limits/targets. Shared raw view may be used solely for own-popup validation. No Go float geometry RPCs on the new path. Safe to prepare/review/build independently; do not claim direct-launch/runtime lifecycle delivery from this source-only producer. Coordinator's later combined normal make run must verify this task's menu contribution, with evidence attributed back to this task, before phase runtime acceptance. Existing RunTerminal/production callers must meaningfully exercise any extracted core. No exported origin-aware API with only a future blocked-task/test caller may be called delivered; if safe current integration cannot meet that invariant, return the exact blocker rather than creating dormant scaffolding. Current public result-only menu must never dispatch resources.
+Implement a CURRENT USED vertical slice: direct Go in-popup entry plus shared Lua float creation/launcher, consuming original origin as data independently from popup REX_* IDs. Accepted decisions1a/1b now remove earlier blocked-consumer conflict. Use defaults .8/.3 with validated configurable fractions/centered placement; exact originating window, no focus fallback; default native chrome only. Shipped Lua fixed program rex-whichkey, shell=none, documented exit on_completion=true quick_exit_threshold_ms=0. A scoped development PATH prepend must select checkout binary, not arbitrary public executable nomination.
+
+Go owns real in-process metadata/rename/provider menu state and exact original action targets, max2 bounded jobs/once-per-kind/errors, one UI owner, current palette/own PTY/SIGWINCH/fixed rectangle/pagination/Unicode/confirm/limits/input handling. Filter exact own popup from post-create pane snapshots/counts/targets. New functions/fields have real current CLI/Lua callers; no dormant framework. Default/native existing path can remain transitional until task2 removes it, but new direct entry MUST function now and not create a nested popup. Ambiguous no-argument/origin data cannot detach a caller's ordinary pane.
+
+Implement accepted direct lifetime in this slice: validate exact own sole-block floating placement distinct from original IDs; cancel/join workers and restore terminal; detach exact own popup, verify visible layer retired/detached host, restore/revalidate original origin/app generation/focus then invoke selected CLI effect once. Uncertain detach/focus/restore/ownership suppresses effects; no retarget/retry. Rex retires detached host after Go exit, not before dispatch; do not claim Go can verify its own post-exit deletion. Dismissal/cancel/error also ends with no orphan block. Session-closing effects can destroy host; never invent successful exit or retry an uncertain mutation. No Go launcher parent/renderer/copy/private-IPC controller for this new path.
+
+Only listed literal source/Lua paths. Preserve test assertions/current ordinary path until consumer switches; no production stubs or framework/Cobra/Viper/hexagonal/direct socket/callback control plane. Existing JSON/defaults/Go actions/palette and PATH-only CLI policy intact, no binary hashes/status/schema gate. Static/build required: changed-source gofmt, git diff --check, task build, task lint:vet with pinned14CPU/Go5GiB; full unchanged lint optional inherited62 diagnostic. No tests/harnesses/benchmark/fake delays/environment hooks/Nix activation/config/reload/live leaf run.
+
+Coordinator integration check on exact reviewed combined source: use documented rex do FILE --action shared Lua entry (no user init load/reload) with explicit owned original origin/current built Go; observe direct popup/menu, colors/own-PTY sizing, dynamic rows/current targets/rename editing, benign rename exact owned tab, cancellation/dismissal and list_blocks before/after for detached leaks, visible retirement before effect. This is real application use, not a custom harness; literal make run final path is delivered/actually checked by task3. Do not call intermediate source full Phase19 completion or native chrome customization. Leave current controller removal to task2, no latent direct APIs awaiting blocked consumer.
+
 <!-- mtn:evidence:v1 -->
 
 <!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDA0OjUxOjExLjA0NloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiZGlzcGF0Y2giLCJyZXRyeUtleSI6InJleC13aGljaGtleS1wMTktdDAxL2Rpc3BhdGNoLzEiLCJpbnRlbnQiOiI2YmEzYTI3ODNlY2M4MDZmMGRhNTY4MTVmOTNmZDA4ZjIzOGZjZmQ3ZGM0YmEzYmJiYWMyNGE0Njc0NTgwMmE0In0 -->
@@ -128,4 +166,16 @@ Implement concrete in-process menu support without activating a new launcher/eff
 ### 2026-11-07T04:56:18.651Z · release · unspecified
 
 {"attempt":1,"dispatchEventID":"rex-whichkey-p19-t01/dispatch/1","eventID":"rex-whichkey-p19-t01/release/1","evidence":"Builder returned blocked after static inspection/build/vet on unchanged source; trusted exit0, no source writes. Required material decisions remain unresolved.","kind":"release","outcome":"stopped","recordRef":"tasks/rex-whichkey-19-01-inprocess-menu.md","schemaVersion":1,"specHash":"sha256:c35544123e5829bfc193948c34e6069452501da2dd122754ccf0610de058c5b1"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDA3OjIxOjMzLjAzMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicmVzdW1lIiwicmV0cnlLZXkiOiJyZXgtd2hpY2hrZXktcDE5LXQwMS9idWlsZC8xL3Jlc3VtZS8yIiwiaW50ZW50IjoiYjBiZTkxZDM0N2FlN2UwZTE5Y2Q4YzY4NWFhODRhMzUyZjRjY2RhNGFkNDM5ODMzODEyM2YyNTM5ZGU1YzU5ZCJ9 -->
+### 2026-11-07T07:21:33.031Z · resume · unspecified
+
+{"attempt":2,"blockerEventID":"rex-whichkey-p19-t01/build/1","decisionEvidence":"1a - yes, accept it for now; 1b - yes","eventID":"rex-whichkey-p19-t01/build/1/resume/2","kind":"resume","recordRef":"tasks/rex-whichkey-19-01-inprocess-menu.md","resolution":"User explicitly approves1a default chrome deferral and1b host-through-dispatch exception. Replanned current-used Go/Lua vertical slice provides real consumer with widened literal ownership; no dormant API or unapproved ordering change. Prior source attempt stopped/no edits; original blocker history preserved.","schemaVersion":1,"specHash":"sha256:df6612b1e096394410c8db3f32d659a475ca1fff7daea07f3489300ffe332c23"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDA3OjIxOjM2Ljg2MloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicmVzdW1lIiwicmV0cnlLZXkiOiJyZXgtd2hpY2hrZXktcDE5LXQwMS9jb25zdW1lci1ibG9ja2VyLzEvcmVzdW1lLzIiLCJpbnRlbnQiOiI5YWU0NzAzYjc0MjA5Njk1YzVhY2Q5MTFmNjZkOWQ3YjcxNjY4OGJlNDgwZDY3ZmI0NzIxMjRiYTJkMWU5YWQ4In0 -->
+### 2026-11-07T07:21:36.862Z · resume · unspecified
+
+{"attempt":2,"blockerEventID":"rex-whichkey-p19-t01/consumer-blocker/1","decisionEvidence":"1a - yes, accept it for now; 1b - yes","eventID":"rex-whichkey-p19-t01/consumer-blocker/1/resume/2","kind":"resume","recordRef":"tasks/rex-whichkey-19-01-inprocess-menu.md","resolution":"User explicitly approves1a default chrome deferral and1b host-through-dispatch exception. Replanned current-used Go/Lua vertical slice provides real consumer with widened literal ownership; no dormant API or unapproved ordering change. Prior source attempt stopped/no edits; original blocker history preserved.","schemaVersion":1,"specHash":"sha256:df6612b1e096394410c8db3f32d659a475ca1fff7daea07f3489300ffe332c23"}
 <!-- mtn:end-entry:v1 -->

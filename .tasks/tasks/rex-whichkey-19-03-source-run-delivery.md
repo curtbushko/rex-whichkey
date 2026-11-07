@@ -27,7 +27,7 @@ scope:
     - REQ-029
   documents:
     - ref: designs/rex-whichkey-lua-float-launch.md
-      hash: 'sha256:a3657116206eb455b158b9727099b7c3859882d18f759171205eb830dda163c8'
+      hash: 'sha256:f7e38d49287de319753732b09fe472a40dfadcef81e5245e2deac208e968ab70'
 implementation:
   language: nix
   ownership:
@@ -71,7 +71,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:48:25.218Z'
-dateModified: '2026-11-07T04:48:29.055Z'
+dateModified: '2026-11-07T07:21:23.451Z'
 tags:
   - task
 type: task
@@ -82,4 +82,10 @@ blockedBy:
   - uid: '[[tasks/rex-whichkey-19-02-direct-lua-lifetime.md]]'
     reltype: FINISHTOSTART
 ---
-Consume task19.2's direct binary/shared Lua entry; no native-chrome prerequisite. Update only Taskfile build/run routing, adding a standard Makefile delegation if useful. Actual PATH make is the fixed Task wrapper: run must depend on checkout build and execute documented rex do FILE --action with explicit full origin IDs, never stale installed binary, old Go launcher, user action registration or init reload. Use only a scoped terminal path_prepend to checkout bin with fixed rex-whichkey program name; no REX_BIN_DIR or runtime Nix path policy. Preserve every existing test/lint/hook command, target, assertion and standard. Package ordinary Go/Lua assets and examples using the same launch implementation; no shell wrapper, activation, pin/lock change or init takeover. Update active docs to distinguish reviewed source, actual runtime evidence, pending native chrome and failure limits, preserving prior history and deferred hooks. Coordinator must perform actual normal make run from an explicitly owned real origin on the reviewed combined source and record source/binary identity, command, exact Rex endpoint/session/window/block/layer IDs, one Go process, own-PTY/palette/keyboard/resize/fixed navigation, dynamic readiness/rename editing, one benign owned rename, cancel/rapid cancel/normal dismissal, original focus and both visible-layer and detached-block disappearance. Attribute checks to affected source tasks rather than a separate test project/private ACK. No actual run until lifecycle blocker resolves. No chrome pass or full phase completion while task19.4 remains blocked. Commit reviewed source and honest docs only via coordinator; exclude parent flake.nix fix.
+After delivered controller-free task2, deliver the actual source make run and normal package route. Current PATH make wrapper execs Task; modify Taskfile run/build routing only as explicitly authorized, preserve EVERY test/lint/hook quality definition. Add conventional Makefile delegating to Task for portable GNU make if needed. Normal make run MUST build/select this checkout Go binary, call shared Lua through documented rex do FILE --action path, create one float and run direct Go; not call old LaunchPopup, assume installed stale binary, require user action registration/config reload or use a fake/private probe.
+
+Use scoped terminal PATH prepend for development fixed program name, same installed Lua implementation/keybinding, ordinary Go/Lua packaging. No Nix runtime executable-discovery policy, wrappers, new dependency/pin/flake.nix/profile activation, init takeover or user config edits. Update clear launch/migration/source-run instructions and direct lifecycle limitations/default native chrome; no pending/current-source success claims before actual evidence.
+
+Source quality gates whitespace, existing Nix parser/formatter only without eval/build/activation; Go build/vet on combined source coordinator-owned, no unit/race/TDD/Lua/parser/FIFO harness/benchmark/synthetic delays. Tests/assertions/hook/lint config unchanged. Existing full lint62 failures remain honest.
+
+MANDATORY coordinator actual make build/make run on reviewed combined checkout and rebuilt main, not dry-run/help/ACK. Capture exact resolved make wrapper/GNU path, Lua script/action/current Go program source, own origin IDs/popup IDs, root/palette/terminal size/keyboard/provider readiness, one benign exact owned rename, cancellation/dismissal. Verify no Go launching parent/copy/private transport, visible float retired before effect, list_blocks shows detached host eventually gone after Go exit and focus/terminal restored. Use only explicitly owned disposable resources, no broad/remote/destructive trials/user config reload. Report uncertainty/exit errors honestly; no physical-keybinding/installed-profile/platform claim from source. Actual artifacts feed task4 final evidence refresh so active docs not stale pending. This task does not implement deferred native chrome.

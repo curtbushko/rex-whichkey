@@ -22,17 +22,19 @@ scope:
     - REQ-029
   documents:
     - ref: designs/rex-whichkey-lua-float-launch.md
-      hash: 'sha256:a3657116206eb455b158b9727099b7c3859882d18f759171205eb830dda163c8'
+      hash: 'sha256:f7e38d49287de319753732b09fe472a40dfadcef81e5245e2deac208e968ab70'
 implementation:
   language: go
   ownership:
     paths:
-      - terminal.go
-      - menu_updates.go
-      - providers.go
-      - direct_menu.go
       - cmd/main.go
+      - controller_legacy_support_test.go
+      - direct_menu.go
+      - examples/rex-whichkey-keybinding.lua
       - launch.go
+      - launch_legacy_support_test.go
+      - lua/rex_whichkey.lua
+      - menu_updates.go
       - native.go
       - native_app_owner.go
       - native_resources.go
@@ -41,16 +43,16 @@ implementation:
       - native_text_entry.go
       - popup.go
       - popup_initial.go
+      - popup_legacy_support_test.go
       - popup_updates.go
-      - runtime_bootstrap.go
+      - providers.go
       - rex/block.go
+      - rex/direct_popup.go
       - rex/layer.go
       - rex/session.go
-      - lua/rex_whichkey.lua
-      - examples/rex-whichkey-keybinding.lua
-      - launch_legacy_support_test.go
-      - popup_legacy_support_test.go
+      - runtime_bootstrap.go
       - runtime_legacy_support_test.go
+      - terminal.go
     sharedPaths: []
     resources: []
     interfaces:
@@ -76,9 +78,9 @@ implementation:
       command: task lint
       required: false
 lifecycle:
-  state: blocked
-  sourceEventID: rex-whichkey-p19-t02/lifetime-blocker/1
-  changedAt: '2026-11-07T04:48:41.527Z'
+  state: planned
+  sourceEventID: rex-whichkey-p19-t02/lifetime-blocker/1/resume/2
+  changedAt: '2026-11-07T07:21:41.625Z'
 title: 'Phase19.2: Lua float and controller-free direct Go lifecycle'
 mtnCreateRetry:
   key: rex-whichkey-p19/task-create/direct-lua-lifetime/1
@@ -89,7 +91,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:48:23.279Z'
-dateModified: '2026-11-07T04:48:42.155Z'
+dateModified: '2026-11-07T07:21:42.259Z'
 tags:
   - task
 type: task
@@ -100,11 +102,24 @@ blockedBy:
   - uid: '[[tasks/rex-whichkey-19-01-inprocess-menu.md]]'
     reltype: FINISHTOSTART
 ---
-BLOCKED for activation/dispatch by P19-DIRECT-LIFETIME; consume reviewed task19.1 only after the exact cleanup-order decision or a documented within-scope capability resolves it. Lua computes finite 0<w,h<=1 fractions and centered x/y, captures actual initiating window from exact original session/block, creates one sole-block floating terminal with explicit window, shell=none, command argv starting fixed rex-whichkey, exit.on_completion=true and quick_exit_threshold_ms=0. Forward original origin/endpoint/client intent as validated arguments distinct from Rex-provided own execution IDs. No focused-window fallback. Module launch and script-local documented rex do FILE --action entry share implementation; not user init registration/reload or a selected-effect callback registry. Go captures original placement/app generation before interaction, independently validates exact own sole-popup membership, consumes task19.1, joins workers/restores tty before retirement, revalidates original origin/destination/generation, and dispatches once through concrete argument-array Rex CLI calls. Refuse effects on cancellation, tty/join/ownership/detach/focus uncertainty; no uncertain retry. If explicitly accepted, detach only the exact own block, confirm detached placement and visible layer absence before focus/effects, then exit under native terminal policy; do not equate this with pre-effect host deletion. Plain binary execution uses the existing terminal or fails explicitly, never launches another float. Remove production parent/renderer launch, private popup command, self-image copy, lease/result/update IPC and geometry creation; preserve genuine shared strict validators and concrete Rex APIs still used. Preserve ALL existing assertions and fixture bytes. Move launchOutput and genuinely obsolete support into precise new _test.go support files if needed for compilation; no production stubs or deletion of assertions. Coordinator actual make run on assembled source must verify one Go process, exact origin effect/cancel, visible and detached cleanup for this task; static review cannot certify it.
+After delivered task1 direct Go/Lua vertical slice, retire the OLD ordinary Go launch controller/renderer/image-copy/lease/result/update production plane. Wire the public direct entry intentionally; no no-argument/caller ambiguity may treat ordinary original pane as owned popup. Preserve task1 direct lifecycle/current behavior. Lua owns native float creation/sizing/default-chrome policy, Go menu/operations/palette only. No launching Go parent, hidden helper, renamed supervisor, registry/relay, private IPC/copy path still used by normal shared Lua flow. No Go origin-geometry startup sizing.
+
+Trace real callers before removal. Keep live strict JSON/Unicode, concrete Rex resources/current app targeting/data validation/provider/rename/terminal code. Preserve ALL historical assertions/test files; where old controller symbols are necessary to compile unchanged tests, isolate genuine original support into approved *_test.go files, not production stubs. Do not remove unrelated legacy assets/dependencies or claim tests ran. Owned files only; add a precise literal support-file ownership request to coordinator if genuinely needed.
+
+All original target/generation/freshness/confirm/no-retry and accepted lifecycle semantics retained: visible float/tty/workers/focus before selected effects, detached host retires after Go exit under Rex. No all-block-before-effects claim. Current callbacks/executable Lua/hooks remain deferred. Go normal build/vet/format/whitespace and fresh independent source/dead-production-path review required; optional inherited lint diagnostic. No tests/TDD/race/Lua/parser/FIFO harnesses/benchmark/environment/user config/profile/reload/remote/deploy/push.
+
+Coordinator actual shared-Lua public run on combined source: direct program/no Go parent/copy/private transport, root/dynamic/inline exact owned rename, cancel/dismiss, terminal/focus/visible and detached cleanup. Actual final make run is task3 integration criterion, not a private ACK or compile substitute. Preserve separate dirty flake.nix, quality gates/history.
+
 <!-- mtn:evidence:v1 -->
 
 <!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDA0OjQ4OjQwLjYxNloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiYmxvY2tlciIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOS10MDIvbGlmZXRpbWUtYmxvY2tlci8xIiwiaW50ZW50IjoiMmY0ZTkzNmE4MWVhMGU3YWE1ZDA4ZDVkODRiMzM5YTkwM2M2NmQ4OTY3NDM3MjZmZWE0Y2YyZjI0YjBiNTQxNSJ9 -->
 ### 2026-11-07T04:48:40.616Z · blocker · unspecified
 
 {"affectedRefs":["tasks/rex-whichkey-19-02-direct-lua-lifetime.md","tasks/rex-whichkey-19-03-source-run-delivery.md"],"attempt":1,"decisionID":"REXWHICHKEY-20261106-234820","eventID":"rex-whichkey-p19-t02/lifetime-blocker/1","evidence":".mtn-tmp/p19/lifetime-assessment.json; installed close/detach/exit schemas; current docs/launch-contract.md cleanup inventory.","kind":"blocker","reason":"Documented detach removes visible float but retains executing block through dispatch. Existing accepted all-owned-block cleanup-before-effect and suppress-on-cleanup-failure cannot be preserved by the same process; close kills Go. No permitted same-process host retirement API found.","recordRef":"tasks/rex-whichkey-19-02-direct-lua-lifetime.md","requiredDecision":"Explicitly accept visible-layer/TTY/worker/focus cleanup before effect with detached execution host retired after Go exits (post-exit cleanup cannot suppress prior effect), OR retain strict all-resource pre-effect rule and supply a supported same-process capability/approve a different architecture.","schemaVersion":1,"specHash":"sha256:94903530c10ca9ae9af67231b30b1927c1c2363eea6b3d2e483e811883c2415d"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDA3OjIxOjQwLjY3NFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicmVzdW1lIiwicmV0cnlLZXkiOiJyZXgtd2hpY2hrZXktcDE5LXQwMi9saWZldGltZS1ibG9ja2VyLzEvcmVzdW1lLzIiLCJpbnRlbnQiOiJkYTk1MWIyMWJkNTgzZTcxNGE4NjE3NmYxZDgwMjA4NDE2YzY4MmViY2E5NTdkODUwMjA5NGE4ZDY4NTZiMGZkIn0 -->
+### 2026-11-07T07:21:40.674Z · resume · unspecified
+
+{"attempt":2,"blockerEventID":"rex-whichkey-p19-t02/lifetime-blocker/1","decisionEvidence":"1a - yes, accept it for now; 1b - yes","eventID":"rex-whichkey-p19-t02/lifetime-blocker/1/resume/2","kind":"resume","recordRef":"tasks/rex-whichkey-19-02-direct-lua-lifetime.md","resolution":"User explicitly approves1a default chrome deferral and1b host-through-dispatch exception. Replanned current-used Go/Lua vertical slice provides real consumer with widened literal ownership; no dormant API or unapproved ordering change. Prior source attempt stopped/no edits; original blocker history preserved.","schemaVersion":1,"specHash":"sha256:31a2ab209e370f04195026c90db164569768106bcb65d0dc92d07b18f4661ab5"}
 <!-- mtn:end-entry:v1 -->

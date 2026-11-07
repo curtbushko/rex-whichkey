@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-07T04:50:25.389Z'
+dateModified: '2026-11-07T07:22:52.548Z'
 tags:
   - task
 type: task
@@ -169,6 +169,12 @@ The installed new_layer/terminal options lack native header/border/corners/shado
 ## REXWHICHKEY-20261106-234820 — Open direct-lifetime ordering choice
 
 Documented detach closes a sole-block visible float but keeps Go host alive during dispatch; exit policy retires it afterward. Proposal: require visible-layer/TTY/worker/focus cleanup before effect, explicitly allow execution host retirement after Go exits and acknowledge such post-effect cleanup failure cannot suppress an already-issued action. Otherwise retain existing strict all-owned-resource-before-effects rule and supply supported same-process capability or explicitly approve another architecture. Independent planner assessed all documented alternatives; this is a material choice, not routine missing detail. No approval inferred. Related accepted direction REXWHICHKEY-20261106-232754 and Task19.2 blocker.
+
+
+
+## Explicit1a/1b acceptance and Phase19 refinement
+
+User replies: 1a - yes, accept it for now; 1b - yes. Decision REXWHICHKEY-20261106-234819 is Accepted: native chrome customization is deferred, use unchanged Rex defaults without false implementation credit. Decision REXWHICHKEY-20261106-234820 is Accepted: exact visible float/TTY/workers/origin focus retire before effect, detached Go execution host may remain through dispatch and retires after Go exits; post-exit cleanup cannot suppress a prior effect. Original Open entries above are history, replaced by this explicit acceptance. Refines REXWHICHKEY-20261106-232754 and prior all-owned-block pre-effect ordering only for this direct-host lifecycle; all other identity/config/confirmation/no-retry safeguards stand. Four-task vertical implementation plan refined routinely under original execute/commit/actual-make-run authority. No test, user-config/deploy or unsupported Rex chrome permission inferred.
 
 
 <!-- mtn:evidence:v1 -->
