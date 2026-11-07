@@ -17,10 +17,11 @@ implementation:
   language: docs
   ownership:
     paths:
+      - README.md
+      - docs/acceptance.md
+      - docs/appearance.md
       - lua/rex_whichkey.lua
       - nix/package.nix
-      - docs/appearance.md
-      - docs/acceptance.md
     sharedPaths: []
     resources: []
     interfaces:
@@ -44,7 +45,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:48:27.141Z'
-dateModified: '2026-11-07T07:21:45.728Z'
+dateModified: '2026-11-07T09:46:55.216Z'
 tags:
   - task
 type: task
