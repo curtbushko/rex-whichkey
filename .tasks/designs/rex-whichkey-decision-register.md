@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-07T00:16:24.518Z'
+dateModified: '2026-11-07T04:36:34.950Z'
 tags:
   - task
 type: task
@@ -20,6 +20,7 @@ id: 944be7fb-2bf1-4dee-8864-9686519b06a0
 
 | Permanent ID | State | Decision | Rationale / relationships |
 | --- | --- | --- | --- |
+| REXWHICHKEY-20261106-232754 | Accepted | Execute Phase19: installed Lua owns native float presentation/sizing/launch; direct Go owns menus/palette/CLI effects; remove current Go controller and route actual make run through Lua. | Explicit user creation/implementation/commit/make-run request. Native chrome remains required but unsupported/blocked; no silent deferral or cleanup weakening. Refines114935/191113 responsibility mechanism only; existing history preserved. |
 | REXWHICHKEY-20261106-191113 | Accepted | Plan Phase18 startup simplification: PATH-only binary lookup, removal of repeated executable/compatibility preflight, draw-first async data, query reuse, no unnecessary copied-executable durability sync, and targeted actual verification. | User explicit item1-4/7 approvals and subsequent add-these-changes phase request; exact UI-update mechanism remains undecided. Refines earlier discovery/compatibility mechanisms, not CLI-only ownership/targeting/cleanup; Phase17 audit remains separate. ID assigned during capture, not a historical message timestamp. |
 | REXWHICHKEY-20261104-193124 | Accepted | Runtime executable discovery and compatibility belong in application code; Nix only builds/installs and init.lua only supplies keybindings/customization. Create Phase 15 to fix required path wiring and component pairing. | Explicit user correction: "it should all be in code", followed by "create a new phase to fix this". Refines the former constructor/Nix path workaround, not origin/callback/privacy safeguards. ID assigned during capture, not an exact historical agreement timestamp. See designs/rex-whichkey-runtime-ownership.md and phases/rex-whichkey-15-code-owned-runtime.md. |
 | REXWHICHKEY-20261104-172117 | Accepted | Separate the actual CLI activation caller from the validated GUI target for configured launch and completion; explicitly route app actions to the retained target. | User explicitly replied "yes, please fix" to this proposal. Refines the earlier activation/app client-ID equality contract; preserves exact origin, capability, connection, expiry and replay checks. Current design: docs/cli-gui-delegation.md. |
@@ -146,6 +147,18 @@ ID assigned while processing the explicit user directive, not a claimed exact hi
 - **Preserved boundaries:** Local configuration/result validation, exact origin/GUI/destination identity, confirmation, terminal restoration, owned cleanup before once-only effects and no uncertain retries remain. CLI-only Go control/minimal Lua and deferred hooks stand. Existing test/standard protections and no broad benchmark/test/remote/config/deploy authority remain.
 - **Relationships:** Refines the mechanism portion of REXWHICHKEY-20261104-193124 and REXWHICHKEY-20261106-114935, not their Go ownership, user-config or resource-safety principles. Specifically supersedes earlier heavier executable/compatibility/discovery policy for Phase18. Earlier source/delivery decisions and failed-run history are preserved. Phase17 audit remains separate and is not a startup prerequisite.
 - **Records:** designs/rex-whichkey-startup-path.md; phases/rex-whichkey-18-startup-speed.md. Source observations are not a measured timing breakdown, implementation or runtime pass; no latency SLA is invented.
+
+
+
+
+## REXWHICHKEY-20261106-232754 — Accepted Lua-float/direct-Go phase direction
+
+- **State:** Accepted requirements and bounded phase/task execution, not proof every Rex capability exists. ID assigned at capture, not a historical-message timestamp.
+- **Actual authority:** User explicitly requests installed Lua handles native float title bar/border/corners/shadow and float sizing, Go handles menus and terminal-color matching, remove current controller, make run calls Lua to launch Go, create phase/tasks, implement and commit, and actually make run.
+- **Decision:** Shift native float launch/sizing/presentation responsibility into shipped Lua and run the Go menu directly; no Go launching parent/renderer/image-copy/private-IPC controller in the completed normal path. Keep Go JSON configuration, menu/rendering/async state and application effects through concrete Rex CLI, matching its terminal palette. Actual normal make run required for runtime delivery.
+- **Relationships:** Refines the launch-only Lua/Go popup ownership portions of REXWHICHKEY-20261106-114935 and REXWHICHKEY-20261106-191113. Those delivered implementations/history remain intact. Does not restore Go-to-Lua callbacks/function config/registry/relay/control frameworks or waive target/confirmation/no-retry/cleanup correctness. Earlier Phase11/14/15 incomplete history is not reopened or retroactively completed.
+- **Verified limitations:** Installed session.new_layer/terminal creation schemas expose no per-float native chrome controls; terminal theme means colors, not native frame style. Required native-chrome deliverable stays blocked, not implicitly deferred. Current PATH make is a wrapper execing Task; no Makefile exists. Documented detach_block plus terminal exit policy is a candidate for one-process dismissal/dispatch, requiring independent lifecycle assessment and actual verification, not a claimed pass or license to weaken accepted cleanup guarantees.
+- **Records:** designs/rex-whichkey-lua-float-launch.md; phases/rex-whichkey-19-lua-float-launch.md. No broad test/benchmark/config/profile/activation/reload/deploy/push/external Rex change or unrelated dirty flake.nix commit authority inferred.
 
 
 <!-- mtn:evidence:v1 -->
