@@ -8,11 +8,15 @@ There is no daemon, executable Lua configuration or hook/callback facility.
 **Evidence:** Phase16 CLI-only delivery is complete, including actual public
 menu/navigation/owned rename/dismissal/cleanup on Darwin arm64. Phase18 tasks1/2
 also have reviewed, integrated public-run evidence, including rename edits while
-loading and preservation after ready. This revision finishes draw-first,
-bounded async/on-demand inventories; its final combined review and comparable
-public timing/effect/cancel/cleanup checks remain pending. No installed-profile,
-physical-keybinding, all-provider or cross-platform success is claimed.
-See [acceptance](docs/acceptance.md).
+loading and preservation after ready. Phase18 async source `d60c976` passed
+independent source review; coordinator public runs on combined candidate
+`397ce9a` captured coarse first-visible upper bounds of 2.69s baseline versus
+0.54s candidate, provider readiness/navigation, an exact owned rename and
+cancel/dismissal/cleanup. These are CLI/capture/poll observations, not exact
+render/load timestamps, a benchmark or an SLA. Later documentation-only revisions
+preserve the reviewed Go bytes; native task/phase summaries bind final delivery.
+No installed-profile, physical-keybinding, all-provider or cross-platform success
+is claimed. See [acceptance](docs/acceptance.md) for exact revisions and limits.
 
 ## Install on the Rex server host
 

@@ -1,6 +1,6 @@
 # Release evidence: CLI-only delivery and async startup
 
-## Verified delivery versus current candidate
+## Verified delivery and captured async evidence
 
 Accepted CLI-only direction `REXWHICHKEY-20261106-114935`: Go owns data,
 providers, menu/lifecycle and Rex CLI operations; Lua only starts the binary.
@@ -20,6 +20,18 @@ An exact disposable owned tab was renamed to `p16-owned-cli-rename` in the
 linked owned-effect run. Earlier task2 observation at `7bdbda2` remains valid
 historical prerequisite evidence, not the final Phase16 boundary.
 
+Phase18 task3 source `d60c976dcc21fea03a00dff0075491360e88ffcb` (tree
+`e354bb8009f3d66e7e23222c9a613438d769211c`) received APPROVED independent
+same-family source review `rex-whichkey-p18-t03/review/1`. The coordinator built
+and observed combined candidate `397ce9a1591bab637c89978fa7670c023bea1111`;
+`task3-public-evidence.json` and native historical event
+`rex-whichkey-p18-t03/runtime-observed/1` index that actual evidence, not a new
+approval or final-main completion. Later documentation-only revisions preserve
+all reviewed Go bytes. The [task](../.tasks/tasks/rex-whichkey-18-03-async-inventories.md)
+and [phase](../.tasks/phases/rex-whichkey-18-startup-speed.md) native delivery
+summaries bind the exact final integrated head/tree, documentation review and
+final normal-public recheck; this inventory does not assert those later results.
+
 Phase17's independent audit at `b1902ca` is a baseline-bound recommendations
 report, not authority for unrelated cleanup in this task.
 
@@ -34,15 +46,17 @@ Artifacts below are coordinator-owned under `.mtn-tmp/p18/`:
 | Task2 `6c5c9ed67c8adde938a620cd86d55f777f665b18`; `task2-public-evidence.json` | Reviewed/integrated incremental rename path; actual loading form with Enter disabled and user edits, exact text preserved on ready, cancel without rename, revisit/one exact owned tab rename, separate dismissal, exit0/origin focus/exact popup/private cleanup. Inventories remained eager. |
 
 Task2's native completion summary is committed at `17eb2f2`, the task3 source
-base. The timing observations include CLI capture latency and poll jitter;
-the previous negative observation is not a strict lower bound. Data/action
-completion timestamps were not separately measured. There is **no approved
-numeric SLA** and no final async speedup claim. No synthetic delays or fake APIs
-were used to manufacture loading.
+base. These earlier timing observations were not a controlled baseline/final
+pair; task1 intentionally changed REX_BIN_DIR. The comparable task3 pair below
+is separate. All observations include CLI capture latency and poll jitter;
+a previous negative observation is not a strict lower bound. There is **no
+approved numeric SLA**. No synthetic delays or fake APIs manufactured loading.
 
 ## Current async source acceptance map
 
-Task3 implements the remaining production consumers, not a new service:
+Task3 implements the remaining production consumers, not a new service. The
+map below describes exact reviewed source `d60c976dcc21fea03a00dff0075491360e88ffcb`
+under review/1; it does not claim a second documentation review has passed:
 
 | Criterion | Source boundary |
 | --- | --- |
@@ -52,33 +66,67 @@ Task3 implements the remaining production consumers, not a new service:
 | Parent authority and atomic UI | `popup_updates.go` retains complete mappings/args/pane targets before writing ready bytes. Provider selections carry only keys/confirmation/invocation-kind-load binding. `menu_updates.go` validates complete batches, then rebinds the same prefix/page/confirmation/form state; only the UI loop writes the terminal. Partial decoding and edited value/cursor survive; pending/error rows cannot execute or replay Enter. |
 | Bounds and cleanup | 512 resources, existing child/key-byte/4-MiB and known-host bounds remain; overflow/conflict fails, not truncates. No navigation/update resize. Jobs and transport cancel/join on exits; controller/root errors propagate before exact popup/focus/files/image retirement and effects. All twelve update/demand slots are in fixed cleanup. Standalone remains result-only with demand-only hosts, not fabricated native targets. |
 
-This map is source evidence for independent frozen review, **not** review approval
-or observed final async behavior. Required leaf checks are owned-file gofmt,
-whitespace, normal `task build` and `task lint:vet`, recorded against the exact
-committed head/tree in the build payload. Optional full unchanged lint reports
-actual inherited diagnostics; no lint/test/Taskfile/hooks/dependency standard is
-changed. No tests were run.
+The source map and review are distinct from the bounded observations below.
+Required leaf gofmt/whitespace, normal `task build` and `task lint:vet` results
+bind the exact committed head/tree in each build payload. Full lint on build1
+reported **62 inherited failures; AI lint was not reached**. This docs-only
+refresh does not repeat full lint or claim it passed; Go bytes remain identical.
+No lint/test/Taskfile/hooks/dependency standard changed. No tests were run.
 
-## Pending final combined coordinator gate
+## Captured comparable public runs and optional providers
 
-After independent source review and integration, repeat the ordinary public
-no-argument run in a comparable explicitly owned origin, with recorded
-host/PATH/endpoint, defaults/config, GUI intent and terminal context. Record
-**first visible static frame**, **required data ready** and **relevant actions
-ready** separately, with observation limits. Earlier task timings are not a
-substitute for this final run.
+Coordinator artifacts are in `.mtn-tmp/p18/` in the authoritative checkout.
+`task3-public-evidence.json`, `paired-baseline-timing.json` and
+`paired-final-timing.json` bind baseline
+`9634246b7e4edbc8bed59210466cac492ddf2f0f` versus observed combined candidate
+`397ce9a1591bab637c89978fa7670c023bea1111`. Both used ordinary public
+`./bin/darwin-arm64/rex-whichkey` with no arguments: same execution host,
+PATH, REX_BIN_DIR, Rex server/session environment, built-in configuration and
+normal GUI intent, with comparable owned origins and terminal context.
+No heavy build ran concurrently with timing.
 
-Observe naturally occurring loading/input/dismissal responsiveness, provider
-navigation during/after loads, full IDs/current markers/pagination, rename
-correctness, one benign effect on an exact disposable owned resource, normal
-dismissal and cancellation, no duplicate dispatch, worker/child exit, terminal
-restoration, origin focus and exact popup/private-slot/directory cleanup before
-effects. Use the existing public config interface and an explicitly owned
-disposable JSON data file for optional nondefault providers if useful; never
-edit user config/reload, probe remote hosts or manufacture loading/errors.
-Keep optional-provider cases separate from the baseline-comparable default run.
-Unobservable branches and actual CLI failures must be reported honestly.
-A compile/help/private ACK or source-only review does not complete this gate.
+| Captured upper bound | Baseline | Candidate |
+| --- | --- | --- |
+| Launch to first visible capture | 2.69s | 0.54s |
+| Inventory visible since launch | 2.79s | 0.63s |
+| Inventory demand to visible | ~0.07s | ~0.07s |
+| Rename demand to ready visible | ~0.09s | ~0.09s |
+
+These are coarse wall-clock CLI/capture/poll upper bounds including jitter and
+explicit demand/navigation, **not exact render or internal data-load timestamps,
+a benchmark, an SLA or broad performance certification**. Baseline eager data
+was ready before first draw by source; the inventory capture does not time that
+internal readiness. Both runs showed root, dynamic full IDs/current marker,
+ready inline rename, form cancellation/root dismissal, exit0, terminal/origin
+restoration and exact popup/private cleanup. The ready captures do not establish
+that every loading/error/cancellation branch occurred.
+
+A separate public `--config` run used only coordinator-owned
+`.mtn-tmp/p18/optional-providers.json`, without user configuration edits/reload.
+The `optional-*` captures record:
+
+- Windows explicitly loading with choices disabled, then ready; Tab reached
+  page2 with the correct full owned current window ID. Panes full IDs, visible
+  Sessions and listing-only known-host inventory/home/warnings groups appeared.
+  No host connection, probe or remote operation was performed.
+- The disabled key stayed at root. The hidden prefix opened with intentionally
+  invisible inherited rows (`optional-hidden-ready.txt`: no visible mappings),
+  not a visible hidden inventory or verified hidden-destination dispatch.
+  Zero unused/disabled loads and same-kind reuse are source-review conclusions,
+  not inferred from the screen alone.
+- All provider loading/navigation retained identical floating bounds. Inline
+  rename via the configured key retained entered `p18-owned-async-rename` and
+  applied it to exact disposable window
+  `window:01a1b3d2-b2c8-7e4c-b9c5-ee01aaf83a52`; `optional-after-session.json`
+  records that exact ID/label. Exit0, primary terminal/origin restoration,
+  exact floating/private cleanup and owned-window closure were captured.
+  Earlier task2, separately, captured edits while loading and their exact
+  preservation on ready; the optional run is not substituted for that evidence.
+
+Source review establishes once-only dispatch and cleanup-before-effect ordering;
+these bounded resource observations do not certify an exhaustive action/error
+matrix. The native task/phase summaries link subsequent exact final delivery
+rather than treating this observed candidate as final main.
 
 ## Residual limits and authoritative guides
 
@@ -88,8 +136,12 @@ update, deployment or push is part of this delivery. Physical keybinding,
 installed-profile, Linux/remote and all-action/provider coverage are not claimed.
 REQ-026 native controls remain unresolved. Phase15's original bridge failure is
 not retroactively fixed. Fresh checks and effects are not atomic; uncertain
-effects are never retried. Final async runtime/effect/cancel/cleanup checks remain
-**pending**, not failed merely because they belong to coordinator integration.
+effects are never retried. Captured candidate evidence is not final-main,
+installation or physical-keybinding evidence. Not every cancellation, error,
+malformed/replay/disconnect/overflow or platform path was exercised; no synthetic
+delay or harness was used to force them. Final integration/public recheck and
+fresh documentation review are coordinator-owned, linked by the native summaries
+above; neither phase completion nor review/2 approval is asserted here.
 
 Current contracts: [data/actions/providers](mapping-format.md),
 [launch/cleanup](launch-contract.md), [discovery/package](runtime-bootstrap.md),
