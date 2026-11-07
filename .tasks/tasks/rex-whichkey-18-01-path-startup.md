@@ -64,20 +64,20 @@ implementation:
       command: task lint
       required: false
 lifecycle:
-  state: planned
-  sourceEventID: rex-whichkey-p18-t01/baseline-observed/1
-  changedAt: '2026-11-07T01:02:25.614Z'
+  state: building
+  sourceEventID: rex-whichkey-p18-t01-builder-a01/runtime/launched
+  changedAt: '2026-11-07T01:03:50.767Z'
 title: '18-01: Simplify PATH and private-image startup'
 mtnCreateRetry:
   key: rex-whichkey-p18/create/18-01/v1
   intent: 7d07c5f1b57b7f35cfa5bf29406cb4c039b7bdf81b36df2f9088cdd6af726a51
-status: open
+status: in-progress
 priority: normal
 recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T00:54:22.508Z'
-dateModified: '2026-11-07T01:02:26.243Z'
+dateModified: '2026-11-07T01:03:51.384Z'
 tags:
   - task
 type: task
@@ -101,4 +101,22 @@ COORDINATOR FIRST INTEGRATION CHECK, BEFORE ANY PHASE18 SOURCE INTEGRATION: buil
 ### 2026-11-07T01:02:24.766Z · historical · unspecified
 
 {"attempt":1,"content":"Required pre-integration baseline: .mtn-tmp/p18/baseline-public-evidence.json. First visible capture approximately2.74s upper bound including CLI/poll jitter; exact internal data/action-ready timestamps unavailable. Eager-before-frame source and actual UI separately observed. Initial untimed clock-failed invocation preserved/dismissed before corrected run. No candidate speedup, broad benchmark/test or deployment claim.","eventID":"rex-whichkey-p18-t01/baseline-observed/1","gateEligible":false,"kind":"historical","provenance":"Coordinator normal public9634246 baseline built/run before any Phase18 source integration; exact owned IDs, root/dynamic/inline rename readiness, dismissal exit0/restoration/cleanup captured.","recordRef":"tasks/rex-whichkey-18-01-path-startup.md","schemaVersion":1,"specHash":"sha256:47c41416c0c0e9066134535413aed3968955c3a216e48ea8361d793a99e630bf"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjAzOjM3LjQ1N1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiZGlzcGF0Y2giLCJyZXRyeUtleSI6InJleC13aGljaGtleS1wMTgtdDAxL2Rpc3BhdGNoLzEiLCJpbnRlbnQiOiI2MDlmMmY0OTNmMTQ0OGJmMWM2ZmQyNzliZDFlZmU4MjE4ZTEzMDMxY2FjMDgyY2E5Y2UwYTk0OTQ1Zjg4Y2YzIn0 -->
+### 2026-11-07T01:03:37.457Z · dispatch · unspecified
+
+{"allowedCommands":["owned gofmt/whitespace/source checks","task build","task lint:vet","optional unchanged full lint diagnostic","Nix parse/format source-only","git commit per-command hooksPath=/dev/null"],"allowedScope":{"interfaces":["STARTUP-PATH-LOOKUP","STARTUP-NO-DURABILITY-SYNC"],"paths":["rex/runtime.go","rex/exec.go","rex/rex.go","rex/endpoint.go","rex/hosts.go","runtime_bootstrap.go","launch.go","native.go","popup.go","terminal.go","hosts.go","nix/package.nix","nix/home-manager.nix","README.md","docs/runtime-bootstrap.md","docs/launch-contract.md","docs/remote-compatibility.md","tests/packaging/home-manager/README.md"],"resources":[],"sharedPaths":[]},"attempt":1,"baseCommit":"987db2d006f29f383d08a42234473dc5aca1a7ab","baselineArtifact":".mtn-tmp/p18/baseline-public-evidence.json","branch":"work/p18-t01-builder-a01","constraints":["No tests/TDD/race/harnesses/benchmarks, no environment hooks/new dependencies/config/activation/reload/deploy/push","Preserve parent uncommitted flake.nix and all tests/assertions/standards","Only controller integrates/runs actual public UI; baseline observation already complete"],"eventID":"rex-whichkey-p18-t01/dispatch/1","kind":"dispatch","limits":{"builders":1,"cpu":14,"gates":1,"goMemoryLimit":"5GiB","integrations":1,"reviewers":1,"totalMemoryGiB":6},"readiness":"Current exact approved phase task plan/document guard passed; native task ready/no prerequisites, no prior workers. Root legacy ready facade unsupported, no migration.","recordRef":"tasks/rex-whichkey-18-01-path-startup.md","runID":"rex-whichkey-p18-t01-builder-a01","schemaVersion":1,"specHash":"sha256:47c41416c0c0e9066134535413aed3968955c3a216e48ea8361d793a99e630bf","targetBranch":"main","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t01-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjAzOjQ2LjM3OFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOC10MDEtYnVpbGRlci1hMDEvcnVudGltZS9yZXNlcnZlZCIsImludGVudCI6IjdlZWE3ODhmNjVjMzY0NzhlNDYxZDE1MTBjNWRmZjg3YWFjN2Y5OTMyMWU1MTA0MDYzZjkwN2RjYTcyZjEwMDEifQ -->
+### 2026-11-07T01:03:46.378Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p18-t01/dispatch/1","eventID":"rex-whichkey-p18-t01-builder-a01/runtime/reserved","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-18-startup-speed.md","piSessionID":"rex-whichkey-p18-t01-builder-a01","piSessionName":"p18-t01-builder-a01","recordRef":"tasks/rex-whichkey-18-01-path-startup.md","rexSessionName":"rex-whichkey-main","rexWindowName":"p18-t01-builder-a01","role":"builder","runID":"rex-whichkey-p18-t01-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-builder","specHash":"sha256:47c41416c0c0e9066134535413aed3968955c3a216e48ea8361d793a99e630bf","stage":"reserved","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p18-t01-builder-a01","windowName":"p18-t01-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t01-builder-a01"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjAzOjQ5LjkxN1oiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoicnVudGltZSIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOC10MDEtYnVpbGRlci1hMDEvcnVudGltZS9sYXVuY2hlZCIsImludGVudCI6IjZmNzAxNDU1MzYzYTc3MTEwMDE1YjVhY2M0OGMzOTBjNGI3NDEyZjkxZmNjZTI1ZThhMDNiNTdiMGIwOTdlNTcifQ -->
+### 2026-11-07T01:03:49.917Z · runtime · unspecified
+
+{"attempt":1,"coordinator":{"phaseRef":"phases/rex-whichkey-15-code-owned-runtime.md","runID":"rex-whichkey-p15-coordinator-a01"},"dispatchEventID":"rex-whichkey-p18-t01/dispatch/1","eventID":"rex-whichkey-p18-t01-builder-a01/runtime/launched","host":{"endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","hostID":"37ba14dc-71d4-468a-a829-32d70294f3e6","instanceID":"75ff9ad4-a558-4295-8b20-855dafe77a8f"},"kind":"runtime","model":"openai-codex/gpt-6.1-sol","phaseRef":"phases/rex-whichkey-18-startup-speed.md","piSessionID":"rex-whichkey-p18-t01-builder-a01","piSessionName":"p18-t01-builder-a01","provider":{"displayName":"p18-t01-builder-a01","name":"rex","resources":{"block":"block:01a1b388-789f-78fc-8ac1-5c70287ebc68","endpoint":"unix:///Users/curtbushko/Library/Application%20Support/rex/server.sock","session":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","window":"window:01a1b388-78a0-7dda-80ed-d918a217ceee"}},"recordRef":"tasks/rex-whichkey-18-01-path-startup.md","rexBlockID":"block:01a1b388-789f-78fc-8ac1-5c70287ebc68","rexSessionID":"session:01a1a935-0b64-7c7b-8e83-5d35011bdee2","rexSessionName":"rex-whichkey-main","rexWindowID":"window:01a1b388-78a0-7dda-80ed-d918a217ceee","rexWindowName":"p18-t01-builder-a01","role":"builder","runID":"rex-whichkey-p18-t01-builder-a01","schemaVersion":1,"sessionName":"rex-whichkey-main","skill":"go-builder","specHash":"sha256:47c41416c0c0e9066134535413aed3968955c3a216e48ea8361d793a99e630bf","stage":"launched","thinking":"high","transportDir":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/rex/rex-whichkey-p18-t01-builder-a01","windowName":"p18-t01-builder-a01","worktree":"/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p18-t01-builder-a01"}
 <!-- mtn:end-entry:v1 -->
