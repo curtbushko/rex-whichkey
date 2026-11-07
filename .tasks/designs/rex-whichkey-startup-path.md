@@ -25,8 +25,8 @@ scope:
       hash: 'sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b'
 lifecycle:
   state: approved
-  sourceEventID: rex-whichkey/startup-design/approval/1
-  changedAt: '2026-11-07T00:16:17.182Z'
+  sourceEventID: rex-whichkey/startup-design/delivery/1
+  changedAt: '2026-11-07T02:45:09.441Z'
 title: 'Startup path: PATH-only lookup, draw-first menu and asynchronous data'
 mtnCreateRetry:
   key: rex-whichkey-startup-path-design-create-v1
@@ -37,7 +37,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T00:16:10.823Z'
-dateModified: '2026-11-07T00:16:18.210Z'
+dateModified: '2026-11-07T02:45:10.073Z'
 tags:
   - task
 type: task
@@ -93,4 +93,10 @@ Complementary scope: REQ-001/002/003/004/006/008/009/010/011/012/013/014/015/016
 ### 2026-11-07T00:16:16.038Z · approval · unspecified
 
 {"approvalScope":"Accepted startup constraints and design/phase planning only. No exact async IPC mechanism, executable-copy removal, task dispatch, implementation, latency SLA, broad benchmark/test expansion, user config/deployment/reload or unrelated audit cleanup inferred.","approvedBy":"user","attempt":1,"decision":"approved","decisionEvidence":"User explicitly approved PATH-only binaries/no validation, separate background/on-demand work, async loading, removing duplicate queries and verification; after fsync/UI-update explanation requested add these changes as a new phase.","decisionID":"REXWHICHKEY-20261106-191113","eventID":"rex-whichkey/startup-design/approval/1","kind":"approval","recordRef":"designs/rex-whichkey-startup-path.md","schemaVersion":1,"specHash":"sha256:c7a6d0d736fbbb3925173391431a05eb2c8c65273c2a81e2e5e7d0ac23e1c85c"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAyOjQ1OjA4LjczMVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3N0YXJ0dXAtZGVzaWduL2RlbGl2ZXJ5LzEiLCJpbnRlbnQiOiIzZWQ5NzI5ZTBkYzhmYjM2ZmRiODE3Mzc3NTEyOTJjNDJlMGIyY2NkZDQyOTgwNjU0ZmJjMGFlMzY5OWQ4MDk5In0 -->
+### 2026-11-07T02:45:08.731Z · historical · unspecified
+
+{"attempt":1,"content":"Phase18 complete at source 765265884a1a94c4084d6be4075c89cf5af029a4; three current task summaries, phase milestone/summary and .mtn-tmp/p18/task3-public-evidence.json bind source/verification. First-frame public paired capture upper bounds2.69s->0.54s, separate readiness and opt-in/owned rename/cleanup verified. No unit/race/harness/benchmark/config/deploy/remote claim, lint62 inherited failures remains. Original planning prose is historical capture, not assertion implementation is still pending; user startup policy supersedes heavier preflight only, preserving product safeguards.","eventID":"rex-whichkey/startup-design/delivery/1","gateEligible":false,"kind":"historical","provenance":"Current accepted Phase18 constraints delivered under subsequent explicit user go-team finish-all execution authority; exact reviewed integrated source/native milestone and actual public MAIN observations.","recordRef":"designs/rex-whichkey-startup-path.md","schemaVersion":1,"specHash":"sha256:c7a6d0d736fbbb3925173391431a05eb2c8c65273c2a81e2e5e7d0ac23e1c85c"}
 <!-- mtn:end-entry:v1 -->
