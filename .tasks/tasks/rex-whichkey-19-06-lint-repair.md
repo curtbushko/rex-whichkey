@@ -34,6 +34,7 @@ implementation:
   language: go
   ownership:
     paths:
+      - README.md
       - action.go
       - cmd
       - config.go
@@ -43,6 +44,8 @@ implementation:
       - data_config.go
       - defaults.go
       - direct_menu.go
+      - docs/acceptance.md
+      - docs/appearance.md
       - hosts.go
       - launch.go
       - launch_legacy_support_test.go
@@ -108,7 +111,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T16:00:07.807Z'
-dateModified: '2026-11-07T16:00:09.893Z'
+dateModified: '2026-11-07T16:05:42.045Z'
 tags:
   - task
 type: task
