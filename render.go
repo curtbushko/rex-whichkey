@@ -171,13 +171,7 @@ func menuEntryLine(entry MenuEntry, config Config, theme Theme) menuLine {
 func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
 	var hints []string
 	if menu.entry != nil {
-		if menu.entry.problem != "" {
-			hints = []string{menu.entry.problem + "  Esc: back", menu.entry.problem, "Invalid name", "Esc: back"}
-		} else if menu.entry.selected {
-			hints = []string{"Type: replace  Enter: save  Esc: back", "Enter: save  Esc: back", "Enter Esc"}
-		} else {
-			hints = []string{"Enter: save  Esc: back  Ctrl-U: clear", "Enter: save  Esc: back", "Enter Esc"}
-		}
+		hints = menuTextEntryHelp(menu)
 	} else if confirming {
 		hints = []string{
 			"y: confirm  Any other key: cancel",
@@ -215,6 +209,22 @@ func menuHelp(menu *Menu, confirming bool, page, pages, width int) string {
 		}
 	}
 	return "Esc"
+}
+
+func menuTextEntryHelp(menu *Menu) []string {
+	if status := menu.renameStatus(); status != "" {
+		if menu.entry.problem != "" {
+			status = menu.entry.problem + "  " + status
+		}
+		return []string{status, "Not ready; Esc: back", "Esc: back"}
+	}
+	if menu.entry.problem != "" {
+		return []string{menu.entry.problem + "  Esc: back", menu.entry.problem, "Invalid name", "Esc: back"}
+	}
+	if menu.entry.selected {
+		return []string{"Type: replace  Enter: save  Esc: back", "Enter: save  Esc: back", "Enter Esc"}
+	}
+	return []string{"Enter: save  Esc: back  Ctrl-U: clear", "Enter: save  Esc: back", "Enter Esc"}
 }
 
 // Status text shares its row with a horizontal rule, not an extra border row.

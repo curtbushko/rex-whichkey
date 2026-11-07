@@ -24,6 +24,7 @@ type MenuEntry struct {
 type MenuEvent struct {
 	Selection *Selection
 	Dismissed bool
+	update    *renameBinding // Private publication binding, never target authority.
 }
 
 // Menu owns one invocation's evaluated mappings and navigation state. It performs
@@ -39,6 +40,7 @@ type Menu struct {
 
 	textSpec *textEntrySpec
 	entry    *menuTextEntry
+	updates  *menuRenameUpdates // Written only by the terminal UI loop.
 }
 
 type menuNode struct {
@@ -229,10 +231,15 @@ func (m *Menu) HandleKey(key string, pages int) MenuEvent {
 
 func (m *Menu) selectNode(target *menuNode, confirmed bool) MenuEvent {
 	m.done = true
-	return MenuEvent{Selection: &Selection{
+	event := MenuEvent{Selection: &Selection{
 		mapping:   cloneMenuMapping(target.mapping),
 		confirmed: confirmed,
 	}}
+	if m.updates != nil && m.renameReady(target) && renameKind(target.mapping) >= 0 {
+		binding := m.updates.ready[renameKind(target.mapping)].Demand.binding()
+		event.update = &binding
+	}
+	return event
 }
 
 func (n *menuNode) entry() MenuEntry {

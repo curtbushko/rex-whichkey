@@ -139,28 +139,17 @@ func (s Session) placedLayers(ctx context.Context) ([]placedLayer, error) {
 	if err := s.valid(); err != nil {
 		return nil, err
 	}
-	var view struct {
-		ID      string `json:"session_id"`
-		Windows []struct {
-			ID            string `json:"window_id"`
-			ZoomedBlockID string `json:"zoomed_block_id"`
-			Layers        []struct {
-				ID     string          `json:"layer_id"`
-				Kind   string          `json:"kind"`
-				Bounds json.RawMessage `json:"bounds"`
-				Layout json.RawMessage `json:"layout"`
-				Blocks []struct {
-					ID string `json:"block_id"`
-				} `json:"blocks"`
-			} `json:"layers"`
-		} `json:"windows"`
-	}
+	var view sessionView
 	if err := s.client.resourceCommand(ctx, &view, "session", "inspect", "--json", "--", s.client.session); err != nil {
 		return nil, err
 	}
 	if view.ID != s.client.session || view.Windows == nil {
 		return nil, errors.New("rex session inspect: unexpected session_id or missing windows")
 	}
+	return s.snapshotLayers(view)
+}
+
+func (s Session) snapshotLayers(view sessionView) ([]placedLayer, error) {
 	layers := make([]placedLayer, 0)
 	seen := make(map[string]bool)
 	for _, window := range view.Windows {

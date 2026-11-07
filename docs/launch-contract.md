@@ -44,8 +44,9 @@ These are published API contracts, not a physical-key observation.
 4. Capture explicit app intent or the pane owner if eligible. An explicit invalid
    or unavailable app rejects; absent implicit GUI eligibility does not gate
    resource-only display.
-5. Expand enabled Go providers once, retain targets, capture rename presentation,
-   calculate one initial rectangle, and create the actual popup terminal.
+5. Expand enabled Go providers once and retain targets; retain the required origin
+   session-view snapshot without extra rename-label reads. Calculate one initial
+   rectangle and create the actual popup terminal.
 6. Wait for ordinary interaction/dismissal/cancellation without idle expiry.
    Restore terminal state, validate the result against the retained snapshot,
    finish exact cleanup, then dispatch a selected effect once.
@@ -97,6 +98,56 @@ Rename and destructive close use exact typed resource methods after cleanup.
 [Actions](actions.md), [rename](tab-rename-input.md) and
 [session UI](session-owned-ui.md) describe the retained semantics.
 
+## Private incremental rename contract (STARTUP-UI-UPDATES)
+
+This bounded contract is specified before its consumers. It is private Go
+invocation plumbing, not a public config/protocol/service extension. Inventories
+still expand eagerly in this intermediate revision; this is not final async
+first-frame startup.
+
+- The parent creates a random invocation ID in `runtime.json`. Four fixed regular
+  slots (`rename-tab-demand.json`, `rename-session-demand.json`,
+  `rename-tab-update.json`, `rename-session-update.json`) start empty. Each slot
+  carries at most one strict JSON object, bounded by `popupMessageLimit`. Owned
+  0600/no-follow/link-count checks and nonblocking flock serialize full reads and
+  writes; contention is retried by the existing polling loops, never by waiting
+  on the terminal thread. No append log, arbitrary filenames or unbounded queue.
+- Opening an inline form demands canonical kind `tab` or `session`, full canonical
+  mapping keys as its prefix, invocation ID and load number 1. At most two demands
+  and one metadata worker exist. The worker reads a detached origin session-view
+  snapshot already required for placement, or obtains that exact view on demand
+  when none is supplied. Its immutable result contains both labels or a bounded
+  unavailable reason; it cannot mutate Config, targets, live Menu or terminal.
+- The controller alone validates demands against enabled retained empty-args
+  rename mappings. It retains each kind/load/prefix result **before** writing a
+  ready update. Existing mappings/args/full target IDs and original GUI intent
+  were retained before child creation and never come from presentation. A ready
+  kind covers only the parent's already retained same-kind rename mappings;
+  alternate configured keys share that publication rather than start new loads.
+- UI state is loading, unavailable or ready per kind. Loading/unavailable status
+  is inline and non-executable. Forms accept edits and Escape while loading, but
+  Enter is discarded until ready: it is never buffered, confirmed or replayed.
+  Only the UI loop reads updates, changes live state and redraws. Unrelated
+  prefix/page/confirmation and partial UTF-8/escape/paste decoder state survive.
+  A label initializes only a wholly untouched form, not edits, cursor movement,
+  validation/error state, pending input bytes/paste or confirmed text.
+- A rename result adds only `update` (invocation/kind/load) to bounded
+  keys/confirmation/text. The parent joins the controller, then matches this
+  binding to its retained ready publication/demand prefix and selected mapping
+  kind. Demand keys are not repeated in the result, preserving the existing
+  near-limit full-key result budget. Unknown, malformed, stale, loading or
+  unavailable bindings refuse; non-rename results
+  cannot carry one. Labels, ordering, child actions/args/IDs grant no authority.
+  No refresh/retry generations exist in this revision; each kind publishes once.
+- Child terminal loss/cancel/parent-pipe EOF stops interaction; its lifetime
+  watcher is canceled/joined before result commit. Parent selection/dismissal,
+  error, origin loss or cancellation cancels and joins its metadata worker and
+  controller before result acceptance and exact popup/focus/transport cleanup.
+  Late worker results are discarded after cancellation. Transport/join/close/
+  cleanup errors suppress effects, not hidden as successful selection. Existing
+  fresh origin/app-generation/destination checks and once-only dispatch remain.
+  No idle menu deadline is introduced.
+
 ## Fixed navigation bounds and liveness
 
 Go computes content-sized initial bounds and seeds PTY cells in a single creation
@@ -123,7 +174,9 @@ Cleanup targets only:
 | Original focus | Revalidate exact origin; never select a replacement focus target |
 | Parent lifetime writer, child reader/watcher, wait goroutine | Close/join; no surviving helper daemon |
 | `config.json`, `result.json` | Private resolved snapshot/result, not user files |
-| `native-input.json` | Private rename labels, not identity |
+| `native-input.json` | Private inline-form enablement; legacy label presentation remains private, not identity |
+| `rename-tab-demand.json`, `rename-session-demand.json` | Bounded single-publication form demands |
+| `rename-tab-update.json`, `rename-session-update.json` | Bounded retained presentation publications |
 | `lifetime` | Invocation-local FIFO |
 | `runtime-image`, `runtime.json` | Invocation-local image copy and selected CLI path/independent endpoint context, not an executable receipt or Lua bridge |
 | Private `rex-whichkey-*` directory and open source-image handle | Remove fixed names through the owned root, then empty directory; retire source handle before effect |

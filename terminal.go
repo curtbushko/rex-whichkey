@@ -83,6 +83,13 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		return MenuEvent{}, err
 	}
 	menu.textSpec = config.textEntry
+	transport, incremental := ctx.Value(terminalRenameKey{}).(terminalRenameTransport)
+	if incremental {
+		if transport.root == nil || config.textEntry == nil {
+			return MenuEvent{}, errRuntimeStartup
+		}
+		menu.updates = &menuRenameUpdates{invocation: transport.invocation}
+	}
 	resize := make(chan os.Signal, 1)
 	signal.Notify(resize, syscall.SIGWINCH, syscall.SIGCONT)
 	defer signal.Stop(resize)
@@ -185,6 +192,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 			}
 			if input.pasteReady && menu.entry != nil {
 				if input.pasteOverflow {
+					menu.entry.touched = true
 					menu.entry.problem = "Name exceeds 4096 bytes"
 				} else {
 					menu.insertText(string(input.pasteText))
@@ -209,12 +217,31 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		}
 		return MenuEvent{}, nil
 	}
+	refreshRename := func() error {
+		if !incremental {
+			return nil
+		}
+		if menu.entry != nil && (input.state != terminalKeyGround || input.runeN > 0 || palette.state == paletteEscape) {
+			menu.entry.touched = true // Preserve partial UTF-8/escape/paste intent.
+		}
+		changed, updateErr := menu.pollRenameUpdates(transport)
+		if updateErr != nil {
+			return updateErr
+		}
+		if changed {
+			frame, updateErr = draw()
+		}
+		return updateErr
+	}
 	poll := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN}}
 	var buffer [4096]byte
 	lastInput := time.Now()
 	for {
 		if err := ctx.Err(); err != nil {
 			return MenuEvent{}, err
+		}
+		if updateErr := refreshRename(); updateErr != nil {
+			return MenuEvent{}, updateErr
 		}
 		select {
 		case <-resize:

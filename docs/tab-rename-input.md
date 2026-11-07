@@ -8,7 +8,13 @@ use a text-entry state in the existing WhichKey popup, not a native dialog,
 second popup or special hardcoded `tr/wr` dispatch path.
 Built-in keys remain Tabs → Rename (`tr`) and Sessions → Rename (`wr`).
 
-The exact captured Window/Session label prefills the field, initially selected:
+On entry the form requests the captured Window/Session label. Loading/unavailable
+context is shown inline, never in a native dialog. Edits and Escape work while
+loading, but Enter is discarded until a retained ready publication exists. There
+is no pending-submit replay. A ready label prefills an untouched field, initially
+selected; it never overwrites edits, cursor movement, errors, partial UTF-8/escape/
+paste input or confirmed text. Revisited forms use the invocation's shared label
+snapshot, not a persistent cache:
 
 - Typing replaces the selection; arrows/Home/End edit.
 - Backspace/Delete remove grapheme clusters; Ctrl-U clears.
@@ -24,14 +30,23 @@ redraw apply. No app chooser or native control/font setting is changed.
 
 ## Retained resource and cleanup
 
-[prepareNativeMenu](../native.go) captures labels before popup creation;
-`native-input.json` is private presentation data, not public menu schema or
-replacement identity. [text_entry.go](../text_entry.go) handles input;
+[prepareNativeMenu](../native.go) enables forms without extra eager label reads.
+The required origin session-view snapshot supplies detached label/window/block
+metadata on form demand through [popup_updates.go](../popup_updates.go).
+`native-input.json` enables private inline presentation, while the four fixed
+rename demand/update slots carry the bounded one-shot publications described by
+the [private contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates).
+These are not public menu schema or replacement identity. [text_entry.go](../text_entry.go)
+handles input; [menu_updates.go](../menu_updates.go) is UI-loop-only application;
 [native_text_entry.go](../native_text_entry.go) validates private text/results.
+Other provider inventories still load eagerly in this intermediate step.
 
 The Go parent retains endpoint/session/block/window/layer, canonical menu mapping
-and confirmation. The terminal returns keys and authorized bounded text; it
-cannot supply an action, callback, replacement ID or app generation.
+and confirmation. The terminal returns keys, confirmation, authorized bounded
+text and a minimal invocation/kind/load binding to the retained demand prefix.
+That binding must match a parent-retained ready publication; it cannot supply an
+action, callback, replacement ID or app
+generation. Unknown, stale, malformed or pending rename selections refuse.
 After terminal restoration, exact popup close, valid origin-focus restoration,
 pipe/private-file removal and image-handle retirement, the parent rechecks
 original placement and calls typed `Window.Rename` or `Session.Rename` once.

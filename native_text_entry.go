@@ -46,6 +46,9 @@ func readNativeTextSpec(root *os.Root) (spec *textEntrySpec, outcome error) {
 // The child carries bounded name data; the parent retains action and resource.
 func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) error {
 	if event.Selection == nil || event.Selection.textInput == nil {
+		if event.update != nil {
+			return errors.New("whichkey: update binding requires inline rename text")
+		}
 		return WriteMenuResult(output, event)
 	}
 	mapping := event.Selection.Mapping()
@@ -56,10 +59,11 @@ func writePopupMenuResult(output io.Writer, event MenuEvent, config Config) erro
 		return err
 	}
 	return json.NewEncoder(output).Encode(struct {
-		Keys      string `json:"keys"`
-		Confirmed bool   `json:"confirmed"`
-		Text      string `json:"text"`
-	}{mapping.Keys, event.Selection.Confirmed(), *event.Selection.textInput})
+		Keys      string         `json:"keys"`
+		Confirmed bool           `json:"confirmed"`
+		Text      string         `json:"text"`
+		Update    *renameBinding `json:"update,omitempty"`
+	}{mapping.Keys, event.Selection.Confirmed(), *event.Selection.textInput, event.update})
 }
 
 // Strip only an authorized native rename form's text before the canonical strict

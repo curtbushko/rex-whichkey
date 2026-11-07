@@ -2,6 +2,7 @@ package rex
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -21,8 +22,8 @@ type Window struct {
 	windowID string
 }
 
-// sessionView is the documented session inspect shape. Layouts and block data
-// are deliberately not modeled here: these operations need only tab metadata.
+// sessionView is the documented session inspect shape. Tab-only readers validate
+// tab metadata; SessionSnapshot additionally validates all placement metadata.
 type sessionView struct {
 	ID             string       `json:"session_id"`
 	Label          string       `json:"label"`
@@ -31,9 +32,21 @@ type sessionView struct {
 }
 
 type windowView struct {
-	ID             string `json:"window_id"`
-	Label          string `json:"label"`
-	FocusedBlockID string `json:"focused_block_id"`
+	ID             string      `json:"window_id"`
+	Label          string      `json:"label"`
+	FocusedBlockID string      `json:"focused_block_id"`
+	ZoomedBlockID  string      `json:"zoomed_block_id"`
+	Layers         []layerView `json:"layers"`
+}
+
+type layerView struct {
+	ID     string          `json:"layer_id"`
+	Kind   string          `json:"kind"`
+	Bounds json.RawMessage `json:"bounds"`
+	Layout json.RawMessage `json:"layout"`
+	Blocks []struct {
+		ID string `json:"block_id"`
+	} `json:"blocks"`
 }
 
 func (v sessionView) validate() error {

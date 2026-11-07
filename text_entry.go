@@ -39,6 +39,7 @@ type menuTextEntry struct {
 	cursor   int // UTF-8 byte offset at a grapheme boundary
 	selected bool
 	problem  string
+	touched  bool // Edits, cursor keys, validation or partial input forbid late prefill.
 }
 
 func validateRenameText(value string) error {
@@ -63,6 +64,13 @@ func (m *Menu) openTextEntry(node *menuNode) {
 		value = m.textSpec.SessionInitial
 	}
 	problem := ""
+	if m.updates != nil {
+		m.updates.demand(node)
+		value = ""
+		if update := m.updates.ready[renameKind(node.mapping)]; update != nil && update.State == renameStateReady {
+			value, problem = update.Initial, update.Problem
+		}
+	}
 	if len(value) > renameTextLimit || validateText(value) != nil {
 		// Never silently truncate or rewrite the existing name on submission.
 		value, problem = "", "Enter a new name"
@@ -79,6 +87,7 @@ func (e *menuTextEntry) title() string {
 
 func (m *Menu) handleTextKey(key string) MenuEvent {
 	e := m.entry
+	e.touched = true // Escape discards this form; all other keys protect its state.
 	switch key {
 	case "\x1b":
 		m.entry = nil // Keep the Tabs node and its page; no result is committed.
@@ -129,6 +138,9 @@ func (m *Menu) handleTextKey(key string) MenuEvent {
 }
 
 func (m *Menu) submitTextEntry(entry *menuTextEntry) MenuEvent {
+	if !m.renameReady(entry.node) {
+		return MenuEvent{} // Discard pending Enter; readiness never replays input.
+	}
 	if err := validateRenameText(entry.value); err != nil {
 		entry.problem = err.Error()
 		return MenuEvent{}
@@ -151,6 +163,7 @@ func (m *Menu) insertText(text string) {
 		return
 	}
 	e := m.entry
+	e.touched = true
 	value, cursor := e.value, e.cursor
 	if e.selected {
 		value, cursor = "", 0
@@ -200,6 +213,9 @@ func nextTextBoundary(value string, cursor int) int {
 func (m *Menu) textEntryLine(theme Theme, width int) menuLine {
 	e := m.entry
 	label, role := "Name: ", ThemePrimary
+	if m.renameStatus() != "" {
+		label, role = "Name (not ready): ", ThemeMuted
+	}
 	if e.problem != "" {
 		label, role = "Name (!): ", ThemeCritical
 	}

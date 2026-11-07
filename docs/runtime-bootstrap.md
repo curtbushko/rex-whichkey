@@ -90,11 +90,31 @@ It opens its running image once and copies from that retained handle into an
 invocation-owned 0700 directory. Ordinary bounded copy/write/close finishes
 before the Rex terminal starts; the image copy has no durability Sync, hashing
 or installation receipt. It passes resolved menu data, the selected CLI path,
-an independent canonical endpoint, rename presentation and a parent lifetime pipe.
+an independent canonical endpoint, invocation ID, inline-form enablement and a
+parent lifetime pipe.
 Those are private implementation files, not install-time helpers, public config
 or a callback channel.
-The child returns keys/confirmation/text only; the parent retains resource/action
-authority and dispatches once after exact cleanup. There is no idle expiry.
+The child returns keys/confirmation/text and, for rename, the minimal retained
+update binding only; the parent retains resource/action authority and dispatches
+once after exact cleanup. There is no idle expiry.
+
+The [private incremental contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates)
+is defined before the rename consumers: two single-publication demand slots and
+two update slots, strict bounded JSON, invocation/kind/load/canonical-prefix
+identity, nonblocking flock and fixed owned cleanup. One on-demand worker returns
+immutable label values from the already-required origin snapshot (or one exact
+session-view read if absent). The controller retains ready state before publishing;
+the UI loop alone applies it. Loading/unavailable forms remain editable/cancellable
+but cannot submit. Late labels cannot replace touched fields, validation errors,
+partial input or confirmation. Teardown cancels/joins the worker/controller and
+child lifetime watcher; errors block effects. No extra transport readers/writers
+or background terminal writer exist. Inventories remain eager at this step.
+
+`rex.SessionSnapshot` is a small concrete per-invocation session-view value. It
+exposes detached typed Session/Window/Block metadata from one validated exact view,
+including original placement and labels, for current rename and later inventory
+reuse. It is not a generic cache or cross-invocation store. Ordinary resource
+`Inspect` methods continue to fetch fresh views; pre-effect freshness is unchanged.
 
 The [fixed cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
 names all files/resources. Root-scoped fixed-name removal, no-follow/owner/mode
