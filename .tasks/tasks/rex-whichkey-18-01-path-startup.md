@@ -65,8 +65,8 @@ implementation:
       required: false
 lifecycle:
   state: planned
-  sourceEventID: null
-  changedAt: '2026-11-07T00:54:21.856Z'
+  sourceEventID: rex-whichkey-p18-t01/baseline-observed/1
+  changedAt: '2026-11-07T01:02:25.614Z'
 title: '18-01: Simplify PATH and private-image startup'
 mtnCreateRetry:
   key: rex-whichkey-p18/create/18-01/v1
@@ -77,7 +77,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T00:54:22.508Z'
-dateModified: '2026-11-07T00:54:23.159Z'
+dateModified: '2026-11-07T01:02:26.243Z'
 tags:
   - task
 type: task
@@ -94,3 +94,11 @@ Packaging: replace the existing optional private libexec Rex symlink with ordina
 Acceptance/review: trace the public launch and every CLI subprocess to show rejected validation is absent, actual result/identity checks remain and effect invocation remains once-only. Independently review the changed source and exact owned cleanup. Run owned-file gofmt/whitespace, normal task build and task lint:vet under the pinned budget; inspect Nix changes as source, without evaluation/build/activation or a packaging harness. Optional unchanged full lint is diagnostic only; supplied Phase16 baseline is 62 diagnostics, not a green gate.
 
 COORDINATOR FIRST INTEGRATION CHECK, BEFORE ANY PHASE18 SOURCE INTEGRATION: build the unmodified committed baseline at 9634246b7e4edbc8bed59210466cac492ddf2f0f in an appropriate clean baseline checkout, preserving the parent's separate flake.nix edit. Run the ordinary public binary with no private modes from a real explicitly owned Rex origin. Record exact public command/binary/source/tree, host/PATH/endpoint, actual full origin IDs, config/defaults, GUI/caller intent, terminal/font/cell context and observation method. From public process launch observe separately first visible static frame, required inventory-data readiness and relevant action/rename readiness; if readiness coincides, say so. Capture observations/timestamps with uncertainty and limits, not invented precision. Observe normal dismissal/restoration/exact popup/private cleanup. This is coordinator-owned normal app observation, not a planner/builder run or custom timing harness. Baseline is a hard pre-integration ordering requirement; an API error or absent menu cannot be replaced by help/compile/private ACK. Do not start candidate integration before the baseline artifact exists. After integration/build, run the same ordinary public path/context to verify PATH startup, real display/navigation/dismissal/cancellation and exact cleanup; record intermediate observations without claiming full asynchronous completion or an SLA. Only the sole coordinator integrates and publishes evidence; do not launch agents or mutate records from a builder/reviewer leaf.
+
+<!-- mtn:evidence:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAxOjAyOjI0Ljc2NloiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOC10MDEvYmFzZWxpbmUtb2JzZXJ2ZWQvMSIsImludGVudCI6IjZhODE1MzZmNTRmNjhiNzg0MWNiZGY1MTA4M2FmZjJmODJlN2E5MGVkMmUzMjk5OTE0ZTIwYzNlMGU4OWI5NTUifQ -->
+### 2026-11-07T01:02:24.766Z · historical · unspecified
+
+{"attempt":1,"content":"Required pre-integration baseline: .mtn-tmp/p18/baseline-public-evidence.json. First visible capture approximately2.74s upper bound including CLI/poll jitter; exact internal data/action-ready timestamps unavailable. Eager-before-frame source and actual UI separately observed. Initial untimed clock-failed invocation preserved/dismissed before corrected run. No candidate speedup, broad benchmark/test or deployment claim.","eventID":"rex-whichkey-p18-t01/baseline-observed/1","gateEligible":false,"kind":"historical","provenance":"Coordinator normal public9634246 baseline built/run before any Phase18 source integration; exact owned IDs, root/dynamic/inline rename readiness, dismissal exit0/restoration/cleanup captured.","recordRef":"tasks/rex-whichkey-18-01-path-startup.md","schemaVersion":1,"specHash":"sha256:47c41416c0c0e9066134535413aed3968955c3a216e48ea8361d793a99e630bf"}
+<!-- mtn:end-entry:v1 -->
