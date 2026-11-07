@@ -65,14 +65,20 @@ are not evidence for this Lua sizing route.
 
 User1a explicitly accepted Rex defaults **for now** and deferred per-float native
 titlebar/border/corner/shadow customization. It is not implemented or credited as
-REQ-026 completion. The inspected Rex API has no supported per-float knobs for
-that customization; this is not a claim about all future Rex versions.
+REQ-026 completion. Rex's default native header/titlebar, border, corners and
+shadow may remain visible. The inspected Rex API has no supported per-float knobs
+for that customization; this is not a claim about all future Rex versions.
 
-No guessed/ignored API fields, global settings changes, clipped controls, font
-changes or ANSI/text borders substitute for native chrome support. Go's terminal
-palette matching below is separate. Task04 records the accepted policy and final
-revision-bound evidence; it is not a native-feature implementation. Earlier
-blocked statements/API observations remain historical in
+Lua owns the native presentation policy, fractional sizing and launch. Go owns
+the rendered menu header/footer, semantic terminal colors and palette matching;
+those terminal spans do not style or remove native controls. No guessed/ignored
+API fields, fake knobs, global Rex settings/user configuration changes, clipped
+controls, font changes or painted borders substitute for native chrome support.
+Task04 documents the accepted policy and supplied revision-bound observations,
+not a native-feature implementation. The explicit user acceptance (`1a - yes,
+accept it for now; 1b - yes`) refines the original blocker without deleting it;
+see the [accepted design](../.tasks/designs/rex-whichkey-lua-float-launch.md).
+Earlier blocked statements/API observations remain historical in
 [acceptance](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026).
 
 ## Roles and inspiration
@@ -176,10 +182,30 @@ prove that a native app restores/displays its floating layer on tab return.
 Phase19 Task01/02 native summaries bind direct-source menu/palette captures,
 real own-PTY resize/reflow without outer-bound change, owned rename/cancel/dismissal
 and pre-effect visible/post-exit host cleanup. The observed terminal resize had
-no GUI owner; it is not a physical GUI drag or pixel measurement. New Task03
-make-route checks on reviewed combined source and rebuilt main remain coordinator
-gates. No physical-key/reload, installed-profile, Nix build/activation, every-
-palette/geometry/flags or all-platform result is claimed by this source update.
+no GUI owner; it is not a physical GUI drag or pixel measurement.
+
+Task03's `.mtn-tmp/p19/resume/task3-public-evidence.json` records actual PATH
+`make run` on reviewed combined source and rebuilt main at `6564d07e`, with current
+Go executable paths, default centered `.8/.3` bounds, root VT/HTML captures,
+providers, owned rename and separate edited cancellation/dismissal. GNU Make's
+custom-config `.75/.25` float had bounds `[.125,.375,.75,.25]`; its later popup
+and original-window disappearance had an unobserved cause, not a controlled
+cancellation pass. These are coordinator observations, not a new leaf runtime.
+See [current acceptance](acceptance.md#phase19-accepted-policy-and-observed-make-route)
+for exact source, commands, Rex IDs and artifacts.
+
+User1b retains worker join, tty restoration, exact visible-float retirement and
+original focus verification before effects; uncertainty suppresses dispatch.
+Only the detached Go execution host may survive through the once-only effect
+until Go exits/Rex retires it. Go cannot prove its own post-exit deletion, and
+post-exit cleanup cannot suppress an already-issued effect. Exact `list_blocks`
+checks prove only the observed cases, not universal cleanup.
+
+This docs-only update leaves Go/Lua/Taskfile/Makefile unchanged. Fresh independent
+docs/source/evidence review and the coordinator's final rebuilt-main `make run`
+remain required before phase completion. No physical-key/reload, installed-profile,
+Nix build/activation, every-palette/geometry/flags, timing SLA or all-platform
+result is claimed; terminal captures are not native pixel/chrome certification.
 
 The following observations are **historical and revision-bound**, not current
 combined-candidate certification. Legacy configured-Lua/callback references

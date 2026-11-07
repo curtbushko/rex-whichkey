@@ -1,6 +1,6 @@
 # Current release evidence: shared Lua float / direct Go
 
-## Phase19 current source and pending make-route observation
+## Phase19 accepted policy and observed make route
 
 Accepted direction `REXWHICHKEY-20261106-232754`: shared Lua owns native float
 creation/fractional sizing; one Go process inside it owns menu/defaults/JSON,
@@ -11,20 +11,33 @@ Functions/callbacks/executable Lua menu config/hooks remain deferred.
 
 User1a explicitly accepted default native chrome **for now**, deferring REQ-026
 native titlebar/border/corners/shadow customization. It is not implemented or
-credited complete; older blocked wording below is historical, not current policy.
+credited complete. Rex's default native header, border, corners and shadow may
+remain visible. Lua owns this presentation policy, sizing and launch; Go's menu
+header/footer, semantic terminal colors and palette matching are separate, not
+native chrome controls. No ignored knobs, invented schema/API fields, global Rex
+settings/user config edits or painted borders implement customization.
+
+The [accepted design](../.tasks/designs/rex-whichkey-lua-float-launch.md) records
+explicit `1a - yes, accept it for now; 1b - yes` in
+`rex-whichkey/lua-float-design/approval/2`; Task04's
+`rex-whichkey-p19-t04/chrome-blocker/1/resume/2` retains the original unsupported-
+API blocker `REXWHICHKEY-20261106-234819` and its history. Older blocked wording
+below is historical, not current policy or feature credit.
+
 User1b permits the detached execution-host Block through dispatch until Go exits
 or Rex deletes it. Workers/tty/visible float/exact original focus must still be
 cleaned and verified before an effect; uncertainty suppresses effects/no retry.
 Go cannot verify its own post-exit deletion. A later cleanup failure cannot
 suppress/undo an already-issued effect; exact `list_blocks` observation is needed.
 
-Delivered prerequisites are recorded by native completed Task01/02 summaries in
+Delivered prerequisites are recorded by native completed Task01/02/03 summaries in
 the coordinator collection, not inferred from this documentation:
 
 | Delivered source | Revision-bound observed scope |
 | --- | --- |
 | Task01 integrated `3b9293334a498d65f459afc2173839d67562e174`; `.mtn-tmp/p19/resume/task1-public-evidence.json` | Shared script/direct root, dynamic metadata, exact owned inline rename, separate configured pane-filter/edit-cancel/root-dismiss runs; visible retirement before effect and observed post-exit host deletion. No page-transition claim from its resize capture. |
 | Task02 integrated `75c75d26923573a4b4b3a67f18cafdd3336fa82f`; `.mtn-tmp/p19/resume/task2-public-evidence.json` | Reviewed controller retirement; direct root/provider/own-popup exclusion, edited rename canceled then exact owned rename, real native terminal resize 80×24→60×9 and reflow with fixed `.8/.3` outer bounds, default dismissal, pre-effect detached host/no float while old label remained, eventual exit0/host absence/origin focus/tty restoration. Process executable/ancestry observed no launching Go parent. Resize had no GUI owner, not physical GUI/pixel evidence. |
+| Task03 integrated/observed combined and main `6564d07ef690d591ea842fa9d986d0bcfa919dd4`, tree `53a91c6bd08b4ceae15f860492092eee6af6a038`; `.mtn-tmp/p19/resume/task3-summary.json` and `task3-public-evidence.json` | Actual normal source `make run` built current Go and invoked shared Lua; root/palette VT/HTML, nested Sessions full-ID/current-marker inventory, exact owned rename, separate edited cancellation/root dismissal, child exit0, pre-effect visible retirement and eventual exact host absence/focus/terminal restoration. Rebuilt-main default launch/dismissal separately observed. GNU custom-config/bounds observed, closure cause unobserved (below). |
 
 Those coordinator artifacts live in the authoritative checkout; packaged docs do
 not install workflow transport. Source equality, build/vet and independent reviews
@@ -41,26 +54,99 @@ fixed `rex-whichkey direct`; installed launch omits the directory. Home Manager
 still links only the shared module, not init.lua/bindings/JSON. No activation,
 reload, dependency/pin or runtime-discovery policy change is implied.
 
-**Pending coordinator gate:** actual normal `make build` / `make run` on the
-exact independently reviewed combined checkout **and rebuilt main**, including
-resolved make implementation/arguments, current Go program and popup IDs, root/
-provider/keyboard/palette/own-PTY behavior, exact owned benign rename, edit cancel,
-root dismissal, no Go launching parent/copy/IPC and pre-effect visible/tty/worker/
-focus cleanup plus final exact detached-host absence. Build/help/dry-run/creation
-ACK/launch exit0 are not actual display, Go exit or cleanup evidence. This leaf
-performed no product runtime; Task04 refreshes this top section from actual final
-evidence. Do not read the older no-argument/controller commands below as current
-usage. Current commands: [README](../README.md), [launch](launch-contract.md),
-[package/discovery](runtime-bootstrap.md), [appearance](appearance.md).
+### Task03 actual commands, identities and observations
 
-Task03's required source gate is whitespace; changed Nix is static formatter/
-syntax-parse only, not evaluation/build/install/check/activation. Combined Go
-build/vet and real runtime belong to the coordinator. Tests/race/TDD/Lua/parser/
-FIFO harnesses/benchmarks/synthetic delays were not run. Protected assertions,
-quality commands/hooks/dependencies/pins/lint configuration remain unchanged.
-Inherited full lint reported 62 failures with AI lint not reached; it is not green.
-No physical-keybinding, installed-profile, remote/deploy or all-platform success,
-phase completion or native customization follows from this source delivery.
+All artifact paths in this section are under `.mtn-tmp/p19/resume/` in the
+authoritative coordinator checkout, not packaged workflow transport. Native
+`rex-whichkey-p19-t03/build/1` and `rex-whichkey-p19-t03/review/1` bind the source
+producer and fresh same-family review; `task3-summary.json` binds combined
+build/vet/source equality and actual runtime. No cross-family review is claimed.
+
+- Combined checkout: `/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/p19-t03-integration-a01`;
+  actual `make run` resolved to
+  `/nix/store/zfhkcz41zg7hks7h4gmz6x7cvcrc6ipn-make/bin/make` (Task wrapper).
+  `task3-combined-make-path.txt`, `task3-combined-make.log` and
+  `task3-combined-go-executable.txt` bind that route and the current
+  `p19-t03-integration-a01/bin/darwin-arm64/rex-whichkey` executable/argv/ancestry,
+  not an installed old binary. No launching whichkey parent/copy/IPC was observed.
+- Actual GNU entry: `/usr/bin/make run ARGS='config=/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/p19/resume/optional-providers.json width=0.75 height=0.25'`.
+  `task3-optional-make.log` records delegation to `task run --` with those data;
+  `task3-optional-active.json` records centered bounds `[.125,.375,.75,.25]`.
+  Listing-only known-host navigation did not attach/probe a host. The child exited 0,
+  but both popup and original disposable window disappeared before planned cancel;
+  **cause unobserved**, not a controlled cancellation/dismissal pass. Preserve
+  `task3-optional-closure-note.json`; do not infer user or automatic closure.
+- A fresh owned-origin PATH `make run -- config=/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main/.mtn-tmp/p19/resume/optional-providers.json`
+  separately observed edited rename cancellation, unchanged `p19-make-cancel-owned`
+  label, root dismissal, child exit0 and exact host/focus/visible cleanup
+  (`task3-cancel-typed.txt`, `task3-cancel-process-exit.json`,
+  `task3-cancel-after-blocks.json`, `task3-cancel-after-session.json`).
+- Rebuilt main: `/Users/curtbushko/workspace/github.com/curtbushko/rex-whichkey/main`;
+  actual `make run` displayed the default direct menu, then Escape dismissed it.
+  `task3-main-go-executable.txt` identifies `main/bin/darwin-arm64/rex-whichkey`;
+  `task3-main-process-exit.json`, `task3-main-after-blocks.json` and
+  `task3-main-after-session.json` record exit0, exact host absence and original
+  focus. `task3-main-origin-modes.json` and the supplied public evidence record
+  primary-screen/terminal restoration.
+
+Observed session: `session:01a1a935-0b64-7c7b-8e83-5d35011bdee2`. These are
+historical observation locators, **not IDs to reuse in launch commands**:
+
+| Run | Exact popup host Block | Exact floating Layer |
+| --- | --- | --- |
+| Combined default / owned rename | `block:01a1b664-a5bf-7340-b5d4-73b14f7ab60b` | `layer:01a1b664-a5c0-77bc-83fe-a98972fad916` |
+| GNU custom-config/bounds | `block:01a1b666-a55c-7403-927b-5fd8ca1b4fd4` | `layer:01a1b666-a55d-791c-8e8a-f17dc58a2666` |
+| Separate controlled config cancel | `block:01a1b669-b790-7743-9c8b-a25f1854152f` | `layer:01a1b669-b791-7d4a-8df5-b1f24dcfb5e7` |
+| Rebuilt-main default dismiss | `block:01a1b66a-d635-7075-9ae4-83de763c5ac3` | `layer:01a1b66a-d636-7645-ad91-78620b7d138e` |
+
+The combined origin was `block:01a1b65d-e397-7a83-a07f-769f9a2daaaf` in
+`window:01a1b65d-e399-7ae8-abc3-908b7249e833`, original layer
+`layer:01a1b65d-e399-7af0-adc5-4e84d256129c`. Its label changed exactly once
+from `p19-source-make-owned` to `p19-owned-make-run` after Enter. In
+`task3-combined-order.ndjson`, observations 2–4 show detached host, zero floating
+layers and the unchanged old label; observation 5 shows the new label. This proves
+observed visible retirement before the effect, **not host deletion before it**.
+`task3-combined-process-exit.json` and `task3-combined-after-blocks.json` separately
+record exit0 and host absence. Root VT/HTML and inventory/typed captures remain
+`task3-combined-root.txt`, `task3-combined-root.html`,
+`task3-combined-inventory.txt` and `task3-combined-rename-typed.txt`.
+
+The rebuilt-main origin was `block:01a1b669-b690-735f-ab41-e48f132bd4d8` in
+`window:01a1b669-b691-79d3-b24c-e1d2a5a62b0c`, original layer
+`layer:01a1b669-b691-79db-9ac7-fb3c14e6a697`. Both default active snapshots show
+one centered `.8/.3` float (normalized x≈.1, y=.35). Task03's unchanged Go/Lua
+source carries forward Task02's own-PTY resize implementation/evidence; it did
+not repeat every resize/palette/action/failure case. Terminal frames are not
+native GUI pixel measurements or universal palette/contrast proof.
+
+### Current verification boundary
+
+This Task04 refresh edits documentation only. Go/Lua/Taskfile/Makefile/package
+source remains byte-identical to its base `d4d917a4a9c6916d936526b54d887b994074cf71`
+and the Task03 observed source above. This leaf ran no product or compilation.
+Fresh independent docs/source/evidence review, combined equality/whitespace and
+a final actual `make run` on rebuilt main after integration remain coordinator
+gates before full phase completion. Task03's actual observations are delivered,
+not pending and not a substitute for that final recheck. `rex do`/make launch ACK
+is not eventual Go exit, display or cleanup proof; exact native watchers and
+`session.list_blocks` establish only the observed cases.
+
+Task04's required gate is `git diff --check`; Nix/Lua were not changed. Task03's
+static Nix formatter/syntax parse and coordinator Go build/vet remain separately
+recorded, not Nix evaluation/build/install/check/activation. Tests/unit/race/TDD/
+Lua/parser/FIFO harnesses/benchmarks/fake servers/synthetic delays were not run.
+Protected assertions, quality commands/hooks/dependencies/pins/lint configuration
+remain unchanged, as does the parent's separate dirty `flake.nix`.
+
+The current full-lint diagnostic is **53 diagnostics, exit 201; AI lint not reached**
+(`current-main-full-lint.log`, `task3-public-evidence.json`). Full lint is not green;
+no inherited-only classification is asserted. Phase18's historical 62 below stays
+verbatim and is not the current count. There is no new latency statistic, benchmark
+or performance SLA. No every-failure/action/platform, physical-keybinding/profile,
+install/reload, remote/deploy, phase-completion or native-customization claim
+follows from this documentation. Do not use older no-argument/controller commands
+below as current usage: see [README](../README.md), [launch](launch-contract.md),
+[package/discovery](runtime-bootstrap.md) and [appearance](appearance.md).
 
 ## Historical Phase16/18 delivery record (verbatim)
 
