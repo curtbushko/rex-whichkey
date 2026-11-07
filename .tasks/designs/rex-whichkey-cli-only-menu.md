@@ -28,8 +28,8 @@ scope:
       hash: 'sha256:966ef70c264360b4820e5faf510496166e91f0effeae479ab7400a3792de88e9'
 lifecycle:
   state: approved
-  sourceEventID: rex-whichkey/cli-only-design/implementation-delivered/1
-  changedAt: '2026-11-06T23:03:08.917Z'
+  sourceEventID: rex-whichkey/cli-only-design/startup-policy-refinement/1
+  changedAt: '2026-11-07T00:17:28.736Z'
 title: CLI-only Go menu and data configuration
 mtnCreateRetry:
   key: rex-whichkey/cli-only-design/create/1
@@ -40,7 +40,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-06T17:00:31.795Z'
-dateModified: '2026-11-06T23:03:09.532Z'
+dateModified: '2026-11-07T00:17:29.744Z'
 tags:
   - task
 type: task
@@ -122,4 +122,10 @@ prds/rex-whichkey.md; prds/rex-whichkey-usability.md; designs/rex-whichkey-runti
 ### 2026-11-06T23:03:08.221Z · historical · unspecified
 
 {"attempt":1,"content":"The originally planning-only definition now has delivered Phase16 implementation. Go owns data configuration/menu/providers/Rex CLI operations; production Lua is launch-only; mandatory registry/completion/relay plane retired and hooks deferred. Final main normal binary built/run, dynamic navigation/Escape/exact owned cleanup observed; combined reviewed source actual owned inline tab rename observed. See phases/rex-whichkey-16-cli-only-menu.md, milestone rex-whichkey-p16/milestone/1 and .mtn-tmp/p16/final-main-public-runtime-evidence.json. JSONv1/path/catalogue details were routine authorized implementation choices, not retrospectively attributed explicit user format decisions. No user configuration/profile/Rex reload/deployment or physical keybinding test. Original phase15 Lua bridge failure not retroactively fixed.","eventID":"rex-whichkey/cli-only-design/implementation-delivered/1","gateEligible":false,"kind":"historical","provenance":"User start-it execution of accepted CLI-only direction; native Phase16 delivered task summaries/milestone and revision-bound source reviews plus actual public app evidence.","recordRef":"designs/rex-whichkey-cli-only-menu.md","schemaVersion":1,"specHash":"sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDAwOjE3OjI3LjYwMFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L2NsaS1vbmx5LWRlc2lnbi9zdGFydHVwLXBvbGljeS1yZWZpbmVtZW50LzEiLCJpbnRlbnQiOiIxZjU1ODhmNzhhOWMyZmQ1ZWI1ZDY5YjliNmQwYmFlYjdkY2ExNjY1YTU3NGFmNDJkNzJmZTY3NDRmMmZhNTYyIn0 -->
+### 2026-11-07T00:17:27.600Z · historical · unspecified
+
+{"attempt":1,"content":"New designs/rex-whichkey-startup-path.md and Phase18 capture accepted PATH-only binary lookup, removal of executable/compatibility/status preflight, draw-first async/on-demand metadata/query reuse and unnecessary temporary-image durability sync, with actual targeted verification. These narrowly replace the earlier heavier startup discovery/validation mechanism; CLI-only Go ownership, minimal Lua, configuration/action targeting, confirmations, cleanup and deferred hooks remain. Phase17 audit stays separate. New phase/design are planned, not implemented or runtime verified; no task dispatch or user configuration/deployment permission.","eventID":"rex-whichkey/cli-only-design/startup-policy-refinement/1","gateEligible":false,"kind":"historical","provenance":"Explicit later user startup decisions REXWHICHKEY-20261106-191113 and request to add one phase.","recordRef":"designs/rex-whichkey-cli-only-menu.md","schemaVersion":1,"specHash":"sha256:23add062dac4326fe35e7e178a6a39f4c4d7631b4c8e164feb988b9aba07e21b"}
 <!-- mtn:end-entry:v1 -->

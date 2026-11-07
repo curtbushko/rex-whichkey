@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-06T17:02:09.209Z'
+dateModified: '2026-11-07T00:16:24.518Z'
 tags:
   - task
 type: task
@@ -20,6 +20,7 @@ id: 944be7fb-2bf1-4dee-8864-9686519b06a0
 
 | Permanent ID | State | Decision | Rationale / relationships |
 | --- | --- | --- | --- |
+| REXWHICHKEY-20261106-191113 | Accepted | Plan Phase18 startup simplification: PATH-only binary lookup, removal of repeated executable/compatibility preflight, draw-first async data, query reuse, no unnecessary copied-executable durability sync, and targeted actual verification. | User explicit item1-4/7 approvals and subsequent add-these-changes phase request; exact UI-update mechanism remains undecided. Refines earlier discovery/compatibility mechanisms, not CLI-only ownership/targeting/cleanup; Phase17 audit remains separate. ID assigned during capture, not a historical message timestamp. |
 | REXWHICHKEY-20261104-193124 | Accepted | Runtime executable discovery and compatibility belong in application code; Nix only builds/installs and init.lua only supplies keybindings/customization. Create Phase 15 to fix required path wiring and component pairing. | Explicit user correction: "it should all be in code", followed by "create a new phase to fix this". Refines the former constructor/Nix path workaround, not origin/callback/privacy safeguards. ID assigned during capture, not an exact historical agreement timestamp. See designs/rex-whichkey-runtime-ownership.md and phases/rex-whichkey-15-code-owned-runtime.md. |
 | REXWHICHKEY-20261104-172117 | Accepted | Separate the actual CLI activation caller from the validated GUI target for configured launch and completion; explicitly route app actions to the retained target. | User explicitly replied "yes, please fix" to this proposal. Refines the earlier activation/app client-ID equality contract; preserves exact origin, capability, connection, expiry and replay checks. Current design: docs/cli-gui-delegation.md. |
 | REXWHICHKEY-20261031-072107 | Accepted | Stop further tests/experiments; prioritize which-key behavior and treat Rex as a documented API. Update the plans accordingly. | Explicit user correction and follow-up instruction. Supersedes the experimental execution scope of REXWHICHKEY-20261030-165746, the probe execution scope of REXWHICHKEY-20261030-215048, the final-test scheduling in REXWHICHKEY-20261030-221324, and the blanket tested-RFC-before-implementation gate. Does not approve provisional interfaces or claim untested behavior passed. |
@@ -134,6 +135,18 @@ ID assigned while processing the explicit user directive, not a claimed exact hi
 - **Relationships:** Supersedes unapproved deployment request REXWHICHKEY-20261106-101053 and the old Lua-callback/loader mechanism for the new phase. Earlier PRD Agreed labels are not treated as independent proof of user approval. REQ IDs remain unchanged: REQ005 is deferred; REQ003/004 and callback-specific usability clauses have explicit CLI-only interpretation in the new design. Phase15 failed-run evidence remains historical, not repaired by this planning decision.
 - **Records:** designs/rex-whichkey-cli-only-menu.md; phases/rex-whichkey-16-cli-only-menu.md. Exact format/path/CLI spelling and task graph remain planning details, not invented user decisions.
 - **Verification:** This entry records agreement and plan creation only, not code, runtime success, real configuration changes or completion.
+
+
+
+## REXWHICHKEY-20261106-191113 — Accepted startup simplification and async data direction
+
+- **State:** Accepted for recording the startup design and creating/planning Phase18. ID assigned at this capture, not claimed as the exact time of earlier user messages. No implementation dispatch, timing run or deployment is inferred.
+- **Actual authority:** User approved PATH-only binary presence instead of validation, separate background/on-demand data, asynchronous loading, removal of duplicate queries and actual verification. After the fsync/UI-update explanations, the user explicitly requested: "add these changes as a new phase".
+- **Decision:** Normal execution-host PATH lookup, no startup executable hashing/receipt or repeated server.status/version/API-schema compatibility gate; minimal draw-first menu; asynchronous/on-demand data and per-invocation query reuse; remove unnecessary temporary-executable startup durability sync; safe single-owner incremental UI updates and targeted actual startup/interaction/cleanup evidence. Exact worker/UI channel or controller/renderer IPC mechanism remains undecided, not an approved new framework. Executable-copy removal itself is not predetermined.
+- **Preserved boundaries:** Local configuration/result validation, exact origin/GUI/destination identity, confirmation, terminal restoration, owned cleanup before once-only effects and no uncertain retries remain. CLI-only Go control/minimal Lua and deferred hooks stand. Existing test/standard protections and no broad benchmark/test/remote/config/deploy authority remain.
+- **Relationships:** Refines the mechanism portion of REXWHICHKEY-20261104-193124 and REXWHICHKEY-20261106-114935, not their Go ownership, user-config or resource-safety principles. Specifically supersedes earlier heavier executable/compatibility/discovery policy for Phase18. Earlier source/delivery decisions and failed-run history are preserved. Phase17 audit remains separate and is not a startup prerequisite.
+- **Records:** designs/rex-whichkey-startup-path.md; phases/rex-whichkey-18-startup-speed.md. Source observations are not a measured timing breakdown, implementation or runtime pass; no latency SLA is invented.
+
 
 <!-- mtn:evidence:v1 -->
 
