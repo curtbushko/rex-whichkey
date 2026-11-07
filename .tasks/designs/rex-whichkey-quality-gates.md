@@ -28,8 +28,8 @@ scope:
 structure: {}
 lifecycle:
   state: approved
-  sourceEventID: rex-whichkey/quality-gates/approval/1
-  changedAt: '2026-11-07T15:58:51.233Z'
+  sourceEventID: rex-whichkey/quality-toolchain/1
+  changedAt: '2026-11-07T16:28:30.692Z'
 title: Mandatory tests and full lint quality gates
 mtnCreateRetry:
   key: rex-whichkey-quality-gates-v1
@@ -40,7 +40,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T15:58:44.893Z'
-dateModified: '2026-11-07T15:58:52.247Z'
+dateModified: '2026-11-07T16:28:31.315Z'
 tags:
   - task
 type: task
@@ -74,4 +74,10 @@ The same sole coordinator owns all .tasks/Git integration. Isolated committed-ba
 ### 2026-11-07T15:58:50.094Z · approval · unspecified
 
 {"approvalScope":"Mandatory test/full lint correction and bounded repair of actual failures; supersedes all earlier test prohibitions, preserves architecture/safety/native chrome and lifetime decisions; no new deployment/profile/config authority","approvedBy":"user","attempt":1,"decision":"approved","decisionEvidence":"You should always run the tests and linting after a change; fix the problems","decisionID":"REXWHICHKEY-20261107-105542","eventID":"rex-whichkey/quality-gates/approval/1","kind":"approval","recordRef":"designs/rex-whichkey-quality-gates.md","schemaVersion":1,"specHash":"sha256:f3120762f7075c7c767e5f39552ba9c2b38b2e213d33d2472d07f0bc0c1cbdb2"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDE2OjI4OjI5Ljk4OFoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5L3F1YWxpdHktdG9vbGNoYWluLzEiLCJpbnRlbnQiOiIxMGZjZTRkYjJmMjIwNTAzNWY2NDg3NWRlMmIwMzY0YmM4NzQxNzFkOWRhZDU2MDUyMWE4NGMxNGRkZmRlYmIxIn0 -->
+### 2026-11-07T16:28:29.988Z · historical · unspecified
+
+{"artifacts":[".mtn-tmp/p19/quality-fix/ai-baseline.log",".mtn-tmp/p19/quality-fix/ai-compatible-baseline.log",".mtn-tmp/p19/quality-fix/tools/source-hash.txt",".mtn-tmp/p19/quality-fix/tools/source-hash-after-build.txt",".mtn-tmp/p19/quality-fix/tools/rebuilt-build-info.txt",".mtn-tmp/p19/quality-fix/ai-source-derivation.json"],"attempt":1,"content":"Existing go-ai-lint1.0.0 builtGo1.25 failed to analyze Go1.26 module (actual errors recorded). Rebuilt EXACT original installed pinned v1.0.0 source using already approved Go1.26.8/-mod=readonly into private tools/bin; source NAR hash before/after unchanged sha256-y2G7dTZqM/rEQaALu54bHigBeO1xxRIblBJ7QxOffW4=. No project deps/pins/rules/Taskfile/profile/install/activation/Nix build changes. Native full lint command/flags unchanged, compatible PATH only. Actual AI stage now runs and reports AIL022 providers loop capture and AIL071 hosts concat, assigned Task06; NOT green yet.","eventID":"rex-whichkey/quality-toolchain/1","gateEligible":false,"kind":"historical","provenance":"Installed derivation metadata read-only, exact source URL/hash, compiler build-info and actual lint stage logs. Original source had been GCd; fetched exact same public pinned source, verified original content hash, not an update.","recordRef":"designs/rex-whichkey-quality-gates.md","schemaVersion":1,"specHash":"sha256:f3120762f7075c7c767e5f39552ba9c2b38b2e213d33d2472d07f0bc0c1cbdb2"}
 <!-- mtn:end-entry:v1 -->
