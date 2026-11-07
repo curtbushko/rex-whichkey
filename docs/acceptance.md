@@ -124,31 +124,45 @@ native GUI pixel measurements or universal palette/contrast proof.
 The user's current instruction requires tests and full lint after changes, with
 failures repaired. It supersedes earlier no-unit/race/TDD/Lua/parser/FIFO-test
 restrictions, which remain historical records below, not current acceptance.
+The original untested Phase19 closure at `e867a3b` was premature: subsequent
+unit/race failures and 53 golangci diagnostics reopened the phase for quality
+repair. No old commit is retroactively certified by later passing checks.
 Task05's native summary records the authentic matching historical fixture repair
 at integrated `88e8f9ae98adf7677a14fac1bf63bf257c5e18dd`: all 42 original
 scenarios/assertions retained, full unit/race suites passing. Historical fixtures
 remain test-only; they are not restored into the production control path.
 
-Task06 fix-attempt 2 builder checks pass in the isolated
-`p19-t06-builder-a02` checkout:
+Task06's delivery sequence is revision-bound:
 
-| Actual command | Result |
+1. Builder1 gates passed at `c7c3156229145f75b87d3dbf8223fb3152d17d93`, but
+   independent review1 required current terminal/direct lifecycle regressions
+   (`REX-P19-T06-001/002`). That negative review remains valid history, not
+   overruled by lint success.
+2. Fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c` (tree
+   `c42a344443d06ffdb68a7547363d6927740f0948`) added that coverage. Fresh
+   whole-original-diff review `rex-whichkey-p19-t06/review/2` was **APPROVED**,
+   with independent build/unit/race/full-lint and uncached/repeated race checks.
+   This is same-family independent review, not cross-family coverage.
+3. Coordinator integration `rex-whichkey-p19-t06/integration/2` advanced main to
+   `7e6160f89c0025991712a751e51aa9b2abeaeeef` (tree
+   `bffabf34f8e63f89bd7526c55527a7813fbe2a97`). Reviewed combined and rebuilt
+   main each passed the normal gates and actual runtime observations below.
+
+| Actual command on both combined and main | Result |
 | --- | --- |
 | `task build` | pass, exit 0 |
 | `task test` | pass, exit 0; both `test:unit` and `test:race` |
 | `task lint` | pass, exit 0; `lint:vet`, `lint:golangci` and `lint:ai` |
 
-Current evidence is under
-`.mtn-tmp/rex/rex-whichkey-p19-t06-builder-a02/evidence/` in the authoritative
-coordinator checkout: `iteration6-{build,test,lint}.log` records green code before
-this documentation update; `final-{build,test,lint}.log` and
-`final-source-identity.log` bind final delivery. The builder payload
-`rex-whichkey-p19-t06/build/2` supplies exact commit/tree, commands and coverage.
-Attempt 1's green gates at `c7c3156` remain in
-`.mtn-tmp/p19/quality-fix/task6-builder-evidence/`; its independent review required
-current orchestration regressions (`REX-P19-T06-001/002`). That negative review
-is not overruled by lint success. These are builder results, not fresh review
-approval or coordinator integration/phase-completion.
+Receipts in the authoritative coordinator checkout are under
+`.mtn-tmp/p19/quality-fix/`: `task6-fix2-build-result.json` binds build/2,
+`task6-review2-result.json` binds approval, and `task6-integration2.json` binds
+integration and the `task6-{combined,main}-{build,tests,lint}.log` gates.
+`task6-public-evidence.json` and `task6-main-source-commit.txt` identify the
+actually observed source, not a guessed current HEAD. Builder1 logs remain in
+`task6-builder-evidence/`; fix2 builder logs remain in
+`.mtn-tmp/rex/rex-whichkey-p19-t06-builder-a02/evidence/`. Workflow artifacts
+are source-checkout evidence, not installed package assets.
 
 All 53 golangci baseline diagnostics and both subsequent AI findings were
 repaired in code, without rule/config/Taskfile/hook/dependency/pin changes,
@@ -186,15 +200,54 @@ Original NAR hash: `sha256-y2G7dTZqM/rEQaALu54bHigBeO1xxRIblBJ7QxOffW4=`.
 Provenance is in `.mtn-tmp/p19/quality-fix/tools/{source-hash,rebuilt-build-info,source-hash-after-build}.txt`.
 No tool version, profile, package pin or lint policy was changed to obtain green.
 
-Fresh independent exact-source full-test/full-lint review of the whole original
-Task06 diff, including these coverage fixes, remains pending.
-Coordinator reviewed-combined/main `task build`, `task test`, full `task lint`
-and actual `make run`/owned rename/cancel/cleanup remain pending before phase
-green. Earlier Task03 observations above retain their original revision limits;
-launch ACKs are not display, eventual Go exit or cleanup proof. No leaf live Rex
-action, profile/config/activation/reload/install/remote/deploy/push, benchmark,
-native customization or universal platform pass is claimed. The parent's
-separate dirty `flake.nix` remains untouched. No architecture gate is configured.
+### Completed source2 runtime proof
+
+`task6-public-evidence.json` records actual candidate/main normal `make run`,
+with the exact checkout executables observed rather than an installed binary:
+
+- Candidate default menu and dismissal; rebuilt main default menu and
+  Sessions → Switch session full IDs/current marker.
+- One exact owned original-tab rename to `p19-owned-quality-green`. Eight
+  sequential snapshots showed the detached host, no visible float and the old
+  label before the effect. These observations support ordering for this case,
+  not internal instrumentation or every possible ordering.
+- A separate main run typed `p19-quality-cancelled-not-applied`, then controlled
+  edit-back/group-back/root dismissal left the original label unchanged.
+- All three native waits returned exit 0; every exact host was absent afterward
+  from `session.list_blocks`. Exact original focus and primary-screen modes
+  returned, and before/after `stty` bytes matched. The disposable owned origin
+  window was closed and the exact pre-test baseline restored; other user and
+  failed-recovery resources were unchanged.
+
+The linked `public-*` artifacts retain the captures, executable identity,
+sequential observations, native exit results and before/after state. Post-exit
+absence was verified by the coordinator, not by Go itself. Accepted default
+chrome/customization deferral 1a and detached-host-through-dispatch boundary 1b
+are unchanged. These are Darwin arm64 observations, not Linux/all-OS, deployment,
+GUI-pixel, native-custom-chrome or universal cleanup certification.
+
+### Docs-only followup and administrative closure
+
+This followup changes only `README.md`, `docs/acceptance.md` and
+`docs/appearance.md` from base `833893e51a209632f829c79dd45be6f1aa75b251`.
+All runtime, Go/test, Lua, Task/Make, Nix/package, configuration/rules/hooks,
+dependency and pin source is byte-identical to approved fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c`
+and observed main `7e6160f89c0025991712a751e51aa9b2abeaeeef`. The new docs HEAD
+is therefore different, but the unchanged-code runtime evidence applies; no new
+post-documentation binary launch by this leaf is claimed. Task03 observations
+above retain their earlier revision limits; launch ACKs alone are not display,
+eventual Go exit or cleanup proof.
+
+As of this 2026-11-07 documentation handoff, source2 review, integration, gates
+and the selected runtime proof are complete. Fresh exact-doc-head independent
+docs/evidence and whole-approved-Go-source-identity review, then combined/main
+build/unit/race/full-lint gates for that docs head remain coordinator followup,
+as do native Task06/Phase19 completion metadata. This is not a pending source2
+runtime check or a claim that this leaf completed native status. Tests/full lint
+remain mandatory after this docs change. No live leaf Rex action,
+profile/config/activation/reload/install/remote/deploy/push, benchmark or native
+customization is claimed. The parent's separate dirty `flake.nix` remains
+untouched. No architecture gate is configured.
 
 Phase18's historical 62 diagnostics below remain verbatim, not the current count.
 Use [README](../README.md), [launch](launch-contract.md),
