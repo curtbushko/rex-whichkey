@@ -6,20 +6,24 @@ JSON menu data, renders the menu and performs operations through the Rex CLI.
 There is no Go launcher/controller, renderer child, image copy, private IPC,
 daemon or executable Lua menu configuration.
 
-**Evidence:** Phase19 Task03 records actual `make run` on reviewed combined
-source and rebuilt main at `6564d07ef690d591ea842fa9d986d0bcfa919dd4`: current
-checkout Go executable, shared Lua float, root/providers, exact owned rename,
-separate edited cancellation/dismissal, pre-effect visible retirement and observed
-exit 0/post-exit host absence. Task02 separately observed real own-PTY resize.
-Task05 restored the authentic historical test fixture with all 42 scenarios and
-assertions retained. Task06 builder checks now pass: `task build`, `task test`
-(unit and race), and full `task lint` (vet, golangci and compatible AI lint).
-Tests and full lint are mandatory after changes; earlier no-tests wording is
-historical, not current acceptance. Fresh exact-source independent review and
-coordinator combined/main gates plus actual `make run`, owned rename/cancel and
-cleanup remain pending. Build/help/creation acknowledgment is not menu-display
-or exit proof. No installed-profile, physical-keybinding, remote or all-platform
-success is claimed. See [acceptance](docs/acceptance.md#current-verification-boundary).
+**Evidence:** Task06 fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c` received
+fresh whole-diff APPROVED independent review and was integrated into observed
+main `7e6160f89c0025991712a751e51aa9b2abeaeeef`. Coordinator combined/main
+`task build`, `task test` (unit/race) and full `task lint` (vet/golangci/compatible
+AI) all exited 0. Actual candidate/main `make run` displayed the default menu;
+main also showed full-ID/current-marker inventory, one exact owned rename and
+separate edited cancellation/root dismissal. Native exit 0, pre-effect visible
+retirement, post-exit exact host absence, focus/tty/primary-screen restoration
+and exact baseline restoration were observed. Task02's real own-PTY resize and
+Task05's restored 42 historical scenarios/assertions retain their recorded scope.
+Tests/full lint are mandatory; the original premature closure, negative first
+review and superseded no-tests policy remain history, not current acceptance.
+This docs-only followup leaves all approved/observed runtime and test source
+byte-identical; it does not claim a new post-doc live launch. Source/runtime
+proof is complete for those cases; exact-doc-head review/gates and native
+completion remain coordinator followup. No installed-profile, physical-key,
+remote or all-platform success is claimed. See
+[acceptance](docs/acceptance.md#current-verification-boundary).
 
 ## Run this checkout
 
@@ -227,5 +231,5 @@ can leave resources; there is no broad cleanup guarantee.
 
 See [launch/lifetime](docs/launch-contract.md), [discovery](docs/runtime-bootstrap.md),
 [CLI/GUI](docs/cli-gui-delegation.md), [appearance](docs/appearance.md) and
-[remote limits](docs/remote-compatibility.md). This source delivery claims no
-prohibited tests, Nix build/activation, deployment, physical key or phase completion.
+[remote limits](docs/remote-compatibility.md). This source evidence does not certify
+Nix build/activation, deployment, physical keys or universal runtime behavior.

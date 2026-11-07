@@ -205,16 +205,28 @@ post-exit cleanup cannot suppress an already-issued effect. Exact `list_blocks`
 checks prove only the observed cases, not universal cleanup.
 
 Task06 refactors the Go renderer, palette decoder and terminal loop without
-changing Lua sizing/native chrome. Builder `task build`, `task test` (unit/race)
-and full `task lint` (vet/golangci/compatible AI) pass. Automated regressions cover
-UTF-8/escape/report/paste/edit framing, palette replies, constrained pagination,
-confirmation, late rename metadata, retained provider bindings, bounded workers
-and cancellation/display restoration. The isolated Darwin PTY check compares all
-configured termios fields except kernel-transient PENDIN; production restores the
-captured state unchanged. These checks do not certify native GUI appearance.
-Fresh independent full-test/full-lint review and coordinator combined/main gates,
-then final rebuilt-main `make run`/owned rename/cancel/cleanup, remain required.
-See [current verification](acceptance.md#current-verification-boundary).
+changing Lua sizing/native chrome. Fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c`
+received fresh whole-diff APPROVED independent review, then integration into
+observed main `7e6160f89c0025991712a751e51aa9b2abeaeeef`. Combined/main
+`task build`, `task test` (unit/race) and full `task lint` (vet/golangci/compatible
+AI) all exited 0. Automated regressions cover UTF-8/escape/report/paste/edit
+framing, palette replies, pagination, confirmation, retained edits/providers,
+bounded workers, and real current terminal/direct lifecycle orchestration in
+isolated Darwin PTYs/executable CLI fixtures. The termios check excludes only
+kernel-transient PENDIN; production restores the captured state unchanged.
+
+Coordinator `task6-public-evidence.json` under `.mtn-tmp/p19/quality-fix/` records
+actual candidate/main `make run`: default menu, full-ID/current-marker inventory,
+one owned rename, separate edited cancel/root dismissal, native exit 0, exact
+post-exit host absence and focus/tty/primary-screen restoration. Eight snapshots
+showed detached host/no visible float with the old label before the rename;
+these are case-specific ordering observations, not internal instrumentation.
+The owned origin window was closed and the exact baseline restored. This docs-only
+followup leaves approved/observed runtime and test source byte-identical, so those
+observations apply without claiming a new post-doc live launch. Native completion
+metadata and exact-doc-head review/combined-main gates remain coordinator followup,
+not missing source2 runtime proof. See
+[current verification](acceptance.md#current-verification-boundary).
 No physical-key/reload, installed-profile, Nix build/activation, every-palette/
 geometry/flags, timing SLA or all-platform result is claimed; terminal captures
 are not native pixel/chrome certification.
