@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-07T04:36:34.950Z'
+dateModified: '2026-11-07T04:50:25.389Z'
 tags:
   - task
 type: task
@@ -159,6 +159,16 @@ ID assigned while processing the explicit user directive, not a claimed exact hi
 - **Relationships:** Refines the launch-only Lua/Go popup ownership portions of REXWHICHKEY-20261106-114935 and REXWHICHKEY-20261106-191113. Those delivered implementations/history remain intact. Does not restore Go-to-Lua callbacks/function config/registry/relay/control frameworks or waive target/confirmation/no-retry/cleanup correctness. Earlier Phase11/14/15 incomplete history is not reopened or retroactively completed.
 - **Verified limitations:** Installed session.new_layer/terminal creation schemas expose no per-float native chrome controls; terminal theme means colors, not native frame style. Required native-chrome deliverable stays blocked, not implicitly deferred. Current PATH make is a wrapper execing Task; no Makefile exists. Documented detach_block plus terminal exit policy is a candidate for one-process dismissal/dispatch, requiring independent lifecycle assessment and actual verification, not a claimed pass or license to weaken accepted cleanup guarantees.
 - **Records:** designs/rex-whichkey-lua-float-launch.md; phases/rex-whichkey-19-lua-float-launch.md. No broad test/benchmark/config/profile/activation/reload/deploy/push/external Rex change or unrelated dirty flake.nix commit authority inferred.
+
+
+
+## REXWHICHKEY-20261106-234819 — Open native chrome unblock choice
+
+The installed new_layer/terminal options lack native header/border/corners/shadow controls. Proposal: explicitly defer that part and use unchanged Rex default chrome until real support exists. Alternative: provide an actual supported capability within authorized access. No deferral is accepted by continued planning or silence. Related accepted direction REXWHICHKEY-20261106-232754 and Task19.4 blocker.
+
+## REXWHICHKEY-20261106-234820 — Open direct-lifetime ordering choice
+
+Documented detach closes a sole-block visible float but keeps Go host alive during dispatch; exit policy retires it afterward. Proposal: require visible-layer/TTY/worker/focus cleanup before effect, explicitly allow execution host retirement after Go exits and acknowledge such post-effect cleanup failure cannot suppress an already-issued action. Otherwise retain existing strict all-owned-resource-before-effects rule and supply supported same-process capability or explicitly approve another architecture. Independent planner assessed all documented alternatives; this is a material choice, not routine missing detail. No approval inferred. Related accepted direction REXWHICHKEY-20261106-232754 and Task19.2 blocker.
 
 
 <!-- mtn:evidence:v1 -->
