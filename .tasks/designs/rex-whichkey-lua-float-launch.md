@@ -26,8 +26,8 @@ scope:
     - REQ-029
 lifecycle:
   state: approved
-  sourceEventID: rex-whichkey/lua-float-design/approval/2
-  changedAt: '2026-11-07T07:21:15.951Z'
+  sourceEventID: rex-whichkey-p19/design-delivery/1
+  changedAt: '2026-11-07T15:00:33.615Z'
 title: Lua-owned float launch and direct Go menu
 mtnCreateRetry:
   key: rex-whichkey-lua-float-launch-design-v1
@@ -38,7 +38,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-11-07T04:34:13.083Z'
-dateModified: '2026-11-07T07:21:16.580Z'
+dateModified: '2026-11-07T15:00:34.629Z'
 tags:
   - task
 type: task
@@ -89,4 +89,10 @@ Stable traceability REQ001/002/003/004/006/008/009/010/011/012/013/014/015/016/0
 ### 2026-11-07T07:21:15.205Z · approval · unspecified
 
 {"approvalScope":"Explicit native chrome deferral/use defaults and detached execution-host through dispatch/post-exit retirement exception. Original Phase19 create/tasks/implement/commit/actual make run authority retained; routine vertical task replan authorized. No other guards or test/config/deploy limits waived.","approvedBy":"user","attempt":2,"decision":"approved","decisionEvidence":"1a - yes, accept it for now; 1b - yes","eventID":"rex-whichkey/lua-float-design/approval/2","kind":"approval","recordRef":"designs/rex-whichkey-lua-float-launch.md","schemaVersion":1,"specHash":"sha256:f7e38d49287de319753732b09fe472a40dfadcef81e5245e2deac208e968ab70"}
+<!-- mtn:end-entry:v1 -->
+
+<!-- mtn:entry:v1:eyJ0aW1lc3RhbXAiOiIyMDI2LTExLTA3VDE1OjAwOjMyLjQ2OVoiLCJhdXRob3IiOiJ1bnNwZWNpZmllZCIsInJvbGUiOiJjb29yZGluYXRvciIsImNhdGVnb3J5IjoiaGlzdG9yaWNhbCIsInJldHJ5S2V5IjoicmV4LXdoaWNoa2V5LXAxOS9kZXNpZ24tZGVsaXZlcnkvMSIsImludGVudCI6IjM5YTRjZDkwZTI2MmU2MjQ5MzQ5ODc5ZjIzNzc5Mzk4ZDkyMzBhZWQwYzIwZTM5MmYzM2YwZTZiNDE2NWQ1NTYifQ -->
+### 2026-11-07T15:00:32.469Z · historical · unspecified
+
+{"attempt":1,"content":"Phase19 accepted nondeferred scope delivered and native completed. Lua exact-origin fractional float/shared source launcher and direct Go menu/effects/palette, no Go controller/copy/private bridge; actual normal make run on combined and rebuilt Main, GNU options, owned rename/cancel/real own-PTY resize/cleanup. Req026 native chrome customization remains explicitly user-deferred, defaults only.1b post-effect host retirement limit explicit. This note is delivery evidence, not a new design-body change/approval or universal coverage. See phase summary/milestone and linked artifacts.","deferredRequirements":[{"approvedBy":"user1a","decisionID":"REXWHICHKEY-20261106-234819","disposition":"Native chrome customization deferred; current default-policy/docs task is NOT native-control implementation credit","requirement":"REQ-026"}],"eventID":"rex-whichkey-p19/design-delivery/1","gateEligible":false,"kind":"historical","observedSourceCommit":"fe9746d0b3856e67c66f942b59d29959cba98730","provenance":"Coordinator verified current exact approved design/plan and nonempty native4/4 reviewed integrated child summaries plus actual final combined/main makerun.","recordRef":"designs/rex-whichkey-lua-float-launch.md","schemaVersion":1,"specHash":"sha256:f7e38d49287de319753732b09fe472a40dfadcef81e5245e2deac208e968ab70","targetCommit":"a625392ef0aac22b35c819cd253d61b5d94b8609","targetTree":"eb407a40e8cc8886ec9732354adace3e29412403"}
 <!-- mtn:end-entry:v1 -->

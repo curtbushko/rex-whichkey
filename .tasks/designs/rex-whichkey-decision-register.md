@@ -10,7 +10,7 @@ recurrenceAnchor: scheduled
 occurrenceMaterialization: manual
 occurrenceNextTrigger: completion
 dateCreated: '2026-10-30T16:16:56.529Z'
-dateModified: '2026-11-07T07:22:52.548Z'
+dateModified: '2026-11-07T14:58:29.489Z'
 tags:
   - task
 type: task
@@ -20,7 +20,9 @@ id: 944be7fb-2bf1-4dee-8864-9686519b06a0
 
 | Permanent ID | State | Decision | Rationale / relationships |
 | --- | --- | --- | --- |
-| REXWHICHKEY-20261106-232754 | Accepted | Execute Phase19: installed Lua owns native float presentation/sizing/launch; direct Go owns menus/palette/CLI effects; remove current Go controller and route actual make run through Lua. | Explicit user creation/implementation/commit/make-run request. Native chrome remains required but unsupported/blocked; no silent deferral or cleanup weakening. Refines114935/191113 responsibility mechanism only; existing history preserved. |
+| REXWHICHKEY-20261106-232754 | Refined | Execute Phase19: Lua owns native float presentation policy/sizing/launch; direct Go owns menus/palette/CLI effects; remove Go controller and route actual make run through Lua. | Original explicit execution direction refined by accepted234819/234820 below: native chrome customization deferred/defaults accepted, detached host may survive dispatch until Go exits. All other safeguards/history remain. Original accepted scope and Open blocker entries below are history, not current unresolved requirements. |
+| REXWHICHKEY-20261106-234819 | Accepted | Accept default Rex native chrome for now; defer REQ-026 titlebar/border/corners/shadow customization pending supported per-float API. | Explicit user1a: yes, accept it for now. Refines232754; current default-policy/docs delivery does not implement or credit deferred native controls. Original Open proposal below preserved. |
+| REXWHICHKEY-20261106-234820 | Accepted | Visible float/TTY/workers/exact original focus cleaned and verified before effects; detached Go host may remain during dispatch and retire after Go exits. | Explicit user1b: yes. Refines232754 and old all-owned-block pre-effect ordering only; post-exit cleanup failure cannot suppress an earlier effect, all other exact identity/config/confirmation/no-retry safeguards remain. Original Open proposal below preserved. |
 | REXWHICHKEY-20261106-191113 | Accepted | Plan Phase18 startup simplification: PATH-only binary lookup, removal of repeated executable/compatibility preflight, draw-first async data, query reuse, no unnecessary copied-executable durability sync, and targeted actual verification. | User explicit item1-4/7 approvals and subsequent add-these-changes phase request; exact UI-update mechanism remains undecided. Refines earlier discovery/compatibility mechanisms, not CLI-only ownership/targeting/cleanup; Phase17 audit remains separate. ID assigned during capture, not a historical message timestamp. |
 | REXWHICHKEY-20261104-193124 | Accepted | Runtime executable discovery and compatibility belong in application code; Nix only builds/installs and init.lua only supplies keybindings/customization. Create Phase 15 to fix required path wiring and component pairing. | Explicit user correction: "it should all be in code", followed by "create a new phase to fix this". Refines the former constructor/Nix path workaround, not origin/callback/privacy safeguards. ID assigned during capture, not an exact historical agreement timestamp. See designs/rex-whichkey-runtime-ownership.md and phases/rex-whichkey-15-code-owned-runtime.md. |
 | REXWHICHKEY-20261104-172117 | Accepted | Separate the actual CLI activation caller from the validated GUI target for configured launch and completion; explicitly route app actions to the retained target. | User explicitly replied "yes, please fix" to this proposal. Refines the earlier activation/app client-ID equality contract; preserves exact origin, capability, connection, expiry and replay checks. Current design: docs/cli-gui-delegation.md. |
@@ -175,6 +177,7 @@ Documented detach closes a sole-block visible float but keeps Go host alive duri
 ## Explicit1a/1b acceptance and Phase19 refinement
 
 User replies: 1a - yes, accept it for now; 1b - yes. Decision REXWHICHKEY-20261106-234819 is Accepted: native chrome customization is deferred, use unchanged Rex defaults without false implementation credit. Decision REXWHICHKEY-20261106-234820 is Accepted: exact visible float/TTY/workers/origin focus retire before effect, detached Go execution host may remain through dispatch and retires after Go exits; post-exit cleanup cannot suppress a prior effect. Original Open entries above are history, replaced by this explicit acceptance. Refines REXWHICHKEY-20261106-232754 and prior all-owned-block pre-effect ordering only for this direct-host lifecycle; all other identity/config/confirmation/no-retry safeguards stand. Four-task vertical implementation plan refined routinely under original execute/commit/actual-make-run authority. No test, user-config/deploy or unsupported Rex chrome permission inferred.
+
 
 
 <!-- mtn:evidence:v1 -->
