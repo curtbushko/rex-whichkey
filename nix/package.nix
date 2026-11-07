@@ -120,6 +120,7 @@ in
     postInstall =
       ''
         mv "$out/bin/cmd" "$out/bin/rex-whichkey"
+        # One shared installed require module / rex do script; no generated launcher.
         install -Dm644 lua/rex_whichkey.lua "$out/share/rex-whichkey/lua/rex_whichkey.lua"
         mkdir -p "$out/share/doc/rex-whichkey/docs" "$out/share/rex-whichkey/examples"
         cp README.md "$out/share/doc/rex-whichkey/"
@@ -137,7 +138,7 @@ in
       );
 
     meta = {
-      description = "Go-owned Rex CLI menu with JSON data and an optional launch-only Lua binding";
+      description = "Shared Lua Rex float launcher with a direct Go CLI menu and JSON data";
       homepage = "https://github.com/curtbushko/rex-whichkey";
       license = lib.licenses.mit;
       mainProgram = "rex-whichkey";

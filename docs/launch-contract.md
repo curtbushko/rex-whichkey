@@ -1,249 +1,188 @@
-# CLI-only popup launch contract
+# Shared Lua float and direct Go launch contract
 
-## Public entrypoints
+## Public launch and source routing
 
-`rex-whichkey [--config PATH] [--server ENDPOINT] [--client FULL_ID]
-[--ascii] [--no-color]` opens the Go-owned popup.
-`--help`/`-h` prints help without effects.
-The documented [function keybinding](../examples/rex-whichkey-keybinding.lua)
-starts this same installed binary with no arguments.
+[`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) is the single implementation for:
 
-Production Lua exports only `launch(ctx)`. It calls documented
-`rex.exec.start({ "rex-whichkey" }, { detach=true, env=... })`, raises an
-immediate start error and returns true when started. It does not wait, set a
-command timeout, query metadata/session state, call Rex operations or register
-actions/completion. A handle acknowledges process start, **not** menu display,
-valid origin, successful later dispatch or cleanup.
+- Installed `require("rex_whichkey").launch(ctx, options)` in an optional
+  function binding.
+- `rex do /absolute/path/rex_whichkey.lua --action rex_whichkey_launch` with
+  explicit original `-s SESSION -b BLOCK` and optional original `-C CLIENT`.
+- Normal source `make run` / `task run`, which builds this checkout first and
+  supplies its known absolute `bin/GOOS-GOARCH` as `development_directory`.
 
-Rex's documented environment semantics are overlay-by-default:
-`REX_SESSION=ctx.session_id or false`,
-`REX_BLOCK=ctx.block_id or false`,
-`REX_CLIENT=ctx.client_id or false`.
-`false` removes an inherited variable. Thus an unknown context field cannot
-nominate stale session/block/CLI/GUI identity. Other execution-host environment
-settings remain available to Go. Lua never stringifies `ctx.server` or resolves
-an executable/store/helper path; Rex finds the ordinary binary through its PATH.
+The script registers its action in this invocation; no installed global action,
+user init.lua registration/reload or stale `require` lookup is needed for source
+run. Only canonical require receives the module function table; ordinary script
+execution returns no function value to serialize. There is no debug-source or
+Go-environment discovery in Lua.
 
-References: Rex [bind](https://www.superlogical.com/rex/docs/reference/lua#rexbindkey-fn),
-[exec options](https://www.superlogical.com/rex/docs/reference/lua#rexexecargv-opts),
-[start/lifetime](https://www.superlogical.com/rex/docs/reference/lua#rexexecstartargv-opts).
-These are published API contracts, not a physical-key observation.
+`make` on the current development PATH is a tiny exec-Task wrapper. Use
+`make run -- width=0.8 height=0.3 config=/absolute/menu.json ascii=true no_color=true`.
+Conventional GNU make reads [Makefile](../Makefile) and uses
+`make run ARGS='width=0.8 height=0.3 config=/absolute/menu.json'` instead.
+Both delegate the unchanged quality commands to [Taskfile.yml](../Taskfile.yml).
+Run from the source checkout; `task build` retains the ordinary Go build command,
+outputting the fixed `rex-whichkey` program under the selected GOOS-GOARCH.
 
-## Go startup and retained authority
+The source task fails if originating `REX_SESSION` or `REX_BLOCK` is missing or
+empty, before any launch; it always passes both `-s` and `-b` rather than allowing
+Rex's focused-block default. A present `REX_CLIENT` is passed explicitly as `-C`;
+empty intent fails, and Go validates full ID/app eligibility. Do not replace a
+CLI caller's identity with a focused/sole GUI app. An absent original client
+remains absent at the source route; it is not taken from popup environment.
+Endpoint/CLI selection is independent; see [runtime discovery](runtime-bootstrap.md).
 
-[cmd/main.go](../cmd/main.go) → [LaunchPopup](../launch.go) →
-[launchNativePopup](../native.go) is the one public resource path.
+## Lua presentation and creation
 
-1. Load/validate version-1 [data configuration](mapping-format.md), canonicalize
-   keys, and reject invalid data before process/resource startup.
-2. Require full origin session/block IDs; capture the actual running public image.
-3. Select `rex` through ordinary execution-host PATH lookup and independently
-   retain a canonical endpoint; inspect exact origin Session/Block/Window/Layer
-   placement. No binary receipts, startup version/API/schema negotiation or
-   server.status/config-generation wrappers run.
-4. Capture explicit app intent or the pane owner if eligible. An explicit invalid
-   or unavailable app rejects; absent implicit GUI eligibility does not gate
-   resource-only display.
-5. Retain the matching required origin session-view snapshot and enable forms,
-   without provider/rename-label waits. Calculate one initial rectangle from static
-   groups/loading placeholders and create the popup terminal.
-6. Actually write the validated static root before demanding nonessential metadata.
-   Visible enabled sessions start after that successful draw; hidden sessions,
-   windows/panes/hosts wait for explicit enabled prefix entry. Rename labels wait
-   for form entry. Retain complete exact choices before publishing ready rows.
-7. Handle interaction/dismissal/cancellation without idle expiry. Cancel/join jobs
-   and transport, restore terminal state, validate the result against retained
-   publications, finish exact cleanup, then dispatch a selected effect once.
+`launch(ctx, options)` requires full original session/block IDs and validates an
+optional original full client ID. It obtains the authoritative session view and
+requires unique exact Block → Layer → Window placement, with no focus fallback.
+Options are a closed data table:
 
-Neither old Lua registrations nor an installed old bridge select, redirect or
-gate startup. There is no custom `rex do whichkey` route, runtime advertisement,
-original-VM registry, callback/completion ticket, preparation relay or second Lua VM.
-The retained `menu` command is data-only **UI/result**, not popup/resource
-dispatch. `popup --directory ... --native` is a private Go PTY child, not user
-wiring. Removed prepare/controller/runtime-relay modes are not prerequisites.
+| Option | Contract |
+| --- | --- |
+| `width`, `height` | Finite fractions `(0,1]`, defaults `.8`, `.3` |
+| `config` | Optional nonempty control-free JSON path; prefer absolute |
+| `ascii`, `no_color` | Optional booleans, forwarded as Go presentation flags |
+| `development_directory` | Trusted source/build caller only: one absolute PATH directory, no colon; omit installed |
 
-## Exact origin and GUI intent
+Lua centers bounds at `{(1-width)/2, (1-height)/2, width, height}` and creates
+exactly one terminal in one new floating layer in the original window. It uses
+`rex.layout.block`, `shell="none"`, and the fixed argument-array program:
 
-Origin is full `REX_SESSION/REX_BLOCK`, never a focused-window search or
-`REX_WINDOW` shortcut. Go captures unique original Window/Layer placement and
-rechecks it; moved or detached resources fail rather than retarget.
-The endpoint is execution-host intent; [discovery](runtime-bootstrap.md) documents
-the independent CLI/endpoint policies.
+```text
+rex-whichkey direct --origin-session SESSION --origin-block BLOCK \
+  --origin-window WINDOW --origin-layer LAYER [--client ORIGINAL_CLIENT] \
+  [--config PATH] [--ascii] [--no-color]
+```
 
-Present `--client` wins over present `REX_CLIENT`; either must be a full
-`client:UUID`, including rejecting an empty value. Without explicit intent,
-app routing uses the original pane's validated owner: attached live `app` kind,
-exact ID and connection generation. No app chooser, singleton/list-order/current
-focus/label fallback exists. A CLI caller is not automatically a graphical app.
-See [CLI/GUI delegation](cli-gui-delegation.md).
+Development prepends only the supplied directory to this terminal's PATH.
+Lua does no executable nomination, source probes, copy or supervisor work.
+Installed normal launch omits the directory and uses the server's ordinary PATH.
+Native titlebar/border/corners/shadow use Rex defaults. User1a explicitly deferred
+REQ-026 customization; terminal palette/text borders are not its implementation.
 
-Display, origin-focus restoration, resource rename/close and generated pane focus
-do not require an implicit GUI app. Explicit app intent remains strict even for
-resource actions. App-routed selections require the retained eligible app, fresh
-connection/placement/owner and built-in `kind=client` action metadata. Calls use
-explicit `client.perform`, never custom Lua invocation; Remote Control and
-authentication remain Rex policy.
+Creation is never retried on uncertainty. Returned full layer/block IDs describe
+creation acknowledgment, **not** a drawn menu, successful action, Go exit or
+cleanup. The binding returns `true` (plus the IDs); the script action returns
+serializable IDs. `rex do` can exit0 while the Go menu is still running or later
+fails. No menu idle timeout or Lua lifetime supervisor is introduced.
 
-## Actions and providers
+## Direct Go identity and startup
 
-The closed [catalogue](mapping-format.md#complete-public-action-catalogue) is
-authoritative; arbitrary configured executable/action names are not supported.
-Go loads sessions/windows/panes/known-hosts asynchronously under the
-[per-kind demand policy](mapping-format.md#complete-provider-catalogue-and-expansion-boundary).
-Generated full IDs and action intents remain in the parent; the PTY returns
-canonical keys, confirmation, authorized rename text and publication bindings,
-never replacement target authority.
+[`cmd/main.go`](../cmd/main.go) → [`RunDirectMenu`](../direct_menu.go) runs inside
+the created terminal. Bare invocation/root launcher flags/legacy popup mode are
+rejected; they cannot detach an ordinary caller pane. `menu` is UI/result-only,
+not a popup/resource launcher.
 
-Session/window selection revalidates destination membership and sends exact
-`session.select` args without outer origin session/block overrides. Split also
-omits those outer fields. Other app actions retain captured origin context.
-New Tab performs exactly one source `Session.NewWindow`, then activates its
-returned ID on the retained app. Activation failure preserves the created tab
-and reports its ID; uncertain creation/activation is not retried or rolled back.
-Rename and destructive close use exact typed resource methods after cleanup.
-[Actions](actions.md), [rename](tab-rename-input.md) and
-[session UI](session-owned-ui.md) describe the retained semantics.
+Original IDs are explicit arguments captured **before creation**. The terminal's
+`REX_SESSION/REX_BLOCK` identify only its own execution context. Go requires the
+same session, a distinct own Block, and exact sole-block floating-layer placement
+in the captured original window. Raw own-float validation is separate from the
+filtered provider view; own popup is excluded from pane rows/counts/targets and
+current markers describe the original source.
 
-## Private incremental rename contract (STARTUP-UI-UPDATES)
+Go resolves `rex` once via execution-host PATH and independently retains a concrete
+endpoint. No binary receipt/hash/status/version/schema preflight, Nix lookup or
+alternate binary/server route runs. It captures original app eligibility and
+connection generation, loads strict version-1 JSON/defaults and runs one terminal
+UI owner. The static root is written before provider demands or label waits.
+Go reads only its **own PTY** for cells/palette/SIGWINCH; it does not calculate
+native bounds from origin geometry.
 
-The task2 rename contract is now extended for actual provider consumers
-(STARTUP-ASYNC-DATA / STARTUP-QUERY-REUSE). It is private Go invocation plumbing,
-not a public config/protocol/service extension or a persistent cache. Source
-ordering is draw-first; final public first-frame/data/action readiness observation
-is still a coordinator gate, not established by this document.
+Explicit `--client` is strict original intent; popup `REX_CLIENT` is never read as
+original intent. Without it, app operations may retain the original pane's exact
+validated live graphical owner/generation. A CLI ID is not a GUI app. Display,
+resource rename/close and pane focus need no implicit eligible app; explicit
+invalid intent still rejects. No focused/first/sole-app selection or chooser is
+used. [CLI/GUI delegation](cli-gui-delegation.md) describes this boundary.
 
-- The parent creates a random invocation ID in `runtime.json`. Four fixed regular
-  slots (`rename-tab-demand.json`, `rename-session-demand.json`,
-  `rename-tab-update.json`, `rename-session-update.json`) start empty. Each slot
-  carries at most one strict JSON object, bounded by `popupMessageLimit`. Owned
-  0600/no-follow/link-count checks and nonblocking flock serialize full reads and
-  writes; contention is retried by the existing polling loops, never by waiting
-  on the terminal thread. Eight additional literal slots pair
-  `sessions/windows/panes/hosts-demand.json` with
-  `sessions/windows/panes/hosts-update.json`. Each kind has only one demand and one
-  terminal publication, including errors. No append log, arbitrary filename,
-  refresh generation or unbounded queue exists.
-- Opening an inline form demands canonical kind `tab` or `session`, full canonical
-  mapping keys as its prefix, invocation ID and load number 1. There are four
-  provider demands, two form demands, five possible once-only jobs (one supplies
-  both labels), at most two executing metadata workers and two result slots.
-  Workers return immutable values, not mutations to shared menu/controller state.
-  The label worker reads a detached origin session-view
-  snapshot already required for placement, or obtains that exact view on demand
-  when none is supplied. Its immutable result contains both labels or a bounded
-  unavailable reason; it cannot mutate Config, targets, live Menu or terminal.
-- The controller alone validates demands against enabled retained empty-args
-  rename mappings. It retains each kind/load/prefix result **before** writing a
-  ready update. Existing mappings/args/full target IDs and original GUI intent
-  were retained before child creation and never come from presentation. A ready
-  kind covers only the parent's already retained same-kind rename mappings;
-  alternate configured keys share that publication rather than start new loads.
-- UI state is loading, unavailable or ready per kind. Loading/unavailable status
-  is inline and non-executable. Forms accept edits and Escape while loading, but
-  Enter is discarded until ready: it is never buffered, confirmed or replayed.
-  Only the UI loop reads updates, changes live state and redraws. Unrelated
-  prefix/page/confirmation and partial UTF-8/escape/paste decoder state survive.
-  A label initializes only a wholly untouched form, not edits, cursor movement,
-  validation/error state, pending input bytes/paste or confirmed text.
-- A rename result adds only `update` (invocation/kind/load) to bounded
-  keys/confirmation/text. The parent joins the controller, then matches this
-  binding to its retained ready publication/demand prefix and selected mapping
-  kind. Demand keys are not repeated in the result, preserving the existing
-  near-limit full-key result budget. Unknown, malformed, stale, loading or
-  unavailable bindings refuse; non-rename results
-  cannot carry one. Labels, ordering, child actions/args/IDs grant no authority.
-  No refresh/retry generations exist in this revision; each kind publishes once.
-- Provider demands use the same invocation/kind/load/full-prefix identity.
-  The controller validates enabled retained markers, builds all same-kind marker
-  rows, validates child/combined bounds and retains exact mapping args and pane
-  placements **before** publishing. A provider update carries complete rows plus
-  invocation/kind/load, not duplicated near-limit demand keys. UI-loop application
-  validates the whole batch off to the side, then rebinds existing navigation,
-  confirmation and form nodes without resetting their state or terminal decoders.
-  Pending choices are non-executable; loading keys/Enter are discarded, not replayed.
-  A selected provider child carries a `provider` binding matched after join to
-  the parent's published batch. Child IDs, labels, list indices and stale bindings
-  cannot replace parent authority. Errors/empty rows cannot execute.
-- Windows/panes and current rename labels reuse only the captured matching origin
-  session-view. Sessions-list and hosts each have a separate invocation result.
-  Current Inspect/origin/GUI-generation/destination/geometry/liveness/cleanup
-  checks remain live reads, not presentation-cache lookups.
-- Child terminal loss/cancel/parent-pipe EOF stops interaction; its lifetime
-  watcher is canceled/joined before result commit. Parent selection/dismissal,
-  error, origin loss or cancellation cancels and joins its metadata worker and
-  controller before result acceptance and exact popup/focus/transport cleanup.
-  Late worker results are discarded after cancellation. Transport/join/close/
-  cleanup errors suppress effects, not hidden as successful selection. Existing
-  fresh origin/app-generation/destination checks and once-only dispatch remain.
-  No idle menu deadline is introduced.
+## In-process menu metadata (STARTUP-UI-UPDATES)
+
+This replaces the old private incremental rename/provider file transport. Internal
+bounded request/publication values remain Go data, not IPC or a public schema:
+
+- At most two metadata jobs and two result slots; one attempt/result per kind,
+  including errors. Visible enabled sessions demand after first successful draw;
+  hidden sessions and windows/panes/known-hosts demand on explicit prefix entry.
+  Rename labels demand on form entry. Disabled/absent providers do no work.
+- Window/pane/rename presentation reuses the validated matching origin view;
+  sessions-list and hosts have independent once-per-invocation results. No cache
+  substitutes for fresh pre-effect resource/app/destination checks.
+- Workers return detached immutable results. The UI owner retains complete
+  mappings/args/full targets before ready rows and applies complete batches without
+  changing prefix/page/confirmation/edits/cursor/partial decoder state.
+- Loading/error rows cannot execute. Rename is editable/cancellable while loading;
+  Enter is discarded until ready, never queued/replayed. Ready labels initialize
+  only untouched fields. Selections match retained ready publications; labels,
+  indices and text do not grant replacement target authority.
+- Existing 512-resource, child/key-byte/4-MiB, UTF-8/text and confirmation bounds
+  remain. Re-entering does not retry/refresh. All workers cancel/join on exit.
+
+See [data/providers](mapping-format.md), [rename](tab-rename-input.md) and
+[session UI](session-owned-ui.md). There is no renderer child, runtime image,
+lifetime FIFO, lease, result/update/demand files, callback registry or relay.
 
 ## Fixed navigation bounds and liveness
 
-Go computes content-sized initial bounds and seeds PTY cells in a single creation
-call. Submenu/back/paging/focus/idle never resize or replace the layer. Large menus
-paginate inside current cells. External font/window changes may change terminal
-cells; SIGWINCH/focus-in redraw do not resize application-owned bounds.
+Lua chooses one fixed fractional rectangle. Menu navigation, background readiness,
+paging/back/focus/idle do not resize or recreate it. Go fits/paginates inside its
+current own-PTY cells; SIGWINCH/focus-in redraw do not alter outer bounds. This is
+not content-height native shrink wrapping or proof of first-size-final GUI pixels.
 
-There is no Lua action timeout, callback-ticket expiry or menu idle deadline.
-The Go parent watches captured resource placement/liveness; the PTY child watches
-its parent lifetime pipe. Long terminal wait does not inherit a short RPC timeout.
-Tab switching or absent GUI eligibility alone does not cancel display.
-Operation checks/RPCs and cancellation-independent cleanup remain bounded.
-See [appearance](appearance.md) for measurement/focus/native-controls limits.
+The terminal has no idle expiry. Original resource placement/liveness, selected
+app generation and operation deadlines remain guarded. Tab switching alone does
+not cancel the menu. No original Lua VM, callback-ticket timeout or parent pipe
+determines menu lifetime.
 
 ## Fixed owned cleanup inventory
 
-[popup.go](../popup.go) owns `runPopupLifecycle/removePopupFiles`;
-[runtime_bootstrap.go](../runtime_bootstrap.go) owns source-handle capture/copy/retirement.
-Cleanup targets only:
+After joining jobs and restoring/closing its tty, Go must complete bounded,
+cancellation-independent cleanup before any selected effect:
 
-| Owned item | Boundary |
-| --- | --- |
-| Returned popup terminal Block and Layer | Inspect exact Block; close through the retained Layer; no cascading window/session or label cleanup |
-| Original focus | Revalidate exact origin; never select a replacement focus target |
-| Parent lifetime writer, child reader/watcher, wait goroutine | Close/join; no surviving helper daemon |
-| `config.json`, `result.json` | Private resolved snapshot/result, not user files |
-| `native-input.json` | Private inline-form enablement; legacy label presentation remains private, not identity |
-| `rename-tab-demand.json`, `rename-session-demand.json` | Bounded single-publication form demands |
-| `rename-tab-update.json`, `rename-session-update.json` | Bounded retained presentation publications |
-| `sessions-demand.json`, `windows-demand.json`, `panes-demand.json`, `hosts-demand.json` | One enabled-marker demand per kind |
-| `sessions-update.json`, `windows-update.json`, `panes-update.json`, `hosts-update.json` | One complete parent-retained batch per kind, including errors |
-| `lifetime` | Invocation-local FIFO |
-| `runtime-image`, `runtime.json` | Invocation-local image copy and selected CLI path/independent endpoint context, not an executable receipt or Lua bridge |
-| Private `rex-whichkey-*` directory and open source-image handle | Remove fixed names through the owned root, then empty directory; retire source handle before effect |
+1. Revalidate the exact returned sole terminal/floating layer and placed identity.
+2. Call `session.detach_block` once on that exact Block, never close a user
+   window/session or select by label. Verify layer retirement/no placed popup
+   and exact detached terminal identity through `session.list_blocks`.
+3. Revalidate original placement and captured app generation as applicable;
+   restore original focus and verify exact window/focused Block. No replacement
+   resource or current-focus fallback is permitted.
+4. Match the selected retained mapping/publication, then perform fresh required
+   target/app checks and issue at most one selected effect. Uncertain detach,
+   tty/worker/focus/ownership cleanup suppresses dispatch; no mutation retry.
 
-Directories are owned mode 0700; transport slots are owned mode 0600, the copied
-image 0700. Strict JSON, bounded copy/input, fixed-slot owner/mode/link-count and
-no-follow checks preserve private transport integrity. The child reuses the
-selected CLI path without rediscovery; no binary hashing or installation/link
-receipt is required. Copy/write/close completes before start without image Sync.
-The child result cannot supply replacement action/resource authority. Result
-Sync, locking, lifetime checks and exact source-handle retirement remain.
-Unexpected directory contents prevent removal; there is no recursive scavenger.
+User1b explicitly permits the detached execution-host Block to remain through
+that effect until Go exits or Rex deletes it. Lua sets
+`exit={on_completion=true, quick_exit_threshold_ms=0}` so Rex can delete even a
+failed/short-lived or detached terminal after exit. **Go cannot verify its own
+post-exit deletion.** A later cleanup failure cannot suppress/undo an earlier
+action; creation/visible retirement alone does not prove host deletion. Coordinator
+runtime evidence must inspect exact `session.list_blocks` after Go exits.
 
-The terminal restores modes/termios before result commit. Exact popup removal,
-origin focus, pipe/files and source-handle retirement must succeed before selected
-effects, including actions that close their caller. Uncertain cleanup suppresses
-dispatch. Deferred cleanup survives caller cancellation with its own five-second
-budget. Unknown creation IDs, server loss, SIGKILL or I/O failures can leave
-resources/artifacts. No broad cleanup, automatic uncertain retry or guaranteed
-post-crash cleanup is claimed. Checks and effects are separate, not atomic
-against external changes.
+No invocation-private files/image/source handle or child wait remain to clean.
+Pre-effect checks and mutations are separate, not atomic against external changes.
+SIGKILL, server/terminal loss or uncertain acknowledgments may leave resources.
+No broad scavenging, rollback, uncertain retry or guaranteed post-crash cleanup
+is claimed.
 
-## Evidence and historical boundary
+## Effects and evidence boundary
 
-Phase16 CLI-only delivery is verified, including the final public menu and an
-exact owned inline rename. Phase18 tasks1/2 have reviewed/integrated public runs,
-including actual loading/edit/ready preservation and owned rename/cancel/cleanup.
-See [acceptance](acceptance.md) for revision-bound artifacts and timing limits.
-The final async combined candidate still needs independent source review and
-coordinator comparable normal public first-frame/data/action-ready observation,
-owned benign effect, cancellation and exact cleanup. No final speedup, leaf
-product invocation, physical-key/reload, installed profile, Nix activation or
-cross-platform/remote success is claimed.
+Go retains original action/resource authority. Session/window selection checks
+exact destination membership and uses `client.perform session.select` without
+outer origin overrides; splits omit them too. Other app actions retain original
+context. New Tab creates one source-session Window and activates its returned
+ID; failed activation preserves it, not rollback/duplicate creation. Rename/close
+use exact resource methods after pre-effect cleanup. Authentication and Remote
+Control remain Rex policy.
 
-The earlier bridge contract is historical at
-`cd5cbce818e07c264738ddcbc591ad49fdf0e9c8:docs/launch-contract.md`.
-Its original-VM/completion/controller/anchor requirements do not apply to this
-CLI-only path. Prior evidence/commits and [historical acceptance](acceptance.md#historical-delivery-records)
-remain preserved; Phase15 is not retroactively declared complete.
+Current native Task01/02 summaries and `.mtn-tmp/p19/resume/task{1,2}-public-evidence.json`
+in the coordinator checkout bind delivered direct-source observations. Actual
+Task03 `make run` on reviewed combined source **and rebuilt main** remains a
+coordinator gate; no leaf runtime was performed. It must establish actual
+program/popup identity, no Go launching parent/copy/IPC, menu/provider/palette/
+own-PTY behavior, owned rename/cancel/dismissal and pre-effect visible/post-exit
+host cleanup. Compile/help/creation ACK cannot replace these checks. Task04
+refreshes final current evidence. Installed-profile, physical-key, remote and
+platform-wide behavior are not certified. [Acceptance](acceptance.md) preserves
+older revision-bound evidence without treating old controller mechanics as current.

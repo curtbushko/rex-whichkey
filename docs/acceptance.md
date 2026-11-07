@@ -1,3 +1,73 @@
+# Current release evidence: shared Lua float / direct Go
+
+## Phase19 current source and pending make-route observation
+
+Accepted direction `REXWHICHKEY-20261106-232754`: shared Lua owns native float
+creation/fractional sizing; one Go process inside it owns menu/defaults/JSON,
+providers/rename/confirmation, own-PTY palette/fitting and CLI effects. There is
+no Go launching controller, renderer child, copied image, private FIFO/result/
+update transport or wrapper supervisor. Bare/root-flag Go launch rejects safely.
+Functions/callbacks/executable Lua menu config/hooks remain deferred.
+
+User1a explicitly accepted default native chrome **for now**, deferring REQ-026
+native titlebar/border/corners/shadow customization. It is not implemented or
+credited complete; older blocked wording below is historical, not current policy.
+User1b permits the detached execution-host Block through dispatch until Go exits
+or Rex deletes it. Workers/tty/visible float/exact original focus must still be
+cleaned and verified before an effect; uncertainty suppresses effects/no retry.
+Go cannot verify its own post-exit deletion. A later cleanup failure cannot
+suppress/undo an already-issued effect; exact `list_blocks` observation is needed.
+
+Delivered prerequisites are recorded by native completed Task01/02 summaries in
+the coordinator collection, not inferred from this documentation:
+
+| Delivered source | Revision-bound observed scope |
+| --- | --- |
+| Task01 integrated `3b9293334a498d65f459afc2173839d67562e174`; `.mtn-tmp/p19/resume/task1-public-evidence.json` | Shared script/direct root, dynamic metadata, exact owned inline rename, separate configured pane-filter/edit-cancel/root-dismiss runs; visible retirement before effect and observed post-exit host deletion. No page-transition claim from its resize capture. |
+| Task02 integrated `75c75d26923573a4b4b3a67f18cafdd3336fa82f`; `.mtn-tmp/p19/resume/task2-public-evidence.json` | Reviewed controller retirement; direct root/provider/own-popup exclusion, edited rename canceled then exact owned rename, real native terminal resize 80×24→60×9 and reflow with fixed `.8/.3` outer bounds, default dismissal, pre-effect detached host/no float while old label remained, eventual exit0/host absence/origin focus/tty restoration. Process executable/ancestry observed no launching Go parent. Resize had no GUI owner, not physical GUI/pixel evidence. |
+
+Those coordinator artifacts live in the authoritative checkout; packaged docs do
+not install workflow transport. Source equality, build/vet and independent reviews
+are bound by native summaries. Same-family independent review is not cross-family
+coverage. Earlier failed runs/blockers remain preserved, not silently counted as
+success. These are selected cases on Darwin arm64, not a full failure/platform or
+provider/action matrix.
+
+Task03 changes the normal source route: `make run` builds this checkout and uses
+`rex do ABSOLUTE_ROOT/lua/rex_whichkey.lua --action rex_whichkey_launch` with
+explicit originating `-s/-b`, optional original `-C`, and trusted absolute
+`development_directory=ABSOLUTE_ROOT/bin/GOOS-GOARCH`. The Lua terminal starts
+fixed `rex-whichkey direct`; installed launch omits the directory. Home Manager
+still links only the shared module, not init.lua/bindings/JSON. No activation,
+reload, dependency/pin or runtime-discovery policy change is implied.
+
+**Pending coordinator gate:** actual normal `make build` / `make run` on the
+exact independently reviewed combined checkout **and rebuilt main**, including
+resolved make implementation/arguments, current Go program and popup IDs, root/
+provider/keyboard/palette/own-PTY behavior, exact owned benign rename, edit cancel,
+root dismissal, no Go launching parent/copy/IPC and pre-effect visible/tty/worker/
+focus cleanup plus final exact detached-host absence. Build/help/dry-run/creation
+ACK/launch exit0 are not actual display, Go exit or cleanup evidence. This leaf
+performed no product runtime; Task04 refreshes this top section from actual final
+evidence. Do not read the older no-argument/controller commands below as current
+usage. Current commands: [README](../README.md), [launch](launch-contract.md),
+[package/discovery](runtime-bootstrap.md), [appearance](appearance.md).
+
+Task03's required source gate is whitespace; changed Nix is static formatter/
+syntax-parse only, not evaluation/build/install/check/activation. Combined Go
+build/vet and real runtime belong to the coordinator. Tests/race/TDD/Lua/parser/
+FIFO harnesses/benchmarks/synthetic delays were not run. Protected assertions,
+quality commands/hooks/dependencies/pins/lint configuration remain unchanged.
+Inherited full lint reported 62 failures with AI lint not reached; it is not green.
+No physical-keybinding, installed-profile, remote/deploy or all-platform success,
+phase completion or native customization follows from this source delivery.
+
+## Historical Phase16/18 delivery record (verbatim)
+
+The following original inventory is preserved verbatim, including then-current
+commands, pending statements and old lifecycle/chrome decisions. It describes
+those revisions, not the active Phase19 route or accepted refinements above.
+
 # Release evidence: CLI-only delivery and async startup
 
 ## Verified delivery and captured async evidence

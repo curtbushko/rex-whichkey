@@ -35,78 +35,45 @@ status borders, subject to width clipping. A zero-height viewport draws nothing
 but does not mutate navigation. Semantic roles and text warnings remain intact
 without color; ASCII mode changes decorations, not user labels.
 
-## Actual layer height and measurement limits
+## Fixed Lua rectangle and own-PTY fitting
 
-`MenuFrame.PreferredHeight` is the natural terminal-row count at the current
-width: all current entries (or one confirmation/empty message) plus both status
-borders and both ideal spacer rows. It is independent of viewport-height clipping,
-pagination and selected page. `Height`/`Lines` still describe only the constrained
-visible frame. Initial sizing consumes this exact producer value, not a second
-menu measurement or the already-clipped frame height.
+[`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) creates one centered float with
+finite launch `width`/`height` fractions in `(0,1]`, default `.8/.3`:
+`{(1-width)/2, (1-height)/2, width, height}`. Shared source/script/require launch
+uses this same implementation. Source `make run` builds current Go and supplies
+its absolute target-bin directory; installed launch uses ordinary PATH.
+See [launch options](launch-contract.md#lua-presentation-and-creation).
 
-Before creating the popup, [`popup_initial.go`](../popup_initial.go) calls this
-same renderer at an estimated popup width. The parent computes a content-sized
-rectangle and sends terminal startup columns/rows in the **single creation RPC**,
-instead of opening at the position maximum or using the server's unrelated 80×24
-default. It uses the exact origin leaf's window-relative rectangle and validated
-current-owner terminal measurement, never the active window or a leaf rectangle
-multiplied by floating-layer bounds. Split/floating origins keep their actual
-scale; documented zoomed origins use the window rectangle. Placement changes
-during sampling or before creation invalidate the measured snapshot.
+Go does not measure origin geometry, choose native content-height bounds or seed
+a hypothetical window grid. The direct menu starts at row zero and fits its
+**own PTY** cells. Larger menus paginate; status/spacer behavior above is retained.
+`MenuFrame.PreferredHeight` remains a natural terminal-row measurement, not a
+native layer sizing command. JSON `position` is still validated but does not
+choose outer bounds in direct mode; standalone UI/result positioning remains.
 
-Initial sizing is an estimate: normalize origin bounds by measured rows/columns,
-reserve two horizontal and four vertical cells for insets, and round height
-upward by half a row. The two additional vertical cells protect root spacing
-without a later correction; they are conservative headroom, not calibration. Optional
-valid paired cell pixels seed terminal metadata, not font preferences or viewer
-measurement provenance. New-pane font/native chrome can differ from the origin.
-When geometry is missing, malformed or unmeasured, use a hypothetical 100-column,
-40-row window grid and cap initial height at 30% (or the smaller position cap).
-The seeded rows are the natural count capped to that estimated available space;
-large menus paginate. This compact fallback is policy, not measured GUI geometry.
-No hidden/offscreen first layer, recreation, cache or app binding is involved.
+Submenu/back/paging/metadata/focus/idle never resize or replace the layer.
+External terminal/window/font changes can alter own-PTY cells; SIGWINCH and
+focus-in repaint/reflow retained content without application-driven outer resize.
+No idle menu expiry, repaint timer, font/settings mutation or geometry feedback
+loop is introduced. Palette replies are metadata, not keyboard actions.
+Captured placement/liveness checks remain distinct from selected app-generation
+checks. This is not pixel-perfect shrink wrapping, GUI pixel provenance or a
+first-size-final guarantee. Historical Go-controller sizing observations below
+are not evidence for this Lua sizing route.
 
-The initial rectangle stays unchanged for the invocation. Submenu entry, paging,
-back, focus and idle never call `Layer.Resize`. Larger menus paginate inside the
-current cells; the popup does not choose an all-submenu maximum at startup.
-Popup frames start at row zero; standalone `RunTerminal` positioning is unchanged.
-The private preferred-row observer, hint files and live geometry feedback loop
-are retired. The existing one-second watcher checks captured resource placement/liveness,
-not GUI attachment/generation as an idle-display prerequisite. Selected app
-effects independently revalidate the retained connection after cleanup. See the
-[launch contract](launch-contract.md#fixed-navigation-bounds-and-liveness).
+### Native chrome: accepted defaults, customization deferred (REQ-026)
 
-The original position rectangle still caps initial height: top/bottom use at most
-40% of the window height, center 60%, and left/right 100%. Initial placement keeps
-the original top edge, bottom edge, or vertical center (center/side positions).
-External native window/font changes may naturally change terminal cells;
-SIGWINCH and focus-in repaint/adapt retained content without application-driven
-layer-bound changes. No font preference is changed. Startup terminal seeds are
-not viewer measurements, and later reports do not trigger fitting.
+User1a explicitly accepted Rex defaults **for now** and deferred per-float native
+titlebar/border/corner/shadow customization. It is not implemented or credited as
+REQ-026 completion. The inspected Rex API has no supported per-float knobs for
+that customization; this is not a claim about all future Rex versions.
 
-This fixed-navigation behavior (REQ-029) supersedes only the navigation-driven
-resize portion of REQ-025. Historical grow/shrink observations do not verify the
-new requirement. Initial sizing/spacers remain; exact first/root/submenu/paging/
-back/idle bounds and cleanup require fresh revision-bound coordinator evidence.
-There is no idle repaint timer, replacement popup, daemon, app-action lookup or
-global font/settings edit.
-
-### Native controls remain blocked (REQ-026)
-
-The requested per-popup hiding of native Rex pane/tab/window controls is **not
-implemented and not deferred by the user**. Retained `session.new_layer` and
-`session.resize_layer` schemas expose bounds/layout/focus, not a chrome switch;
-the shell creator rejects unknown options. The captured connected-app action
-registry and published Lua layout reference provide no supported per-popup
-control/header/toolbar suppression. This is a limitation of the inspected Rex
-capabilities, not proof that no future Rex version can support it.
-
-No undocumented flag, global setting, font change or clipped-over control is a
-substitute. A supported Rex capability/update or explicit user deferral is needed;
-Phase11/project completion remains blocked by this requirement. The
-[acceptance inventory](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026)
-indexes the API evidence and distinguishes measured server layer/terminal frames
-from native GUI chrome, including remote clients.
+No guessed/ignored API fields, global settings changes, clipped controls, font
+changes or ANSI/text borders substitute for native chrome support. Go's terminal
+palette matching below is separate. Task04 records the accepted policy and final
+revision-bound evidence; it is not a native-feature implementation. Earlier
+blocked statements/API observations remain historical in
+[acceptance](acceptance.md#compact-popup-presentation-req-024025-and-blocked-req-026).
 
 ## Roles and inspiration
 
@@ -158,7 +125,7 @@ values or universally distinct hues.
 
 ## Foreground return
 
-The real popup child retains one menu and theme throughout `RunTerminal`. Its
+The direct Go process retains one menu and theme throughout `RunTerminal`. Its
 terminal ownership now includes saving, enabling and restoring xterm focus-reporting
 mode 1004 alongside wrap, cursor visibility and bracketed paste. The single input
 reader passes bytes through `PaletteDecoder`, then `terminalKeys`; only a complete,
@@ -180,18 +147,18 @@ prove that a native app restores/displays its floating layer on tab return.
 
 - A **nonempty** `NO_COLOR` in the execution environment disables theme color
   output and skips palette queries **in the rendering process**. Normal popup
-  rendering runs in the Rex-created server-host terminal child, not the calling
-  terminal's process. The launchers do not forward the caller's `NO_COLOR` or
-  supply an environment override to `session.new_layer`; do not assume a new
-  caller-side export changes that child. Its effective environment is managed
+  rendering runs in the Rex-created server-host terminal, not the caller's
+  process. Lua does not forward caller `NO_COLOR` or supply an environment
+  override to `session.new_layer`; do not assume a new caller-side export changes
+  that terminal. Its effective environment is managed
   by Rex. Changing a terminal variable does not change an already-running
   server's environment.
-- Public `rex-whichkey --no-color --ascii` explicitly forwards these presentation
-  flags to the Go-owned popup child. Low-level UI/result `menu` and private
-  `popup` modes accept them too. They are not Lua setup fields; the minimal
-  keybinding starts the public binary without flags. ASCII mode replaces application decorations
-  with ASCII equivalents and omits optional icons, but does not transliterate
-  user labels or itself disable colors.
+- Public Lua launch `no_color=true` / `ascii=true` explicitly supplies Go direct
+  `--no-color` / `--ascii`; the require binding accepts corresponding booleans.
+  Source PATH wrapper: `make run -- no_color=true ascii=true`; GNU make:
+  `make run ARGS='no_color=true ascii=true'`. Standalone UI/result `menu` also
+  accepts Go flags. Bare Go/root flags and private `popup` mode are not launchers.
+  ASCII mode changes decorations/optional icons, not user labels or color policy.
 - Control characters are removed before text measurement/styling, including
   in no-color mode. The renderer clips plain grapheme/cell-width spans before
   adding SGR, so color escapes do not consume layout columns. Actual font/glyph
@@ -206,12 +173,13 @@ prove that a native app restores/displays its floating layer on tab return.
 
 ## Evidence
 
-Current CLI-only source uses Go JSON configuration and the same retained renderer;
-no Lua configuration/registration is needed. Task2's coordinator observed the
-normal default public menu/navigation/dismissal/cleanup on Darwin arm64 at
-`7bdbda2`, not the full palette/geometry/focus/flags matrix. Final combined
-launcher/package runtime is pending. No physical key/reload, Nix build/activation
-or new rendering experiment is claimed here.
+Phase19 Task01/02 native summaries bind direct-source menu/palette captures,
+real own-PTY resize/reflow without outer-bound change, owned rename/cancel/dismissal
+and pre-effect visible/post-exit host cleanup. The observed terminal resize had
+no GUI owner; it is not a physical GUI drag or pixel measurement. New Task03
+make-route checks on reviewed combined source and rebuilt main remain coordinator
+gates. No physical-key/reload, installed-profile, Nix build/activation, every-
+palette/geometry/flags or all-platform result is claimed by this source update.
 
 The following observations are **historical and revision-bound**, not current
 combined-candidate certification. Legacy configured-Lua/callback references

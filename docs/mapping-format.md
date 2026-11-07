@@ -7,24 +7,30 @@ contract in the flat Go package. It reads files and returns an independent,
 validated configuration; it never invokes Rex, queries inventories, evaluates
 Lua, writes configuration or expands providers.
 
-The public entrypoint uses this loader, draws validated static groups/loading
-placeholders, and then loads eligible providers asynchronously. Go retains exact
-choices before publishing them and dispatches through Rex CLI resources only
-after cleanup. It never queries Lua runtime/launch registrations. Phase16 and
-Phase18 tasks1/2 have actual public Darwin evidence; final async runtime and
-comparable timing remain pending. This is not arbitrary-config, every-provider,
-keybinding or installed-profile certification. See [acceptance](acceptance.md).
-Legacy
-`DecodeConfig`, callback wire validation and `launchOutput` remain isolated for
-unchanged source tests, not as an alternative public configuration/control path.
+Shared Lua creates one fixed fractional float and starts the direct Go entry.
+Go uses this loader, draws static groups/loading placeholders and loads eligible
+providers asynchronously in-process. Exact mappings/targets are retained before
+ready rows; effects follow worker/tty/visible-float/original-focus cleanup. The
+accepted detached-host exception permits that Block through dispatch until Go
+exits/Rex deletes it; a later cleanup failure cannot suppress an earlier effect.
+There is no launching Go parent, renderer child, image copy or file IPC.
+
+Phase19 Task01/02 native summaries bind direct-source runtime observations;
+new Task03 make-route combined/rebuilt-main checks remain coordinator-owned.
+This is not arbitrary-config, every-provider, physical-key or installed-profile
+certification. [Acceptance](acceptance.md) preserves revision-bound evidence.
+Genuine old controller/wire support remains test-only for unchanged assertions,
+not an alternative production control/configuration path.
 
 ## File selection
 
 Go starts with the current built-ins, then applies exactly one selected JSON
 options file. In priority order:
 
-1. A present `--config PATH` (represented by non-nil `explicit`). An empty path is
-   an error. Relative paths are relative to the process working directory.
+1. A present `--config PATH` (represented by non-nil `explicit`), supplied to
+   `direct` by Lua launch `config` data, or to standalone UI/result `menu`.
+   An empty path is an error. Relative paths use the rendering process cwd;
+   prefer absolute paths for source/installed Lua launch.
 2. Nonempty `REX_WHICHKEY_CONFIG` (also permits a relative path).
 3. `$XDG_CONFIG_HOME/rex-whichkey/config.json` when `XDG_CONFIG_HOME` is set.
    It must be an absolute, nonempty directory path; an explicitly empty or
@@ -50,7 +56,7 @@ Required member: `"version": 1`, exactly the integer scalar `1`, not `1.0`, `1e0
 
 | Member | Type | Meaning |
 | --- | --- | --- |
-| `position` | string | `top`, `bottom`, `left`, `right`, `center` |
+| `position` | string | `top`, `bottom`, `left`, `right`, `center`; standalone UI positioning only |
 | `title` | string | Menu title; `""` suppresses it |
 | `icon` | string | Menu icon; `""` suppresses it |
 | `icons` | object | Only `breadcrumb` and `group`, both strings |
@@ -62,6 +68,13 @@ A present `spec` replaces the **whole** binding list, not individual keys;
 `"spec": []` deliberately clears it. Explicit empty strings and false booleans
 are data, never replaced by truthy/default merging. An empty position remains an
 invalid position. `{"version":1}` preserves all built-ins.
+
+The shared Lua launch's finite `width`/`height` fractions (defaults `.8/.3`,
+centered) control native outer bounds, not this JSON `position`. The direct menu
+renders from row zero within its own PTY and never resizes that rectangle.
+Launch `config`, `ascii`, `no_color` are data options; normal source routing is
+`make run -- config=/absolute/menu.json` with the PATH Task wrapper, or GNU make
+`make run ARGS='config=/absolute/menu.json'`. Bare Go/root flags are not a launcher.
 
 Unknown or differently cased structural members are rejected by exact name,
 including Unicode case-fold lookalikes. Duplicate members (including escaped
@@ -171,7 +184,8 @@ Scheduling is invocation-local:
   only on explicit prefix entry.
 - `windows` and `panes` load on first enabled prefix entry. They use the captured
   matching origin session-view snapshot, including original ordering/current
-  markers, rather than re-inspecting for presentation.
+  markers, rather than re-inspecting for presentation. The direct menu's own
+  popup is excluded from pane rows/counts/targets; raw ownership checks stay exact.
 - `known-hosts` loads only on explicit enabled prefix entry. It uses listing-only
   `rex hosts --json` on the execution host with its existing home semantics,
   fields/warnings/limits; no endpoint probe, attach or reachability claim.
@@ -197,7 +211,7 @@ reuse does not replace fresh pre-effect origin/GUI-generation/destination checks
 Known-host details remain non-executable; remote connect/management is not implied.
 Standalone `menu` is UI/result-only: hosts have the same demand behavior; resource
 providers without native origin authority show unavailable, not fabricated targets.
-See the [private update contract](launch-contract.md#private-incremental-rename-contract-startup-ui-updates).
+See the [in-process update contract](launch-contract.md#in-process-menu-metadata-startup-ui-updates).
 
 `ValidateMenuProviderChildren(marker, children)` is the structural batch contract:
 
@@ -217,7 +231,7 @@ Provider queries, expansion, pagination and dispatch belong to the Go launch
 consumer, not the file loader. Supported notation is canonicalized in one retained
 snapshot before expansion, so case-insensitive key notation cannot break dispatch.
 Inline rename follows retained action intent at any configured key, with optional
-confirmation and validated private text; it never opens a native rename dialog.
+confirmation and validated text; it never opens a native rename dialog.
 
 ## Built-ins and migration
 
