@@ -73,6 +73,14 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	menu.textSpec = config.textEntry
 	menu.providers = &menuProviderUpdates{base: base}
 	transport, incremental := ctx.Value(terminalRenameKey{}).(terminalRenameTransport)
+	direct, inProcess := ctx.Value(terminalDirectKey{}).(*directMenuState)
+	if inProcess {
+		if direct == nil || incremental || direct.client == nil || direct.request.snapshot == nil || config.textEntry == nil {
+			return MenuEvent{}, errors.New("whichkey: invalid in-process menu context")
+		}
+		menu.updates = &menuRenameUpdates{}
+		direct.config = config
+	}
 	if incremental {
 		if transport.root == nil || config.textEntry == nil {
 			return MenuEvent{}, errRuntimeStartup
@@ -171,9 +179,13 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	menu.demandProviders(true)
 	var localJobs *metadataJobs
 	if !incremental {
-		// Standalone remains result-only: hosts are listing-only; resource
-		// providers cannot fabricate native origin/dispatch authority.
-		localJobs = newMetadataJobs(ctx, popupRequest{}, nil)
+		if inProcess {
+			localJobs = newMetadataJobs(ctx, direct.request, direct.client)
+		} else {
+			// Standalone remains result-only: resource providers cannot
+			// fabricate native origin or dispatch authority.
+			localJobs = newMetadataJobs(ctx, popupRequest{}, nil)
+		}
 		defer localJobs.stop() // Join before terminal restoration on every exit.
 	}
 	if !noColor && os.Getenv("NO_COLOR") == "" {
@@ -225,7 +237,13 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		if menu.entry != nil && (input.state != terminalKeyGround || input.runeN > 0 || palette.state == paletteEscape) {
 			menu.entry.touched = true // Preserve partial UTF-8/escape/paste intent.
 		}
-		changed, updateErr := menu.pollUpdates(transport, localJobs)
+		var changed bool
+		var updateErr error
+		if inProcess {
+			changed, updateErr = direct.poll(menu, localJobs)
+		} else {
+			changed, updateErr = menu.pollUpdates(transport, localJobs)
+		}
 		if updateErr != nil {
 			return updateErr
 		}

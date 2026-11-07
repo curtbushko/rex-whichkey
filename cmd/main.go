@@ -11,11 +11,13 @@ import (
 	whichkey "temp"
 )
 
-// run has one public resource path and one private PTY child. The low-level menu
-// command is UI/result-only; it never dispatches a resource operation.
+// direct is the Lua-created, in-popup public entry. The no-argument controller
+// remains transitional; menu is result-only and popup is its private PTY child.
 func run(ctx context.Context, args []string, output, diagnostics io.Writer) error {
 	if len(args) > 0 {
 		switch args[0] {
+		case "direct":
+			return runDirect(ctx, args[1:], output)
 		case "popup":
 			return runPopupChild(ctx, args[1:])
 		case "menu":
@@ -23,6 +25,52 @@ func run(ctx context.Context, args []string, output, diagnostics io.Writer) erro
 		}
 	}
 	return runLaunch(ctx, args, output)
+}
+
+const directHelp = `usage: rex-whichkey direct --origin-session ID --origin-block ID --origin-window ID --origin-layer ID [options]
+
+Run inside the sole terminal of a Lua-created float, not an ordinary pane.
+Original IDs are fixed invocation data, separate from popup REX_* identities.
+Options: --client FULL_ID --server ENDPOINT --config PATH --ascii --no-color
+No nested popup, parent process, private IPC or init reload is used.
+The shared public Lua action is rex_whichkey_launch; run lua/rex_whichkey.lua.
+`
+
+func runDirect(ctx context.Context, args []string, output io.Writer) error {
+	flags := flag.NewFlagSet("rex-whichkey direct", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	options := whichkey.DirectOptions{}
+	flags.StringVar(&options.OriginSession, "origin-session", "", "original full session ID")
+	flags.StringVar(&options.OriginBlock, "origin-block", "", "original full block ID")
+	flags.StringVar(&options.OriginWindow, "origin-window", "", "original full window ID")
+	flags.StringVar(&options.OriginLayer, "origin-layer", "", "original full layer ID")
+	server := flags.String("server", "", "execution-host endpoint override")
+	client := flags.String("client", "", "original exact app intent")
+	config := flags.String("config", "", "version 1 JSON menu data")
+	flags.BoolVar(&options.ASCII, "ascii", false, "ASCII decorations")
+	flags.BoolVar(&options.NoColor, "no-color", false, "disable terminal colors")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			if _, writeErr := io.WriteString(output, directHelp); writeErr != nil {
+				return writeErr
+			}
+		}
+		return err
+	}
+	if flags.NArg() != 0 {
+		return errors.New("whichkey: direct accepts no positional arguments")
+	}
+	flags.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "server":
+			options.Server = server
+		case "client":
+			options.Client = client
+		case "config":
+			options.Config = config
+		}
+	})
+	return whichkey.RunDirectMenu(ctx, options)
 }
 
 func runPopupChild(ctx context.Context, args []string) error {
@@ -79,7 +127,11 @@ func runMenuUI(ctx context.Context, args []string, output, diagnostics io.Writer
 const publicHelp = `usage: rex-whichkey [options]
 
 Open the Go-owned floating menu from the originating Rex terminal.
-No Lua action registration or runtime bridge is used.
+This no-argument path retains the transitional Go controller.
+The shared Lua launcher uses the public direct entry instead:
+  rex do /absolute/checkout/lua/rex_whichkey.lua --action rex_whichkey_launch development_directory=/absolute/checkout/bin/GOOS-GOARCH
+Supply the current build's absolute bin directory for development; omit it for
+ordinary installed PATH. See lua/rex_whichkey.lua for the source-build command.
 
 Options:
   --config PATH      Version 1 JSON menu data (otherwise environment/user default)
