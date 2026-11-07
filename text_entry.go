@@ -10,17 +10,11 @@ import (
 
 const renameTextLimit = 4096
 
-// textEntrySpec is private popup presentation data, not a Mapping option
-// or callback argument. The parent retains the only executable target identity.
+// textEntrySpec is Go-owned inline rename presentation, not a Mapping option
+// or callback argument. Direct dispatch retains the executable target identity.
 type textEntrySpec struct {
 	Initial        string `json:"initial"`
 	SessionInitial string `json:"session_initial"`
-}
-
-// nativeRenameMapping preserves the historical Completion test contract. The
-// supported Go menu uses action-based inlineRenameMapping, not legacy keys.
-func nativeRenameMapping(mapping Mapping) bool {
-	return (mapping.Keys == "tr" || mapping.Keys == "wr") && !mapping.Confirm && inlineRenameMapping(mapping)
 }
 
 func inlineRenameMapping(mapping Mapping) bool {

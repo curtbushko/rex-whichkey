@@ -1,26 +1,13 @@
 package whichkey
 
 import (
-	"encoding/json"
 	"errors"
-	"os"
 	"strings"
 )
 
-// This context value carries an owned root, not a reader goroutine. Only the
-// terminal UI loop calls poll, changes form readiness, or draws its result.
-type terminalRenameKey struct{}
-
-type terminalRenameTransport struct {
-	root       *os.Root
-	invocation string
-}
-
 type menuRenameUpdates struct {
-	invocation string
-	wanted     [2]*renameDemand
-	sent       [2]bool
-	ready      [2]*renameUpdate
+	wanted [2]*renameDemand
+	ready  [2]*renameUpdate
 }
 
 func (u *menuRenameUpdates) demand(node *menuNode) {
@@ -28,12 +15,12 @@ func (u *menuRenameUpdates) demand(node *menuNode) {
 	if kind < 0 || u.wanted[kind] != nil {
 		return
 	}
-	u.wanted[kind] = &renameDemand{Invocation: u.invocation, Kind: renameKindName(kind), Load: 1, Keys: node.keys}
+	u.wanted[kind] = &renameDemand{Kind: renameKindName(kind), Load: 1, Keys: node.keys}
 }
 
 func (m *Menu) renameReady(node *menuNode) bool {
 	if m.updates == nil {
-		return true // Standalone/historical presentation has no private update path.
+		return true // Standalone/historical presentation has no asynchronous rename context.
 	}
 	kind := renameKind(node.mapping)
 	return kind >= 0 && m.updates.ready[kind] != nil && m.updates.ready[kind].State == renameStateReady
@@ -57,60 +44,6 @@ func (m *Menu) renameStatus() string {
 	return ""
 }
 
-// No update feeds or resets terminal decoders. The caller separately marks a
-// form touched when partial input/paste is retained by those decoders.
-func (m *Menu) pollRenameUpdates(transport terminalRenameTransport) (bool, error) {
-	changed := false
-	for kind, demand := range m.updates.wanted {
-		if demand == nil || m.updates.ready[kind] != nil {
-			continue
-		}
-		if !m.updates.sent[kind] {
-			sent, err := sendRenameDemand(transport.root, kind, *demand)
-			if err != nil {
-				return false, err
-			}
-			m.updates.sent[kind] = sent
-			if !sent {
-				continue
-			}
-		}
-		update, err := readRenameUpdate(transport.root, kind, *demand)
-		if err != nil {
-			return false, err
-		}
-		if update != nil {
-			m.applyRenameUpdate(kind, *update)
-			changed = true
-		}
-	}
-	return changed, nil
-}
-
-func sendRenameDemand(root *os.Root, kind int, demand renameDemand) (bool, error) {
-	data, err := json.Marshal(demand)
-	if err != nil {
-		return false, err
-	}
-	_, sent, err := transferRenameSlot(root, renameDemandFiles[kind], data)
-	return sent, err
-}
-
-func readRenameUpdate(root *os.Root, kind int, demand renameDemand) (*renameUpdate, error) {
-	data, ready, err := transferRenameSlot(root, renameUpdateFiles[kind], nil)
-	if err != nil || !ready {
-		return nil, err
-	}
-	var update renameUpdate
-	if err := decodeRuntime(data, &update, popupMessageLimit); err != nil {
-		return nil, err
-	}
-	if err := validateRenameUpdate(update, demand); err != nil {
-		return nil, err
-	}
-	return &update, nil
-}
-
 func validateRenameUpdate(update renameUpdate, demand renameDemand) error {
 	if update.Demand != demand || update.State != renameStateReady && update.State != renameStateUnavailable {
 		return errors.New("whichkey: invalid or stale rename presentation update")
@@ -126,11 +59,9 @@ func validateRenameUpdate(update renameUpdate, demand renameDemand) error {
 }
 
 type menuProviderUpdates struct {
-	base       Config
-	invocation string
-	wanted     [4]*renameDemand
-	sent       [4]bool
-	ready      [4]*providerUpdate
+	base   Config
+	wanted [4]*renameDemand
+	ready  [4]*providerUpdate
 }
 
 // Called only after the first successful draw, or after explicit prefix entry.
@@ -147,21 +78,9 @@ func (m *Menu) demandProviders(firstDraw bool) {
 		background := firstDraw && kind == 0 && !marker.Hidden
 		entered := !firstDraw && (m.Prefix() == marker.Keys || strings.HasPrefix(m.Prefix(), marker.Keys))
 		if background || entered {
-			m.providers.wanted[kind] = &renameDemand{Invocation: m.providers.invocation, Kind: providerKinds[kind], Load: 1, Keys: marker.Keys}
+			m.providers.wanted[kind] = &renameDemand{Kind: providerKinds[kind], Load: 1, Keys: marker.Keys}
 		}
 	}
-}
-
-func (m *Menu) pollUpdates(transport terminalRenameTransport, localJobs *metadataJobs) (bool, error) {
-	if localJobs != nil {
-		return m.pollLocalProviders(localJobs)
-	}
-	renameChanged, err := m.pollRenameUpdates(transport)
-	if err != nil {
-		return false, err
-	}
-	providerChanged, err := m.pollProviderUpdates(transport)
-	return renameChanged || providerChanged, err
 }
 
 func (m *Menu) pollLocalProviders(jobs *metadataJobs) (bool, error) {
@@ -177,7 +96,7 @@ func (m *Menu) pollLocalProviders(jobs *metadataJobs) (bool, error) {
 		}
 		demand := m.providers.wanted[result.kind]
 		if demand == nil {
-			return false, errRuntimeStartup
+			return false, errors.New("whichkey: unexpected local inventory result")
 		}
 		update, _, err := buildProviderUpdate(m.providers.base, *demand, result)
 		if err != nil {
@@ -190,45 +109,6 @@ func (m *Menu) pollLocalProviders(jobs *metadataJobs) (bool, error) {
 	default:
 	}
 	jobs.start()
-	return changed, nil
-}
-
-func (m *Menu) pollProviderUpdates(transport terminalRenameTransport) (bool, error) {
-	changed := false
-	for kind, demand := range m.providers.wanted {
-		if demand == nil || m.providers.ready[kind] != nil {
-			continue
-		}
-		if !m.providers.sent[kind] {
-			data, err := json.Marshal(demand)
-			if err != nil {
-				return false, err
-			}
-			_, sent, err := transferRenameSlot(transport.root, providerDemandFiles[kind], data)
-			if err != nil {
-				return false, err
-			}
-			m.providers.sent[kind] = sent
-			if !sent {
-				continue
-			}
-		}
-		data, ready, err := transferRenameSlot(transport.root, providerUpdateFiles[kind], nil)
-		if err != nil {
-			return false, err
-		}
-		if !ready {
-			continue
-		}
-		var update providerUpdate
-		if err := decodeRuntime(data, &update, popupMessageLimit); err != nil {
-			return false, err
-		}
-		if err := m.applyProviderUpdate(kind, update); err != nil {
-			return false, err
-		}
-		changed = true
-	}
 	return changed, nil
 }
 
