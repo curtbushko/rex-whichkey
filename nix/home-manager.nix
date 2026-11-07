@@ -17,10 +17,13 @@ in {
         Package providing the real bin/rex-whichkey and
         share/rex-whichkey/lua/rex_whichkey.lua launch module.
         The flake module defaults to this flake's package for the host platform.
-        Includes an optional licensed execution-host Rex CLI at
-        libexec/rex-whichkey/rex where published. The pinned source has no
-        Intel macOS CLI artifact; standalone execution-host PATH discovery
-        remains supported. Go owns discovery, validation and endpoint policy.
+        Exposes the same optional licensed execution-host CLI as bin/rex
+        where published. The pinned source has no Intel macOS CLI artifact;
+        provide a legitimate rex on the execution-host PATH there.
+        Go uses ordinary PATH lookup and independent endpoint policy, without
+        binary receipts or startup version/API/schema negotiation. The running
+        Rex server must already inherit PATH for both rex-whichkey and rex;
+        installing a package does not update an existing process environment.
         Installation does not configure data, bindings or a Rex service,
         select an endpoint, or reload the server.
       '';

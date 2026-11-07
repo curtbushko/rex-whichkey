@@ -130,9 +130,8 @@ in
       + (
         if dependency != null
         then ''
-          # Go discovers this optional dependency relative to the public image.
-          mkdir -p "$out/libexec/rex-whichkey"
-          ln -s ${dependency}/bin/rex "$out/libexec/rex-whichkey/rex"
+          # Expose the same optional dependency through ordinary process PATH.
+          ln -s ${dependency}/bin/rex "$out/bin/rex"
         ''
         else ""
       );

@@ -27,8 +27,8 @@ const (
 	terminalSetup        = "\x1b[?7l\x1b[?25l\x1b[?1004h\x1b[?2004h"
 )
 
-// A popup always supplies this context value, including its captured endpoint
-// receipt. Absence is reserved for the standalone menu's initial CLI capture.
+// A popup always supplies its selected CLI path and independent endpoint.
+// Absence is reserved for the standalone menu's initial CLI capture.
 type terminalRuntimeKey struct{}
 
 type terminalRuntime struct {
@@ -40,8 +40,7 @@ func resolveTerminalHostMenu(ctx context.Context, config Config) (Config, error)
 	var selection *rex.CLISelection
 	if frozen, present := ctx.Value(terminalRuntimeKey{}).(terminalRuntime); present {
 		endpoint, err := rex.CanonicalEndpoint(frozen.endpoint)
-		if err != nil || endpoint != frozen.endpoint || frozen.selection == nil ||
-			frozen.selection.Capabilities == nil || frozen.selection.Capabilities.Endpoint != endpoint {
+		if err != nil || endpoint != frozen.endpoint || frozen.selection == nil {
 			return Config{}, errRuntimeCompatibility
 		}
 		// The parent expanded providers before sizing and image handoff.

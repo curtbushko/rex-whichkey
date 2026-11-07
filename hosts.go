@@ -32,8 +32,8 @@ func resolveHostMenu(ctx context.Context, config Config, selection *rex.CLISelec
 	if !requested {
 		return config, nil
 	}
-	// The endpoint remains bound inside Selection's API receipt; it does not
-	// retarget rex hosts, whose execution-host/home inventory semantics remain.
+	// Only the invocation's selected CLI path is reused. The independently
+	// retained endpoint does not retarget rex hosts' execution-host inventory.
 	inventory, readErr := rex.Hosts(ctx, rex.InventoryOptions{Selection: selection, Timeout: 3 * time.Second})
 	if err := ctx.Err(); err != nil {
 		return Config{}, err // Invocation cancellation/expiry is not a listing warning.

@@ -21,7 +21,7 @@ The package installs ordinary assets:
 
 ```text
 bin/rex-whichkey                         # real executable
-libexec/rex-whichkey/rex                 # optional licensed CLI symlink
+bin/rex                                # optional licensed CLI symlink
 share/rex-whichkey/lua/rex_whichkey.lua   # launch only
 share/rex-whichkey/examples/             # JSON data and keybinding examples
 share/doc/rex-whichkey/                  # documentation
@@ -31,11 +31,15 @@ The flake exports `packages.<system>.rex-whichkey` and `default` for
 x86_64/aarch64 Linux and macOS. These are declared outputs, not platform
 certification. Pinned official CLI artifacts exist for x86_64/aarch64 Linux and
 aarch64 macOS, **not Intel macOS**. A legitimate `rex-cli` package override
-can supply `bin/rex`; otherwise a standalone installation can use validated
-execution-host PATH discovery. Licensing/unfree policy still applies.
+can supply `bin/rex`; otherwise provide a legitimate `rex` on the
+execution-host PATH. Licensing/unfree policy still applies.
 Linux loader/PAM/terminfo/SSH assets and the released Darwin signature are
 preserved. Nix installs inputs; Go alone owns runtime discovery and policy.
 No wrapper, Lua-tree binary, anchor or generated helper layout is required.
+A source-only Go build supplies neither the licensed CLI nor installed Lua/assets;
+provide `rex` separately and expose the named `rex-whichkey` binary on PATH.
+The optional package CLI is the same pinned dependency, now exposed as `bin/rex`;
+no dependency, pin or profile change is implied.
 
 Optional Home Manager integration:
 
@@ -82,7 +86,9 @@ end)
 The key is **only an example**. It has not been installed or pressed as part of
 this delivery. Choose and wire it yourself through your normal configuration
 lifecycle; a binding may replace an existing shortcut. The server process must
-already find `rex-whichkey` on PATH. No command palette registration is added.
+already find both `rex-whichkey` and `rex` on its execution-host PATH.
+Installing a package or updating a terminal profile does not change a running
+server's inherited environment. No command palette registration is added.
 
 The launch function calls `rex.exec.start({ "rex-whichkey" }, { detach = true,
 env = ... })`. It passes exact context session/block/client IDs and explicitly
@@ -145,9 +151,13 @@ See [appearance](docs/appearance.md).
 
 ## Targeting and safety
 
-Go selects a Rex CLI using execution-host `REX_BIN_DIR` when present, otherwise
-an applicable ordinary package dependency, otherwise unambiguous absolute PATH.
-Invalid preferences or broken applicable dependencies fail without fallback.
+Go selects the first `rex` found by ordinary execution-host PATH lookup, then
+reuses that path for the invocation and private child. `REX_BIN_DIR`, private
+libexec layouts and executable overrides are not search authorities. There is
+no binary hashing/receipt, startup version/API/schema negotiation or per-command
+server.status/config-generation sandwich. Actual CLI failures are reported
+without retrying or selecting another binary/server; selected-action metadata
+and strict functional result/identity checks remain.
 Endpoint precedence is present `--server` > nonempty `REX_SERVER` >
 bounded no-autostart native Linux/macOS `whoami` discovery. No viewing-host socket
 or Lua server object is authority. See [discovery](docs/runtime-bootstrap.md).

@@ -16,9 +16,6 @@ const defaultTimeout = 10 * time.Second
 
 // Options selects the CLI and its target in the host running this Go process.
 type Options struct {
-	// Executable is an internal absolute execution-host path. Empty uses the
-	// shared environment/layout/PATH policy. It cannot accompany Selection.
-	Executable string
 	// Selection reuses the bootstrap's already-frozen CLI without discovery.
 	Selection *CLISelection
 	// Server is a concrete endpoint. Empty uses REX_SERVER. A server remains
@@ -43,14 +40,14 @@ type Client struct {
 	timeout    time.Duration
 }
 
-// New is the context-free convenience entry for NewContext. It performs bounded
-// read-only compatibility checks, never autostarts or mutates a server.
+// New is the context-free convenience entry for NewContext. Construction does
+// not contact, autostart or mutate a server.
 func New(options Options) (*Client, error) {
 	return NewContext(context.Background(), options)
 }
 
-// NewContext freezes one CLI and concrete target, checking read-only API metadata
-// before returning. Use this entry when bootstrap cancellation is available.
+// NewContext retains one PATH-selected CLI and a concrete canonical target.
+// Use this entry when bootstrap cancellation is available.
 func NewContext(ctx context.Context, options Options) (*Client, error) {
 	if ctx == nil {
 		return nil, errors.New("rex: client construction requires a context")
@@ -76,35 +73,22 @@ func NewContext(ctx context.Context, options Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	selectionOptions := CLIOptions{Selection: options.Selection}
-	if options.Executable != "" {
-		selectionOptions.Executable = &options.Executable
-	}
-	selection, err := ResolveCLI(ctx, selectionOptions)
+	selection, err := ResolveCLI(ctx, CLIOptions{Selection: options.Selection})
 	if err != nil {
 		return nil, err
 	}
 	client := &Client{
-		executable: selection.Executable.Path,
+		executable: selection.Path,
 		selection:  selection,
 		server:     server,
 		session:    options.Session,
 		timeout:    options.Timeout,
 	}
-	if selection.Capabilities == nil {
-		if err := client.captureCapabilities(ctx); err != nil {
-			return nil, err
-		}
-	} else if selection.Capabilities.Endpoint != server {
-		// Frozen evidence for another endpoint never authorizes this target.
-		return nil, errCLIChanged
-	}
 	return client, nil
 }
 
-// Selection returns a detached receipt snapshot for the trusted Go bootstrap.
-// It is not execution authority when obtained from untrusted serialized input.
-// NewContext and every resource call consume/recheck this same bound selection.
+// Selection returns a detached path snapshot for invocation-local reuse.
+// It carries no endpoint, resource, GUI or compatibility authority.
 func (c *Client) Selection() *CLISelection {
 	if c == nil || c.selection == nil {
 		return nil
@@ -159,9 +143,6 @@ func (c *Client) Call(ctx context.Context, method string, arguments, result any)
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
-	if err := c.checkMethod(method); err != nil {
-		return err
-	}
 	output, err := run(ctx, c.executable, argv, c.selection)
 	if err != nil {
 		return errors.Join(errors.New("rex: API call failed or uncertain; not retried"), err)

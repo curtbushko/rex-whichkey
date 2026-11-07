@@ -54,9 +54,12 @@ end)
 
 The key is an example, not an installed/reloaded/observed shortcut.
 The launcher starts ordinary `rex-whichkey` through documented detached
-argument-array execution. Rex's process PATH must already find it; an updated
-terminal profile does not prove the running server inherited it.
-Go discovers the compatible Rex CLI/endpoint and validates exact context IDs.
+argument-array execution. Rex's process PATH must already find both
+`rex-whichkey` and `rex`; installing the package or updating a terminal profile
+does not update the running server's inherited environment.
+Go selects `rex` through ordinary execution-host PATH lookup, retains the
+endpoint independently and validates exact context IDs. Binary receipts,
+startup version/API/schema negotiation and status sandwiches are not required.
 No Lua action/runtime/completion registration or anchor/helper path is required.
 
 Go reads optional version-1 JSON from its
@@ -66,9 +69,12 @@ or install an automatic replacement config. Preserve old files; manually account
 for literal data and deferred functions/hooks/callbacks before migration.
 See [examples](../../../examples/README.md).
 
-The real package image is `bin/rex-whichkey`; optional licensed CLI symlink is
-`libexec/rex-whichkey/rex`. The pinned source has no Intel macOS CLI artifact;
-standalone validated PATH support remains. Go, not Nix, owns discovery policy.
+The real package image is `bin/rex-whichkey`; the same optional pinned licensed
+CLI is exposed as ordinary `bin/rex`, with no private libexec lookup or wrapper.
+The pinned source has no Intel macOS CLI artifact; provide a legitimate `rex`
+on execution-host PATH there, or use a legitimate `rex-cli` override. A source-only
+Go build installs neither that CLI nor the Lua/assets. Go, not Nix, owns lookup
+and endpoint policy. No dependency, pin, profile or activation change is implied.
 See [package layout](../../../docs/runtime-bootstrap.md).
 
 ## Preservation and migration checklist (source-only)

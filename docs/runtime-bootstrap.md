@@ -12,7 +12,7 @@ configuration compiler. [Launch](launch-contract.md) and
 
 ```text
 bin/rex-whichkey                         # real Go image, not a Lua-tree symlink
-libexec/rex-whichkey/rex                 # optional symlink to licensed bin/rex
+bin/rex                                # optional symlink to licensed bin/rex
 share/rex-whichkey/lua/rex_whichkey.lua   # only production Lua module
 share/rex-whichkey/examples/             # keybinding + version-1 JSON
 share/doc/rex-whichkey/README.md
@@ -25,8 +25,11 @@ Go vendor hash, Linux loader/PAM rpath, terminfo/SSH assets and Darwin signature
 preservation. It keeps `doCheck=false` and `doInstallCheck=false`.
 The licensed CLI is available from the pinned source for x86_64/aarch64 Linux and
 aarch64 Darwin. **No Intel macOS CLI artifact is configured.** A legitimate
-`rex-cli` override can supply `bin/rex`; otherwise ordinary standalone PATH
-discovery remains available there too, with or without a JSON config.
+`rex-cli` override can supply `bin/rex`; otherwise provide a legitimate `rex`
+on the execution-host PATH, with or without a JSON config. The optional
+symlink exposes the same already pinned dependency, not a new CLI or wrapper.
+A source-only Go build installs neither that CLI nor the Lua/assets; expose
+the named Go binary and separately supplied CLI through ordinary PATH.
 
 Fixtures, obsolete Lua modules/defaults/runtime directories, workflow state and
 experiments are excluded from the package source/install surface. No binary lives
@@ -37,34 +40,31 @@ generate menu data, init.lua, bindings or an endpoint policy; see the
 
 ## CLI executable discovery
 
-[rex/runtime.go](../rex/runtime.go) freezes one execution-host CLI:
+[rex/runtime.go](../rex/runtime.go) uses Go's ordinary `exec.LookPath("rex")`
+on the execution host. The first executable match wins; a relative directory
+result is made absolute once so later working-directory changes cannot retarget
+it. Standard Go lookup safety (including rejection of an implicit current-directory
+executable) applies. Absence produces a clear PATH/install error, without exposing
+child diagnostics. There is no application-wide PATH-directory/uniqueness policy.
 
-1. Trusted internal frozen selection (the PTY child reuses it, never rediscovers).
-2. Valid internal executable intent where used by the concrete client API;
-   there is **no public executable/path flag**.
-3. Present `REX_BIN_DIR`, an absolute directory containing `rex`.
-   Present-empty is invalid, not absent.
-4. Applicable package dependency at `../libexec/rex-whichkey/rex`, relative to
-   the **canonical public executable** when its parent directory is named `bin`.
-5. Unambiguous execution-host PATH candidate.
+The parent, concrete clients, inventory readers and private PTY child reuse that
+selected path. No `REX_BIN_DIR`, internal executable override, private libexec
+search, public executable flag, viewing-host path or store/repository scan is
+supported. There is no repeated executable discovery, binary/link/content receipt,
+startup version/API/schema negotiation, method admission or before/after
+`server.status`/config-generation wrapper. Trust now follows ordinary PATH/OS
+policy; replacement detection by application hashing is intentionally retired.
 
-Absent optional package directories/leaf allow standalone PATH. Dangling links,
-unreadable/malformed applicable entries or invalid higher-priority intent fail
-without trying lower candidates. PATH must consist solely of nonempty absolute
-directories; empty/relative/cwd entries reject even after an earlier candidate.
-Multiple links to the same device/inode are allowed, distinct candidates reject.
-No shell search, viewing-host path, store scan or repository inference occurs.
+All Rex subprocesses still use bounded, cancellable argument-array execution via
+[rex/exec.go](../rex/exec.go), explicit endpoint/no-autostart where applicable,
+strict actual result decoding and sanitized failure/uncertainty. Built-in action
+metadata is fetched after selection, not as a startup gate. No execution error
+permits another binary, endpoint or Lua route, or an uncertain-operation retry.
 
-Go freezes canonical file/link/content/platform identity, bounded read-only
-`version --json` and the consumed API metadata contracts. Release-string equality
-is not required and no invented minimum Rex version is asserted. Replacement,
-changed links or incompatible metadata invalidate this invocation; no fallback
-to another binary, endpoint or Lua route is attempted. All Rex subprocesses use
-the shared argument-array [rex/exec.go](../rex/exec.go) boundary.
-
-The Lua start itself uses the server process's ordinary PATH for **rex-whichkey**.
-The packaged optional CLI dependency helps Go find **rex**, not the launch binary.
-No claim is made that a running Rex server inherited a new profile or terminal env.
+The Lua start uses the running server's PATH for **rex-whichkey**, and Go uses
+its inherited PATH for **rex**. Package `bin/rex` exposure helps only when that
+bin directory is on the launching process's PATH. Installing a package or changing
+a terminal profile does not update a running server's inherited environment.
 
 ## Endpoint discovery is independent
 
@@ -86,16 +86,21 @@ server retry occurs. The selected endpoint is frozen and explicit thereafter.
 ## Invocation-private PTY transport
 
 A public Go parent owns one interactive child, not a daemon/controller framework.
-It copies its verified image into an invocation-owned 0700 directory, passes
-resolved menu data, a frozen CLI/image receipt, rename presentation and a parent
-lifetime pipe, then creates the Rex terminal. Those are private implementation
-files, not install-time helpers, public config or a callback channel.
+It opens its running image once and copies from that retained handle into an
+invocation-owned 0700 directory. Ordinary bounded copy/write/close finishes
+before the Rex terminal starts; the image copy has no durability Sync, hashing
+or installation receipt. It passes resolved menu data, the selected CLI path,
+an independent canonical endpoint, rename presentation and a parent lifetime pipe.
+Those are private implementation files, not install-time helpers, public config
+or a callback channel.
 The child returns keys/confirmation/text only; the parent retains resource/action
 authority and dispatches once after exact cleanup. There is no idle expiry.
 
 The [fixed cleanup inventory](launch-contract.md#fixed-owned-cleanup-inventory)
 names all files/resources. Root-scoped fixed-name removal, no-follow/owner/mode
-checks and image/link/content validation remain. No guarantee after SIGKILL,
+checks, bounded image copying, strict results/locks/result Sync and exact source
+handle retirement remain. The child checks its fixed private image slot, not the
+parent installation's content or links. No guarantee after SIGKILL,
 hostile same-account changes or server loss, atomic resource transaction or
 uncertain-effect retry is implied.
 

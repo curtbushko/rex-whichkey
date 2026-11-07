@@ -21,25 +21,31 @@ or its keybinding; cross-host public invocation is not certified.
 
 ## Frozen CLI and endpoint
 
-See [discovery](runtime-bootstrap.md) for the exact precedence:
-present valid `REX_BIN_DIR` > applicable ordinary package
-`libexec/rex-whichkey/rex` > unambiguous absolute PATH, after trusted internal
-selection where applicable. Missing optional dependency permits PATH;
-broken applicable entries or invalid higher intent do not. No runtime Nix
-resolver, anchor, helper path, shell/store/home scan or alternate binary retry.
+See [discovery](runtime-bootstrap.md): ordinary execution-host PATH lookup
+selects the first `rex` executable once, then all invocation consumers reuse
+that path. No `REX_BIN_DIR`, private libexec discovery, executable override,
+runtime Nix resolver, anchor, helper path, shell/store/home scan or alternate
+binary retry is supported. The launching server must already inherit PATH for
+both `rex-whichkey` and `rex`; package installation or a changed terminal profile
+does not update a running process's environment.
 
 Endpoint selection is present `--server` > nonempty `REX_SERVER` >
 bounded no-autostart native Linux/macOS Rex `whoami`. Explicit empty/malformed
 intent fails. Accepted values are concrete Unix paths/URIs or numeric-port
 host:port, not mutable host labels or opaque Lua server objects.
 Rex, not application path guesses, owns platform runtime/home/XDG discovery.
-The CLI/image/link/content and endpoint/server contracts remain frozen through
-child wait, cleanup and dispatch.
+The selected CLI path and independent endpoint remain retained through child
+wait, cleanup and dispatch. Binary/link/content receipts, startup version/API/schema
+negotiation and per-command server.status/config-generation checks are retired.
+Strict functional result decoding, selected-action metadata and actual origin/
+resource/app-generation checks remain; no uncertain operation is retried.
 
 The pinned package offers official licensed CLI artifacts for x86_64/aarch64
 Linux and aarch64 macOS, not Intel macOS. Standalone PATH remains supported with
-JSON/default menus; a legitimate `rex-cli` override can supply the optional
-dependency. No platform output declaration or source parse proves runtime support,
+JSON/default menus; a legitimate `rex-cli` override can supply the same optional
+pinned dependency, exposed as ordinary `bin/rex` where available. A source-only
+Go build supplies neither the CLI nor installed Lua/assets. No platform output
+declaration or source parse proves runtime support,
 license permission or a deployed server environment.
 
 ## Origin and app identity
