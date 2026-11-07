@@ -51,7 +51,7 @@ func ValidateInvocationCapability(capability string) error {
 		return errors.New("whichkey: capability must be 64 lowercase hex characters")
 	}
 	for _, c := range capability {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return errors.New("whichkey: capability must be 64 lowercase hex characters")
 		}
 	}

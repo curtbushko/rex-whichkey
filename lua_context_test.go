@@ -7,8 +7,10 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
+const testCallbackScenario = "callback"
+
 func TestConfiguredRenameDispatch(t *testing.T) {
-	for _, scenario := range []string{"tab", "session", "callback", "missing", "blank", "control", "custom_args", "injected_callback", "moved", "uncertain"} {
+	for _, scenario := range []string{"tab", "session", testCallbackScenario, "missing", "blank", "control", "custom_args", "injected_callback", "moved", "uncertain"} {
 		t.Run(scenario, func(t *testing.T) {
 			state := lua.NewState()
 			defer state.Close()
@@ -17,7 +19,7 @@ func TestConfiguredRenameDispatch(t *testing.T) {
 			invoke := func() error {
 				return state.CallByParam(lua.P{Fn: state.GetGlobal("try_rename"), Protect: true, NRet: 0})
 			}
-			if scenario == "tab" || scenario == "session" || scenario == "callback" {
+			if scenario == "tab" || scenario == "session" || scenario == testCallbackScenario {
 				require.NoError(t, invoke())
 			} else {
 				require.Error(t, invoke())
@@ -31,7 +33,7 @@ func TestConfiguredRenameDispatch(t *testing.T) {
 
 func TestCLIDelegation(t *testing.T) {
 	for _, scenario := range []string{
-		"app_action", "key_launch", "confirmed", "unconfirmed", "guard_changed", "callback", "named", "cancel",
+		"app_action", "key_launch", "confirmed", "unconfirmed", "guard_changed", testCallbackScenario, "named", "cancel",
 		"wrong_session", "wrong_block", "wrong_server", "invalid_caller", "wrong_capability", "malformed",
 		"reconnect", "lost", "expired", "reload", "caller_mutation", "rpc_error", "rpc_wrong_client",
 		"non_app", "no_target", "kind_changed", "launch_caller_mutation",

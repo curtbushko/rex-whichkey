@@ -3,8 +3,11 @@
 The renderer assigns separate semantic roles to keys, icons and labels. These
 roles live in [`theme.go`](../theme.go), not in a second Lua/Nix theme schema.
 [`render.go`](../render.go) applies them to actual menu spans;
-[`terminal.go`](../terminal.go) writes the styled frames and updates the theme
-when terminal palette metadata arrives.
+[`terminal.go`](../terminal.go) owns terminal acquisition/restoration;
+[`terminal_input.go`](../terminal_input.go) orders keys, metadata and redraws,
+updating the theme when terminal palette replies arrive. Input framing lives in
+[`terminal_keys.go`](../terminal_keys.go), and bounded display rollback in
+[`terminal_modes.go`](../terminal_modes.go).
 
 ## Compact status borders and paging
 
@@ -201,11 +204,20 @@ until Go exits/Rex retires it. Go cannot prove its own post-exit deletion, and
 post-exit cleanup cannot suppress an already-issued effect. Exact `list_blocks`
 checks prove only the observed cases, not universal cleanup.
 
-This docs-only update leaves Go/Lua/Taskfile/Makefile unchanged. Fresh independent
-docs/source/evidence review and the coordinator's final rebuilt-main `make run`
-remain required before phase completion. No physical-key/reload, installed-profile,
-Nix build/activation, every-palette/geometry/flags, timing SLA or all-platform
-result is claimed; terminal captures are not native pixel/chrome certification.
+Task06 refactors the Go renderer, palette decoder and terminal loop without
+changing Lua sizing/native chrome. Builder `task build`, `task test` (unit/race)
+and full `task lint` (vet/golangci/compatible AI) pass. Automated regressions cover
+UTF-8/escape/report/paste/edit framing, palette replies, constrained pagination,
+confirmation, late rename metadata, retained provider bindings, bounded workers
+and cancellation/display restoration. The isolated Darwin PTY check compares all
+configured termios fields except kernel-transient PENDIN; production restores the
+captured state unchanged. These checks do not certify native GUI appearance.
+Fresh independent full-test/full-lint review and coordinator combined/main gates,
+then final rebuilt-main `make run`/owned rename/cancel/cleanup, remain required.
+See [current verification](acceptance.md#current-verification-boundary).
+No physical-key/reload, installed-profile, Nix build/activation, every-palette/
+geometry/flags, timing SLA or all-platform result is claimed; terminal captures
+are not native pixel/chrome certification.
 
 The following observations are **historical and revision-bound**, not current
 combined-candidate certification. Legacy configured-Lua/callback references

@@ -33,6 +33,7 @@ const TerminalPaletteQuery = "\x1b]10;?\x1b\\" + "\x1b]11;?\x1b\\" +
 // retain labels and key hints: color alone must never convey an action or error.
 type ThemeRole uint8
 
+// Semantic roles used by menu text, hints, warnings and decorations.
 const (
 	ThemePrimary ThemeRole = iota
 	ThemeKey
@@ -173,23 +174,31 @@ func parseThemeColor(value string) (themeRGB, bool) {
 	}
 	var rgb [3]uint8
 	for i, component := range components {
-		if len(component) < 1 || len(component) > 4 {
+		channel, valid := parseThemeChannel(component)
+		if !valid {
 			return themeRGB{}, false
 		}
-		// Terminal color components contain only hexadecimal digits.
-		for _, digit := range component {
-			if !(digit >= '0' && digit <= '9' || digit >= 'a' && digit <= 'f' || digit >= 'A' && digit <= 'F') {
-				return themeRGB{}, false
-			}
-		}
-		value, err := strconv.ParseUint(component, 16, 16)
-		if err != nil {
-			return themeRGB{}, false
-		}
-		maximum := uint64(1)<<(4*len(component)) - 1
-		rgb[i] = uint8((value*255 + maximum/2) / maximum)
+		rgb[i] = channel
 	}
 	return themeRGB{rgb[0], rgb[1], rgb[2]}, true
+}
+
+func parseThemeChannel(component string) (uint8, bool) {
+	if len(component) < 1 || len(component) > 4 {
+		return 0, false
+	}
+	// Terminal channels contain only hexadecimal digits, without separators.
+	for _, digit := range component {
+		if (digit < '0' || digit > '9') && (digit < 'a' || digit > 'f') && (digit < 'A' || digit > 'F') {
+			return 0, false
+		}
+	}
+	value, err := strconv.ParseUint(component, 16, 16)
+	if err != nil {
+		return 0, false
+	}
+	maximum := uint64(1)<<(4*len(component)) - 1
+	return uint8((value*255 + maximum/2) / maximum), true
 }
 
 // Relative luminance uses the WCAG sRGB transfer function, not perceived
@@ -298,31 +307,37 @@ func (d *PaletteDecoder) Feed(data []byte) (keys []byte, messages []TerminalPale
 				messages = append(messages, moreMessages...)
 			}
 		case paletteOSC, paletteOSCEscape:
-			// A C1-looking continuation byte in an OSC title is not ST.
-			// Unknown OSC is consumed with the same framing as palette OSC.
-			continuation := d.continuation(b)
-			switch {
-			case b == 0x18 || b == 0x1a:
-				d.resetOSC()
-			case b == 0x07 || b == 0x9c && !continuation || d.state == paletteOSCEscape && b == '\\':
-				if !d.discard && d.applyReply() {
-					messages = append(messages, TerminalPaletteMessage{Palette: d.palette})
-				}
-				d.resetOSC()
-			case b == 0x1b:
-				d.state = paletteOSCEscape
-			default:
-				if d.state == paletteOSCEscape || len(d.body) == maxPaletteReply {
-					d.discard = true
-				}
-				d.state = paletteOSC
-				if !d.discard {
-					d.body = append(d.body, b)
-				}
+			if d.feedOSC(b) {
+				messages = append(messages, TerminalPaletteMessage{Palette: d.palette})
 			}
 		}
 	}
 	return keys, messages
+}
+
+// Unknown OSC uses the same framing as palette replies. A C1-looking UTF-8
+// continuation in a title is not ST, and oversized bodies remain discard-only.
+func (d *PaletteDecoder) feedOSC(b byte) bool {
+	continuation := d.continuation(b)
+	switch {
+	case b == 0x18 || b == 0x1a:
+		d.resetOSC()
+	case b == 0x07 || b == 0x9c && !continuation || d.state == paletteOSCEscape && b == '\\':
+		changed := !d.discard && d.applyReply()
+		d.resetOSC()
+		return changed
+	case b == 0x1b:
+		d.state = paletteOSCEscape
+	default:
+		if d.state == paletteOSCEscape || len(d.body) == maxPaletteReply {
+			d.discard = true
+		}
+		d.state = paletteOSC
+		if !d.discard {
+			d.body = append(d.body, b)
+		}
+	}
+	return false
 }
 
 // FlushEscape releases a lone ESC when the caller's normal key-ambiguity timer

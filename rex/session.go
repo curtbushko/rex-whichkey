@@ -178,7 +178,8 @@ func (c *Client) resourceCommand(ctx context.Context, result any, args ...string
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("rex resource command: %w", err)
 	}
-	argv := []string{"--server", c.server, "--autostart=false", "--timeout", c.timeout.String()}
+	argv := make([]string, 0, 5+len(args))
+	argv = append(argv, "--server", c.server, "--autostart=false", "--timeout", c.timeout.String())
 	argv = append(argv, args...)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -211,7 +212,7 @@ func resourceID(id, kind string) bool {
 			}
 			continue
 		}
-		if !(b >= '0' && b <= '9' || b >= 'a' && b <= 'f' || b >= 'A' && b <= 'F') {
+		if (b < '0' || b > '9') && (b < 'a' || b > 'f') && (b < 'A' || b > 'F') {
 			return false
 		}
 	}

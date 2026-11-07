@@ -307,14 +307,14 @@ func (jobs *metadataJobs) start() {
 		jobs.started[kind] = true
 		jobs.active++
 		jobs.workers.Add(1)
-		go func() {
+		go func(kind int) {
 			defer jobs.workers.Done()
 			result := loadMetadata(jobs.ctx, jobs.request, jobs.client, kind)
 			select {
 			case jobs.results <- result:
 			case <-jobs.ctx.Done():
 			}
-		}()
+		}(kind)
 	}
 }
 

@@ -175,26 +175,9 @@ func HostMenuMappings(prefix string, inventory rex.HostInventory) ([]Mapping, er
 		return nil, fmt.Errorf("whichkey: host menu home: %w", err)
 	}
 
-	add(prefix+"w", fmt.Sprintf("Warnings (%d)", len(inventory.Warnings)))
-	if len(inventory.Warnings) == 0 {
-		add(prefix+"w0", "No inventory warnings")
+	if err := hostMenuWarnings(prefix, inventory.Warnings, add); err != nil {
+		return nil, err
 	}
-	for index, warning := range inventory.Warnings {
-		if warning == nil {
-			return nil, fmt.Errorf("whichkey: host menu warning %d is null", index+1)
-		}
-		keys := hostMenuListKey(prefix+"w", index, len(inventory.Warnings), "warnings", add)
-		label, err := hostMenuJSON(warning)
-		if err != nil {
-			return nil, fmt.Errorf("whichkey: host menu warning %d: %w", index+1, err)
-		}
-		add(keys, "Warning: "+label)
-		add(keys+"d", "Warning details")
-		if err := hostMenuFields(keys+"d", warning, add); err != nil {
-			return nil, fmt.Errorf("whichkey: host menu warning %d details: %w", index+1, err)
-		}
-	}
-
 	add(prefix+"l", fmt.Sprintf("Known hosts (%d); open details only", len(hosts)))
 	if len(hosts) == 0 {
 		add(prefix+"l0", "No Rex-known hosts in this effective inventory")
@@ -204,48 +187,80 @@ func HostMenuMappings(prefix string, inventory rex.HostInventory) ([]Mapping, er
 			return nil, fmt.Errorf("whichkey: host menu record %d needs an inventory ID and label", index+1)
 		}
 		keys := hostMenuListKey(prefix+"l", index, len(hosts), "hosts", add)
-		label := hostMenuText(entry.Host.Label) + " [" + hostMenuText(entry.Host.ID) + "]"
-		if entry.Held {
-			label += " [held: not yet sent to home]"
-		}
-		add(keys, label)
-		add(keys+"i", "Inventory ID: "+hostMenuText(entry.Host.ID))
-		add(keys+"l", "Label: "+hostMenuText(entry.Host.Label))
-		owner := "not separately reported by Rex (empty from)"
-		if entry.From != "" {
-			owner = hostMenuText(entry.From)
-		}
-		add(keys+"o", "Inventory owner: "+owner)
-		held := "no"
-		if entry.Held {
-			held = "yes; change not yet sent to its owning home server"
-		}
-		add(keys+"h", "Held: "+held)
-		if entry.Host.HostID != "" {
-			add(keys+"m", "Machine/account ID (not inventory ID): "+hostMenuText(entry.Host.HostID))
-		}
-		if entry.Host.Source != "" {
-			add(keys+"s", "Source: "+hostMenuText(entry.Host.Source))
-		}
-		if entry.Host.AddedFrom != "" {
-			add(keys+"a", "Added from: "+hostMenuText(entry.Host.AddedFrom))
-		}
-		if entry.Host.UpdatedAt != "" {
-			add(keys+"u", "Updated at: "+hostMenuText(entry.Host.UpdatedAt))
-		}
-		add(keys+"e", fmt.Sprintf("Endpoints (%d); not probed", len(entry.Host.Endpoints)))
-		if len(entry.Host.Endpoints) == 0 {
-			add(keys+"e0", "No endpoints reported")
-		}
-		for endpointIndex, endpoint := range entry.Host.Endpoints {
-			endpointKeys := hostMenuListKey(keys+"e", endpointIndex, len(entry.Host.Endpoints), "endpoints", add)
-			add(endpointKeys, hostMenuText(endpoint))
-		}
+		hostMenuEntry(keys, entry, add)
 	}
 	if err := ValidateMappings(mappings); err != nil {
 		return nil, fmt.Errorf("whichkey: host menu: %w", err)
 	}
 	return mappings, nil
+}
+
+func hostMenuWarnings(prefix string, warnings []rex.InventoryWarning, add func(string, string)) error {
+	add(prefix+"w", fmt.Sprintf("Warnings (%d)", len(warnings)))
+	if len(warnings) == 0 {
+		add(prefix+"w0", "No inventory warnings")
+	}
+	for index, warning := range warnings {
+		if warning == nil {
+			return fmt.Errorf("whichkey: host menu warning %d is null", index+1)
+		}
+		keys := hostMenuListKey(prefix+"w", index, len(warnings), "warnings", add)
+		label, err := hostMenuJSON(warning)
+		if err != nil {
+			return fmt.Errorf("whichkey: host menu warning %d: %w", index+1, err)
+		}
+		add(keys, "Warning: "+label)
+		add(keys+"d", "Warning details")
+		if err := hostMenuFields(keys+"d", warning, add); err != nil {
+			return fmt.Errorf("whichkey: host menu warning %d details: %w", index+1, err)
+		}
+	}
+
+	return nil
+}
+
+func hostMenuEntry(keys string, entry rex.HostEntry, add func(string, string)) {
+	var label strings.Builder
+	label.WriteString(hostMenuText(entry.Host.Label))
+	label.WriteString(" [")
+	label.WriteString(hostMenuText(entry.Host.ID))
+	label.WriteByte(']')
+	if entry.Held {
+		label.WriteString(" [held: not yet sent to home]")
+	}
+	add(keys, label.String())
+	add(keys+"i", "Inventory ID: "+hostMenuText(entry.Host.ID))
+	add(keys+"l", "Label: "+hostMenuText(entry.Host.Label))
+	owner := "not separately reported by Rex (empty from)"
+	if entry.From != "" {
+		owner = hostMenuText(entry.From)
+	}
+	add(keys+"o", "Inventory owner: "+owner)
+	held := "no"
+	if entry.Held {
+		held = "yes; change not yet sent to its owning home server"
+	}
+	add(keys+"h", "Held: "+held)
+	if entry.Host.HostID != "" {
+		add(keys+"m", "Machine/account ID (not inventory ID): "+hostMenuText(entry.Host.HostID))
+	}
+	if entry.Host.Source != "" {
+		add(keys+"s", "Source: "+hostMenuText(entry.Host.Source))
+	}
+	if entry.Host.AddedFrom != "" {
+		add(keys+"a", "Added from: "+hostMenuText(entry.Host.AddedFrom))
+	}
+	if entry.Host.UpdatedAt != "" {
+		add(keys+"u", "Updated at: "+hostMenuText(entry.Host.UpdatedAt))
+	}
+	add(keys+"e", fmt.Sprintf("Endpoints (%d); not probed", len(entry.Host.Endpoints)))
+	if len(entry.Host.Endpoints) == 0 {
+		add(keys+"e0", "No endpoints reported")
+	}
+	for endpointIndex, endpoint := range entry.Host.Endpoints {
+		endpointKeys := hostMenuListKey(keys+"e", endpointIndex, len(entry.Host.Endpoints), "endpoints", add)
+		add(endpointKeys, hostMenuText(endpoint))
+	}
 }
 
 // Home/warning fields are CLI-owned opaque data. Preserve all of them instead

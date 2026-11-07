@@ -37,8 +37,18 @@ func TestDarwinControllingTerminalOutput(t *testing.T) {
 		defer stop()
 		// With no input, the real menu must stay alive until cancellation,
 		// not fail its first read-readiness check or dismiss itself.
+		before, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
+		require.NoError(t, err)
 		_, err = RunTerminal(idle, config, true, true)
 		require.ErrorIs(t, err, context.DeadlineExceeded)
+		after, err := unix.IoctlGetTermios(fd, unix.TIOCGETA)
+		require.NoError(t, err)
+		// Darwin sets kernel-transient PENDIN on restoration (observed here).
+		// Compare every configured flag, control byte and speed, excluding only
+		// that transient bit. Production restores the captured state unchanged.
+		before.Lflag &^= unix.PENDIN
+		after.Lflag &^= unix.PENDIN
+		require.Equal(t, before, after, "configured termios must be restored after cancellation")
 		return
 	}
 	executable, err := os.Executable()

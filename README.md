@@ -11,11 +11,15 @@ source and rebuilt main at `6564d07ef690d591ea842fa9d986d0bcfa919dd4`: current
 checkout Go executable, shared Lua float, root/providers, exact owned rename,
 separate edited cancellation/dismissal, pre-effect visible retirement and observed
 exit 0/post-exit host absence. Task02 separately observed real own-PTY resize.
-This docs-only refresh runs no product; independent review and the coordinator's
-final rebuilt-main run remain required before phase completion. Build/help/creation
-acknowledgment is not menu-display or exit proof. Full lint remains unresolved
-(53 diagnostics, exit 201; AI lint not reached). No installed-profile, physical-
-keybinding, remote or all-platform success is claimed. See [acceptance](docs/acceptance.md).
+Task05 restored the authentic historical test fixture with all 42 scenarios and
+assertions retained. Task06 builder checks now pass: `task build`, `task test`
+(unit and race), and full `task lint` (vet, golangci and compatible AI lint).
+Tests and full lint are mandatory after changes; earlier no-tests wording is
+historical, not current acceptance. Fresh exact-source independent review and
+coordinator combined/main gates plus actual `make run`, owned rename/cancel and
+cleanup remain pending. Build/help/creation acknowledgment is not menu-display
+or exit proof. No installed-profile, physical-keybinding, remote or all-platform
+success is claimed. See [acceptance](docs/acceptance.md#current-verification-boundary).
 
 ## Run this checkout
 
