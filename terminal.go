@@ -17,8 +17,6 @@ import (
 
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
-
-	"temp/rex"
 )
 
 const (
@@ -26,15 +24,6 @@ const (
 	terminalEscapeDelay  = 50 * time.Millisecond
 	terminalSetup        = "\x1b[?7l\x1b[?25l\x1b[?1004h\x1b[?2004h"
 )
-
-// A popup always supplies its selected CLI path and independent endpoint.
-// Absence is reserved for the standalone menu's initial CLI capture.
-type terminalRuntimeKey struct{}
-
-type terminalRuntime struct {
-	selection *rex.CLISelection
-	endpoint  string
-}
 
 // RunTerminal owns one short-lived menu on the controlling popup terminal. The
 // caller must give it exclusive terminal ownership, then dispatch its Selection
@@ -72,26 +61,13 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	}
 	menu.textSpec = config.textEntry
 	menu.providers = &menuProviderUpdates{base: base}
-	transport, incremental := ctx.Value(terminalRenameKey{}).(terminalRenameTransport)
 	direct, inProcess := ctx.Value(terminalDirectKey{}).(*directMenuState)
 	if inProcess {
-		if direct == nil || incremental || direct.client == nil || direct.request.snapshot == nil || config.textEntry == nil {
+		if direct == nil || direct.client == nil || direct.request.snapshot == nil || config.textEntry == nil {
 			return MenuEvent{}, errors.New("whichkey: invalid in-process menu context")
 		}
 		menu.updates = &menuRenameUpdates{}
 		direct.config = config
-	}
-	if incremental {
-		if transport.root == nil || config.textEntry == nil {
-			return MenuEvent{}, errRuntimeStartup
-		}
-		menu.updates = &menuRenameUpdates{invocation: transport.invocation}
-		menu.providers.invocation = transport.invocation
-		frozen, present := ctx.Value(terminalRuntimeKey{}).(terminalRuntime)
-		endpoint, endpointErr := rex.CanonicalEndpoint(frozen.endpoint)
-		if !present || endpointErr != nil || endpoint != frozen.endpoint || frozen.selection == nil {
-			return MenuEvent{}, errRuntimeCompatibility
-		}
 	}
 	resize := make(chan os.Signal, 1)
 	signal.Notify(resize, syscall.SIGWINCH, syscall.SIGCONT)
@@ -178,16 +154,14 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	// No metadata job or demand is eligible until the static frame was written.
 	menu.demandProviders(true)
 	var localJobs *metadataJobs
-	if !incremental {
-		if inProcess {
-			localJobs = newMetadataJobs(ctx, direct.request, direct.client)
-		} else {
-			// Standalone remains result-only: resource providers cannot
-			// fabricate native origin or dispatch authority.
-			localJobs = newMetadataJobs(ctx, popupRequest{}, nil)
-		}
-		defer localJobs.stop() // Join before terminal restoration on every exit.
+	if inProcess {
+		localJobs = newMetadataJobs(ctx, direct.request, direct.client)
+	} else {
+		// Standalone remains result-only: resource providers cannot
+		// fabricate native origin or dispatch authority.
+		localJobs = newMetadataJobs(ctx, popupRequest{}, nil)
 	}
+	defer localJobs.stop() // Join before terminal restoration on every exit.
 	if !noColor && os.Getenv("NO_COLOR") == "" {
 		// Startup acquisition, not a blocking probe: keys/rendering never wait
 		// for a reply, and palette decoding stays installed until exit.
@@ -242,7 +216,7 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 		if inProcess {
 			changed, updateErr = direct.poll(menu, localJobs)
 		} else {
-			changed, updateErr = menu.pollUpdates(transport, localJobs)
+			changed, updateErr = menu.pollLocalProviders(localJobs)
 		}
 		if updateErr != nil {
 			return updateErr

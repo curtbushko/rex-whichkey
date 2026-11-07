@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 )
 
 // Bounds is a floating rectangle in normalized window coordinates. The entire
@@ -29,8 +28,8 @@ func (b Bounds) valid() error {
 	return nil
 }
 
-// Layer owns exactly the floating layer and terminal block returned by
-// NewLayer. Exported IDs are snapshots: mutating them cannot retarget cleanup.
+// Layer owns exactly the sole floating terminal bound by DirectPopup.
+// Exported IDs are snapshots: mutating them cannot retarget cleanup.
 // Copies refer to the same resources; they do not grant additional ownership.
 type Layer struct {
 	ID       string
@@ -42,149 +41,10 @@ type Layer struct {
 	blockID string
 }
 
-// NewLayer opens one owned floating terminal in the origin's current window.
-// command is a program and its arguments on the selected server, not paths to
-// resolve on the graphical client. The terminal runs directly without a shell
-// and remains open after child exit so Wait can recover its status; call Close
-// for dismissal/error cleanup. No user configuration is read or changed here.
-//
-// Creation is attempted once. Errors may follow successful creation; any known
-// returned identity is preserved. Never blindly retry after a timeout or decode
-// error. The placement lookup and creation are separate server operations, so
-// concurrent moves/closure can still race with creation.
-func (b Block) NewLayer(ctx context.Context, bounds Bounds, command []string) (Layer, error) {
-	return b.newLayer(ctx, bounds, command, nil)
-}
-
-// NewLayerWithSize creates the layer and seeds its terminal in the same RPC.
-// Unlike NewLayer's server defaults, size is an explicit startup estimate. A
-// changed origin placement invalidates that estimate before creation; callers
-// must not retry an uncertain creation. A move after inspection can still race.
-func (b Block) NewLayerWithSize(ctx context.Context, bounds Bounds, command []string, size TerminalStartSize) (Layer, error) {
-	if err := size.valid(); err != nil {
-		return Layer{}, err
-	}
-	return b.newLayer(ctx, bounds, command, &size)
-}
-
-func (b Block) newLayer(ctx context.Context, bounds Bounds, command []string, size *TerminalStartSize) (Layer, error) {
-	if err := b.valid(); err != nil {
-		return Layer{}, err
-	}
-	if err := bounds.valid(); err != nil {
-		return Layer{}, err
-	}
-	if len(command) == 0 || strings.TrimSpace(command[0]) == "" {
-		return Layer{}, errors.New("rex: layer command requires a program on the selected server")
-	}
-	for _, argument := range command {
-		if strings.ContainsRune(argument, '\x00') {
-			return Layer{}, errors.New("rex: layer command must not contain NUL")
-		}
-	}
-	current, err := b.Inspect(ctx)
-	if err != nil {
-		return Layer{}, err
-	}
-	if size != nil && !b.samePlacement(current) {
-		return Layer{}, errors.New("rex: origin moved before sized layer creation")
-	}
-	options := map[string]any{
-		"command": command,
-		"shell":   "none",
-		"exit":    map[string]bool{"on_completion": false},
-	}
-	if size != nil {
-		options["size"] = *size
-	}
-	// The API documents a generic block/options layout, not an enumerated
-	// creator schema. Bounds are [x,y,w,h] on the wire; keep the Go rectangle
-	// internal. Direct creation needs no script VM or action registration.
-	arguments := map[string]any{
-		"session_id": b.client.session,
-		"window_id":  current.WindowID,
-		"bounds":     [4]float64{bounds.X, bounds.Y, bounds.W, bounds.H},
-		"focus":      true,
-		"layout": map[string]any{"block": map[string]any{
-			"flavor":  "com.superlogical.terminal.shell",
-			"options": options,
-		}},
-	}
-	var result struct {
-		ID       string   `json:"layer_id"`
-		BlockIDs []string `json:"block_ids"`
-	}
-	if err := b.client.Call(ctx, "session.new_layer", arguments, &result); err != nil {
-		return Layer{}, err
-	}
-	if !resourceID(result.ID, "layer") {
-		return Layer{}, errors.New("rex new_layer: missing or invalid layer_id (creation may have succeeded)")
-	}
-	layer := Layer{ID: result.ID, client: b.client, layerID: result.ID}
-	if len(result.BlockIDs) != 1 || !resourceID(result.BlockIDs[0], "block") || result.BlockIDs[0] == b.blockID {
-		return layer, errors.New("rex new_layer: invalid owned block_ids (creation may have succeeded)")
-	}
-	layer.BlockID, layer.blockID = result.BlockIDs[0], result.BlockIDs[0]
-	layer.WindowID = current.WindowID
-	return layer, nil
-}
-
-// Block returns the exact terminal identity captured from creation. Its Inspect
+// Block returns the exact terminal identity captured from popup binding. Its Inspect
 // and Focus methods resolve current placement instead of following WindowID.
 func (l Layer) Block() Block {
 	return Block{ID: l.blockID, client: l.client, blockID: l.blockID}
-}
-
-// Resize changes only the owned floating layer, after checking it still contains
-// exactly the returned terminal. A vanished layer is an error, not a request to
-// create a replacement. The server remains responsible for the final mutation.
-func (l Layer) Resize(ctx context.Context, bounds Bounds) error {
-	if err := bounds.valid(); err != nil {
-		return err
-	}
-	if err := l.checkOwned(ctx); err != nil {
-		return err
-	}
-	return l.client.Call(ctx, "session.resize_layer", struct {
-		SessionID string     `json:"session_id"`
-		LayerID   string     `json:"layer_id"`
-		Bounds    [4]float64 `json:"bounds"`
-	}{l.client.session, l.layerID, [4]float64{bounds.X, bounds.Y, bounds.W, bounds.H}}, nil)
-}
-
-// Close closes only the captured terminal, even if it has moved. Rex's
-// session.close_layer also closes every block in the layer, so a prior membership
-// snapshot cannot make that operation safe against concurrent layout changes.
-// Without a documented atomic ownership condition, Close never calls it.
-// After closing the terminal, Close checks whether the returned layer is gone.
-// A remaining layer or failed inspection returns an error without further
-// mutation; no window/session, label match or replacement popup is targeted.
-func (l Layer) Close(ctx context.Context) error {
-	if err := l.valid(); err != nil {
-		return err
-	}
-	if err := l.Block().Close(ctx); err != nil {
-		return err
-	}
-	layers, err := l.Block().Session().placedLayers(ctx)
-	if err != nil {
-		return fmt.Errorf("rex: closed owned block %q but could not confirm layer removal: %w", l.blockID, err)
-	}
-	for _, layer := range layers {
-		if layer.id == l.layerID {
-			return fmt.Errorf("rex: closed owned block %q but layer %q remains; refusing cascading layer cleanup", l.blockID, l.layerID)
-		}
-	}
-	return nil
-}
-
-// Wait reports the owned terminal's completion without creating, closing or
-// replacing anything. Use Close separately even when the child exits nonzero.
-func (l Layer) Wait(ctx context.Context) error {
-	if err := l.valid(); err != nil {
-		return err
-	}
-	return l.Block().Wait(ctx)
 }
 
 func (l Layer) valid() error {
@@ -192,20 +52,9 @@ func (l Layer) valid() error {
 		return err
 	}
 	if !resourceID(l.layerID, "layer") {
-		return errors.New("rex: layer must be returned by NewLayer")
+		return errors.New("rex: layer must be bound by DirectPopup")
 	}
 	return nil
-}
-
-// Bounds reads the current normalized rectangle after the same exact-owned
-// membership check used by Resize. A missing or malformed rectangle is never
-// substituted with a cached creation size.
-func (l Layer) Bounds(ctx context.Context) (Bounds, error) {
-	layer, err := l.owned(ctx)
-	if err != nil {
-		return Bounds{}, err
-	}
-	return decodeBounds(layer.bounds)
 }
 
 func (l Layer) checkOwned(ctx context.Context) error {
