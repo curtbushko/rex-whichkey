@@ -41,7 +41,38 @@
         subPackages = ["cmd/go-ai-lint"];
         vendorHash = "sha256-zkXyXTEnMmBZnvzoq0UWKgzWZlyNRyQZCYAv+huZo0I=";
       };
+
+    lintToolchains = forEachSupportedSystem ({pkgs, ...}: {
+      go = pkgs.go;
+      # The locked package explicitly uses buildGo125Module; overriding `go`
+      # alone does not change that compiler. v2.15.0 requires Go >= 1.26.0.
+      golangciLint =
+        (pkgs.golangci-lint.override {
+          buildGo125Module = pkgs.buildGoModule.override {go = pkgs.go;};
+        }).overrideAttrs (finalAttrs: old: {
+          version = "2.15.0";
+          src = pkgs.fetchFromGitHub {
+            owner = "golangci";
+            repo = "golangci-lint";
+            tag = "v${finalAttrs.version}";
+            hash = "sha256-m9PoJHescRuT9DiKsb6LL+lQlc7RKAWDiRyf8pNMffA=";
+          };
+          vendorHash = "sha256-gWbhZc/BJwuiwyTMaR1ShEBI1lo0bGLCXsdj5n91baw=";
+          ldflags = map (builtins.replaceStrings [old.version] [finalAttrs.version]) old.ldflags;
+        });
+      goAiLint = go-ai-lint {inherit pkgs;};
+    });
   in {
+    checks = forEachSupportedSystem ({
+      pkgs,
+      system,
+    }: {
+      lint-toolchain = import ./nix/lint-toolchain-check.nix {
+        inherit pkgs;
+        toolchain = lintToolchains.${system};
+      };
+    });
+
     overlays.default = final: prev: {
       go = final.${goAttribute}.overrideAttrs (_: {
         version = goVersion;
@@ -77,6 +108,7 @@
       pkgs,
       system,
     }: let
+      toolchain = lintToolchains.${system};
       sharedConfigs = golang-shared-configs.packages.${system}.all-configs;
       # Darwin retains the .NET test dependency even when upstream checks are off.
       # Its NuGet setup is unrelated to building this Python application and aborts.
@@ -91,13 +123,13 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           docker
-          # go (version is specified by overlay)
-          go
+          # Share the exact compiler/linter derivations with the compatibility check.
+          toolchain.go
           go-task
           gotools
-          golangci-lint
+          toolchain.golangciLint
           preCommit
-          (go-ai-lint {inherit pkgs;})
+          toolchain.goAiLint
           sharedConfigs
           make-wrapper
         ];
