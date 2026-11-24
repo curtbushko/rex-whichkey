@@ -61,6 +61,10 @@ pkgs.runCommand "lint-toolchain" {
     exit 1
   fi
   grep -F 'AIL090: panic in library code' ai.log
+  # Raw diagnostics contain temporary build paths; retain only a stable receipt.
+  # The assertions above still print the matched diagnostics in the build log.
   mkdir -p "$out"
-  cp golangci.log ai.log "$out/"
+  printf '%s\n' \
+    'Clean fixture: go test, golangci-lint and go-ai-lint passed' \
+    'Injected diagnostics: govet and AIL090 detected' > "$out/passed"
 ''
