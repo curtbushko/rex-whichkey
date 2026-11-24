@@ -35,8 +35,10 @@ const (
 )
 
 type directFixtureState struct {
-	Detached bool
-	Focused  bool
+	Detached    bool
+	Focused     bool
+	Minimized   bool
+	ScriptReads int
 }
 
 type directFixtureCall struct {
@@ -269,6 +271,9 @@ func fixtureAPI(method string, params map[string]string) []string {
 }
 
 func directFixtureResponse(argv []string, state *directFixtureState) (string, any, int) {
+	if operation, result, code, handled := scriptFixtureResponse(argv, state); handled {
+		return operation, result, code
+	}
 	if slices.Equal(argv, []string{"--autostart=false", "--timeout", "3s", "hosts", "--json"}) && sandboxCase() == fixtureWorkersDrainedCase {
 		return fixturePendingWorker()
 	}

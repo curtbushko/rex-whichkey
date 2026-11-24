@@ -72,7 +72,7 @@ func (l Layer) owned(ctx context.Context) (placedLayer, error) {
 	}
 	for _, layer := range layers {
 		if layer.id == l.layerID {
-			if layer.kind != "floating" || len(layer.blocks) != 1 || layer.blocks[0].blockID != l.blockID {
+			if layer.kind != "floating" || len(layer.blocks) != 1 || layer.blocks[0].blockID != l.blockID || layer.blocks[0].WindowID != l.WindowID {
 				return placedLayer{}, fmt.Errorf("rex: layer %q no longer contains exactly its owned terminal; refusing mutation", l.layerID)
 			}
 			return layer, nil

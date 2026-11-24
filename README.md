@@ -2,11 +2,13 @@
 
 A short-lived keyboard menu for [Rex](https://www.superlogical.com/rex).
 Shared Lua creates one centered floating terminal; one Go process inside it reads
-JSON menu data, renders the menu and performs operations through the Rex CLI.
+JSON menu configuration, renders the menu and performs built-in operations through
+the Rex CLI. Optional trusted `script.run` bindings start host-local executable
+scripts with literal arguments, without a script pane or tab.
 There is no Go launcher/controller, renderer child, image copy, private IPC,
 daemon or executable Lua menu configuration.
 
-**Evidence:** Task06 fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c` received
+**Previous built-in evidence (not script certification):** Task06 fix2 `cacf7a9694c8ed912ff72d9f8ecfe86c31fa094c` received
 fresh whole-diff APPROVED independent review and was integrated into observed
 main `7e6160f89c0025991712a751e51aa9b2abeaeeef`. Coordinator combined/main
 `task build`, `task test` (unit/race) and full `task lint` (vet/golangci/compatible
@@ -24,6 +26,32 @@ proof is complete for those cases; exact-doc-head review/gates and native
 completion remain coordinator followup. No installed-profile, physical-key,
 remote or all-platform success is claimed. See
 [acceptance](docs/acceptance.md#current-verification-boundary).
+
+## Background scripts
+
+Use [examples/background-scripts.json](examples/background-scripts.json) as a
+complete replacement menu. Place its `./scripts/report.sh` on the originating
+pane's host, relative to its **current foreground cwd**, and make it an executable
+regular file with a valid shebang. Edit the example for your own trusted script;
+no file is copied or installed automatically. Arguments are literal strings,
+not shell code: `$HOME`, `~`, `*` and `;` are not expanded. Configuring a script
+grants executable authority; review the configuration and script as code.
+
+Scripts inherit the Go host process environment, **not** the interactive pane
+shell's aliases/functions or private exports. All standard streams go to
+`/dev/null`; scripts must own their logs. Startup errors use the same menu for
+Esc/q acknowledgement, never retry. Success starts a detached child that survives
+menu/PTY exit, retires the menu and never restores focus again. Completion and
+later exit status are not monitored.
+
+The menu independently proves native Unix host/account identity and reads only
+the exact origin's fresh foreground cwd. Remote origins require the menu itself
+to run on that host/account with a native local Unix server. A local renderer or
+remote `--server` selector is not remote execution authority. Unknown/mismatched
+host, cwd, account or placement refuses without fallback. No live remote or
+all-platform certification is claimed. See the precise
+[script contract](docs/mapping-format.md#background-script-contract) and
+[lifetime](docs/launch-contract.md#script-only-minimized-lifetime).
 
 ## Run this checkout
 

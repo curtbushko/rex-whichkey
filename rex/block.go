@@ -114,6 +114,7 @@ func (b Block) valid() error {
 type placedLayer struct {
 	id     string
 	kind   string
+	state  string
 	blocks []Block
 }
 
@@ -147,7 +148,7 @@ func (s Session) snapshotLayers(view sessionView) ([]placedLayer, error) {
 				return nil, errors.New("rex session inspect: invalid layer placement")
 			}
 			seen[item.ID] = true
-			layer := placedLayer{id: item.ID, kind: item.Kind}
+			layer := placedLayer{id: item.ID, kind: item.Kind, state: item.State}
 			// Keep parsing optional layout metadata, but never use it for float
 			// sizing or placement authority. Missing/malformed geometry remains
 			// nonfatal; the exact placed identities below are authoritative.

@@ -138,8 +138,8 @@ determines menu lifetime.
 
 ## Fixed owned cleanup inventory
 
-After joining jobs and restoring/closing its tty, Go must complete bounded,
-cancellation-independent cleanup before any selected effect:
+For built-ins, after joining jobs and restoring/closing its tty, Go must complete
+bounded, cancellation-independent cleanup before any selected effect:
 
 1. Revalidate the exact returned sole terminal/floating layer and placed identity.
 2. Call `session.detach_block` once on that exact Block, never close a user
@@ -165,6 +165,43 @@ Pre-effect checks and mutations are separate, not atomic against external change
 SIGKILL, server/terminal loss or uncertain acknowledgments may leave resources.
 No broad scavenging, rollback, uncertain retry or guaranteed post-crash cleanup
 is claimed.
+
+## Script-only minimized lifetime
+
+Built-in detachment above is unchanged. A retained `script.run` selection takes
+a different lifetime only to preserve a readable startup-error surface:
+
+1. After joining metadata workers and restoring/closing the TTY, independently
+   discover the native local Unix host/account (ignore inherited Rex selectors),
+   verify actual socket peer PID/UID and compare both exact terminals' fresh
+   host IDs. Read only original `process.foreground.cwd` and preflight the
+   literal host-local target. Preflight failures show in that same menu for Esc/q.
+2. Revalidate sole-block/same-window ownership, minimize that exact layer once,
+   and read back `state=minimized` plus terminal inventory. ACK alone,
+   normal/unknown state, changed placement, cleanup/focus failure or cancellation
+   forbids start.
+3. Restore and verify original placement/focus and captured explicit app
+   generation. Refresh native host proof, current foreground cwd and preflight;
+   recheck minimized ownership and exact original focus. These separate reads
+   are not atomic against concurrent UI/filesystem edits.
+4. Start one literal absolute executable/argv with explicit cwd, real `/dev/null`
+   stdio and a separate Unix session. OS exec/chdir handshake errors mean no
+   executed child; no shell fallback, retry or completion wait. Reaping runs
+   independently while Go is alive; OS reparenting owns it after Go exit.
+5. On success, detach only the exact owned minimized host and exit. **Never
+   refocus after accepted startup**, even when detach fails or the user switches
+   away. Post-start cleanup error cannot imply nonexecution or rollback.
+6. Only on certain nonexecution with still-valid original placement/app context,
+   restore/focus the same layer/block for sanitized error-only acknowledgement.
+   It has no config/menu/metadata/dispatch path. Restore its temporary TTY and
+   retire the host. Lost authority/infrastructure can prevent safe acknowledgement;
+   no replacement pane, input injection or local fallback is attempted.
+
+The existing terminal exit policy retires the host after Go exits; Go cannot
+self-prove that deletion. Tests exercise real Go PTYs/native children against
+isolated CLI fixtures, not live remote hosts or native GUI pixels. Native Rex
+invisibility/final retirement on a reviewed candidate remains an external
+coordinator observation, not a unit-test or source-review claim.
 
 ## Effects and evidence boundary
 

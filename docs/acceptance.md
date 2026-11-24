@@ -1,5 +1,24 @@
 # Current release evidence: shared Lua float / direct Go
 
+## Background-script implementation evidence boundary
+
+The opt-in `script.run` contract is documented in
+[mapping-format](mapping-format.md#background-script-contract). Regression
+coverage exercises strict config vectors, literal host-local targets/native OS
+exec errors, real detached-child survival after launcher and PTY exit,
+independent local Unix peer identity and production direct-menu orchestration
+through isolated CLI fixtures. Fixtures check worker/TTY cleanup before
+minimization/focus/start, same-layer minimized readback, once-only confirmation,
+error-only acknowledgement and detach without later success focus restoration.
+Existing built-in detachment assertions remain unchanged.
+
+This is not live remote/production certification, native GUI invisibility proof
+or external observation of Rex deleting its terminal after Go exits. The build
+handoff records exact candidate revisions and gate logs; independent Go/Bash
+code/test, architecture/security/usability review and coordinator combined/main/
+runtime acceptance remain separate requirements. Historical Phase19 evidence
+below does not certify this new script feature.
+
 ## Phase19 accepted policy and observed make route
 
 Accepted direction `REXWHICHKEY-20261106-232754`: shared Lua owns native float

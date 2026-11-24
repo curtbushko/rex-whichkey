@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "title": "Trusted background scripts",
+  "spec": [
+    {
+      "keys": "r",
+      "desc": "Run project report",
+      "action": "script.run",
+      "confirm": true,
+      "args": {
+        "path": "./scripts/report.sh",
+        "args": ["--format", "text", "a literal argument"]
+      }
+    }
+  ]
+}

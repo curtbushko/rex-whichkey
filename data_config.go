@@ -266,15 +266,11 @@ func validateMenuAction(mapping Mapping) error {
 		args = json.RawMessage(`{}`)
 	}
 	switch mapping.Action {
+	case menuScriptRun:
+		_, err := decodeScriptAction(args)
+		return err
 	case menuPaneSplit:
-		fields, err := menuObject(args, "direction")
-		if err != nil {
-			return err
-		}
-		direction, err := completionString(fields["direction"])
-		if err != nil || direction != menuSplitRight && direction != menuSplitDown {
-			return errors.New("pane.split requires direction right or down")
-		}
+		return validateMenuSplitArgs(args)
 	case menuSessionSelect:
 		return validateMenuSessionArgs(args)
 	case menuPaneClose, menuTabClose, menuSessionClose:
@@ -296,6 +292,17 @@ func validateMenuAction(mapping Mapping) error {
 		return err
 	default:
 		return errors.New("unsupported menu action (custom Lua actions are not supported)")
+	}
+}
+
+func validateMenuSplitArgs(args json.RawMessage) error {
+	fields, err := menuObject(args, "direction")
+	if err != nil {
+		return err
+	}
+	direction, err := completionString(fields["direction"])
+	if err != nil || direction != menuSplitRight && direction != menuSplitDown {
+		return errors.New("pane.split requires direction right or down")
 	}
 	return nil
 }

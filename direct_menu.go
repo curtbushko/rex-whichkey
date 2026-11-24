@@ -89,7 +89,11 @@ func directSelection(ctx context.Context, client *rex.Client, origin launchOrigi
 	popup rex.Layer, snapshot rex.SessionSnapshot, options DirectOptions, state *directMenuState,
 ) (event MenuEvent, bound launchOrigin, appErr error, outcome error) {
 	bound = origin
+	scriptStarted := false
 	defer func() {
+		if scriptStarted {
+			return // Success consumes all focus/retry authority, even on detach uncertainty.
+		}
 		cleanup, done := context.WithTimeout(context.WithoutCancel(ctx), 9*time.Second)
 		defer done()
 		outcome = errors.Join(outcome, retireDirectPopup(cleanup, client, bound, placement, requested, popup))
@@ -114,8 +118,18 @@ func directSelection(ctx context.Context, client *rex.Client, origin launchOrigi
 	state.request = popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 		selection: origin.selection, placement: &placement, snapshot: &snapshot}
 	state.client = client
-	ctx = context.WithValue(ctx, terminalDirectKey{}, state)
-	event, outcome = RunTerminal(ctx, config, options.NoColor, options.ASCII)
+	terminalCtx := context.WithValue(ctx, terminalDirectKey{}, state)
+	event, outcome = RunTerminal(terminalCtx, config, options.NoColor, options.ASCII)
+	if outcome == nil && !event.Dismissed {
+		mapping, selectionErr := state.validateSelection(event)
+		if selectionErr != nil {
+			return MenuEvent{}, bound, appErr, selectionErr
+		}
+		if mapping.Action == menuScriptRun {
+			scriptStarted, outcome = runDirectScript(ctx, client, bound, placement, requested, popup, mapping, options)
+			event = MenuEvent{Dismissed: true} // Never redispatch the consumed script selection.
+		}
+	}
 	return event, bound, appErr, outcome
 }
 
@@ -126,6 +140,10 @@ func retireDirectPopup(ctx context.Context, client *rex.Client, origin launchOri
 	if err := popup.Detach(ctx); err != nil {
 		return err
 	}
+	return restoreDirectOrigin(ctx, client, origin, placement, requested)
+}
+
+func restoreDirectOrigin(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string) error {
 	current, _, err := nativeResourceOrigin(ctx, client, origin, placement, requested)
 	if err != nil {
 		return err
@@ -140,6 +158,10 @@ func retireDirectPopup(ctx context.Context, client *rex.Client, origin launchOri
 	if focusErr := current.Focus(ctx); focusErr != nil {
 		return errors.New("whichkey: original focus restoration failed or is uncertain; no effect, no retry")
 	}
+	return verifyDirectOriginFocus(ctx, client, origin, placement, requested)
+}
+
+func verifyDirectOriginFocus(ctx context.Context, client *rex.Client, origin launchOrigin, placement rex.Block, requested string) error {
 	view, err := client.SessionSnapshot(ctx, origin.SessionID)
 	if err != nil {
 		return err

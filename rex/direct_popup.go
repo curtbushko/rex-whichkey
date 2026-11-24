@@ -96,6 +96,59 @@ func (l Layer) Detach(ctx context.Context) error {
 	return l.terminalPlacement(ctx, "detached")
 }
 
+// Minimize hides only the same owned terminal. Mutation acknowledgement is not
+// evidence of invisibility: state and inventory are independently read back.
+func (l Layer) Minimize(ctx context.Context) error {
+	if err := l.checkOwned(ctx); err != nil {
+		return err
+	}
+	if err := l.terminalPlacement(ctx, "placed"); err != nil {
+		return err
+	}
+	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, "layer_id": l.layerID, "state": "minimized"}, nil); err != nil {
+		return fmt.Errorf("rex: popup minimize failed or uncertain; not retried: %w", err)
+	}
+	return l.VerifyMinimized(ctx)
+}
+
+// VerifyMinimized rejects unknown, visible, shared or reparented layers.
+func (l Layer) VerifyMinimized(ctx context.Context) error {
+	layer, err := l.owned(ctx)
+	if err != nil {
+		return err
+	}
+	if layer.state != "minimized" {
+		return errors.New("rex: exact owned menu is not verified minimized; script not started")
+	}
+	return l.terminalPlacement(ctx, "placed")
+}
+
+// RestoreForError is only for known nonexecution. It never creates/replaces UI.
+func (l Layer) RestoreForError(ctx context.Context) error {
+	if err := l.VerifyMinimized(ctx); err != nil {
+		return err
+	}
+	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, "layer_id": l.layerID, "state": "normal", "focus": true}, nil); err != nil {
+		return err
+	}
+	layer, err := l.owned(ctx)
+	if err != nil {
+		return err
+	}
+	if layer.state != "" && layer.state != "normal" {
+		return errors.New("rex: error menu is not verified visible")
+	}
+	view, err := l.client.SessionSnapshot(ctx, l.client.session)
+	if err != nil {
+		return err
+	}
+	window, err := view.Window(l.WindowID)
+	if err != nil || !window.Active || window.FocusedBlockID != l.blockID {
+		return errors.New("rex: exact error menu focus unavailable")
+	}
+	return l.terminalPlacement(ctx, "placed")
+}
+
 func (l Layer) terminalPlacement(ctx context.Context, placement string) error {
 	var result struct {
 		Blocks []struct {

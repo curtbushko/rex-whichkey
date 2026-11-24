@@ -100,9 +100,9 @@ the narrow allowlists below, not an arbitrary Rex argument escape hatch.
 | `provider` | string | Named non-executable dynamic group below |
 | `cond` | boolean | False disables display/dispatch; omission means enabled |
 
-These are the only mapping fields. `callback_ref`, hooks, functions, executable
-paths/commands, nested executable specs and custom Lua action names are not
-supported. Conditions, labels and icons are literal values, not expressions.
+These are the only mapping fields. `callback_ref`, hooks, functions, arbitrary
+command strings, nested executable specs and custom Lua action names are not
+supported. The single executable-config facility is `script.run` below. Conditions, labels and icons are literal values, not expressions.
 Only actions may carry args or confirmation. A plain group/metadata row is not
 executable. Providers additionally require `group` and forbid action, args and
 confirmation. Flags apply to that record; the flat file has no implicit Lua
@@ -128,7 +128,8 @@ No additional key-length or token-count limit is imposed.
 ## Complete public action catalogue
 
 `args` may be omitted, meaning `{}`. Unknown argument members, wrong types and
-nulls are errors. There is no configurable client/server/executable nomination.
+nulls are errors. There is no configurable client/server nomination; only
+`script.run` may name an executable script.
 
 | Action | Accepted args | Dispatch intent |
 | --- | --- | --- |
@@ -148,6 +149,7 @@ nulls are errors. There is no configurable client/server/executable nomination.
 | `pane.close` | `{}` | Close retained Block; **confirm must be true** |
 | `client.sidebar.toggle` | `{}` | Toggle sidebar |
 | `client.palette.toggle` | `{}` | Toggle command palette |
+| `script.run` | required `path` string; optional `args` string array | Start a script on the exact origin host/current cwd |
 
 `session.select` IDs must be full typed `session:UUID` / `window:UUID`, with
 36-character UUID bodies (hex digits and canonical hyphen positions), never
@@ -160,6 +162,64 @@ Destructive actions without `confirm:true` are rejected, not silently dispatched
 or silently rewritten. Their retained confirmation is rechecked by the dispatch
 owner. Other executable actions may request confirmation too; `session.switch`
 cannot, because opening a list is not an executable selection.
+
+## Background script contract
+
+```json
+{"keys":"r","desc":"Run report","action":"script.run","confirm":true,
+ "args":{"path":"./scripts/report.sh","args":["--format","text","a b","$HOME"]}}
+```
+
+`path` must be nonempty. Path and arguments reject NUL and malformed Unicode;
+empty argument elements, spaces, Unicode and shell metacharacters are literal.
+Optional `args` defaults to an empty vector. Unknown/duplicate/case-alias members,
+nulls and non-string elements are rejected. No command string, interpreter
+selector, environment override, callback or expansion is available. A present
+`spec` still replaces the whole menu. Loading config and standalone `menu` never
+stat or run targets; only direct retained selection (and `y` when configured)
+grants one startup attempt.
+
+Relative paths resolve against the **fresh original foreground process cwd** on
+its host, never the config directory, popup cwd, initial shell cwd, home or PATH.
+Absolute paths are host-local too. Targets must resolve to regular executable
+files; ordinary symlinks are allowed. FIFOs, directories, devices, dangling links
+and nonexecutables refuse. Use a valid shebang whose interpreter exists on that
+host. Native exec reports permission, chdir, format and interpreter errors; there
+is no automatic shell/shebang fallback. Trusted same-account replacement between
+checks and exec is not an atomic-content guarantee or sandbox.
+
+**Treat script configuration as executable code.** Anyone who can change the
+selected config or script can choose work running as the menu's OS account.
+Arguments may be visible in the OS process list. The child inherits the Go host
+process environment (including PATH and Rex selectors), not the foreground
+shell's private exports, aliases or functions. Scripts must explicitly use any
+inherited Rex selectors they need; no later-focused target is substituted.
+Standard input/output/error are real `/dev/null` handles. Redirect logs inside
+your script if needed. Startup success does not report completion, nonzero exit
+or subsequent failure. Cancellation after accepted startup does not kill it.
+
+Startup errors reuse the same menu for **Esc/q acknowledgement only**. The error
+view prioritizes the cause and repair guidance over full paths, so both remain
+readable in short floats (including 64 columns by 5 rows). Full path details stay
+in the underlying caller error; the view is not a scrolling log. Repeated
+mapping/confirmation keys cannot run anything. Certain late exec failure may
+restore that exact minimized menu. Lost/changed host/app/placement can prevent
+safe UI recovery; there is no replacement pane or notification fallback. After
+accepted startup the menu only detaches and exits: no later focus restore,
+retry, completion monitor or rollback. A retirement error can mean the script
+**did start**. Inspect your logs/processes before considering a manual rerun.
+If infrastructure failure leaves a host visible, inspect and close only the
+exact known menu, never a guessed user pane.
+
+Host/account proof requires the independently discovered native local Unix
+server, matching OS socket peer PID/UID and matching host IDs on both retained
+terminals. A network selector or renderer location is insufficient. Remote origin
+support requires running this Go menu on that remote host/account with a native
+local server; no SSH/copy/local fallback is provided. Actual remote and Linux
+runtime certification remain separate from isolated tests.
+
+See [the complete example](../examples/background-scripts.json) and
+[script lifetime](launch-contract.md#script-only-minimized-lifetime).
 
 ## Complete provider catalogue and expansion boundary
 

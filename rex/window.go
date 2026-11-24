@@ -42,6 +42,7 @@ type windowView struct {
 type layerView struct {
 	ID     string          `json:"layer_id"`
 	Kind   string          `json:"kind"`
+	State  string          `json:"state"`
 	Bounds json.RawMessage `json:"bounds"`
 	Layout json.RawMessage `json:"layout"`
 	Blocks []struct {

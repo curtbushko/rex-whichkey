@@ -41,6 +41,23 @@ Hosts remain opt-in execution-host/home inventory listing only, never connect/SS
 The `panes` provider's exact Block focus intent is internal Go data, not a public
 `pane.focus` action schema or a restored directional-focus default.
 
+## Configured background scripts
+
+`script.run` is an opt-in trusted executable binding, not a new default or an
+arbitrary Lua/Rex callback. It accepts literal `path` and optional string-vector
+`args`; see [the complete contract](mapping-format.md#background-script-contract)
+and [example](../examples/background-scripts.json). Loading and standalone `menu`
+remain effect-free. Optional confirmation is retained and checked once.
+
+The exact origin's proven native host/account and fresh foreground cwd determine
+where it runs. After worker/TTY cleanup, only the same menu float is minimized
+and independently verified hidden; exact original focus is restored before one
+native detached startup. Missing/unsuitable targets stay in that menu for readable
+acknowledgement. Certain OS startup failure restores only that owned menu for
+Esc/q; no retry or replacement pane is offered. Success performs detach-only
+retirement and never restores focus again. Output is discarded and completion
+is not monitored.
+
 ## Dispatch and uncertainty
 
 All Rex operations use the frozen concrete Go CLI client/argument arrays.
@@ -50,8 +67,9 @@ unchanged placement/owner and current built-in `kind=client` metadata.
 Explicit app intent remains strict even for resource effects.
 There is no custom Lua action fallback or chooser/current-focus substitution.
 
-Terminal restoration and exact popup/origin-focus/pipe/private-file/image cleanup
-precede every selected effect. Rename follows action intent at configured keys,
+Terminal restoration and exact popup/origin-focus cleanup precede every
+selected effect. Built-ins keep exact detachment; scripts use the separately
+verified same-layer minimized lifetime described above. Rename follows action intent at configured keys,
 not hardcoded tr/wr; text supplies a label, never resource authority.
 Selected sessions/windows and panes are revalidated before dispatch.
 Split/session.select omit outer origin context; other app actions retain it.
