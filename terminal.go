@@ -87,6 +87,8 @@ func RunTerminal(ctx context.Context, config Config, noColor, ascii bool) (event
 	if drawErr := ui.draw(ctx, fd); drawErr != nil {
 		return MenuEvent{}, drawErr
 	}
+	ui.startSizing(ctx, fd)
+	defer func() { outcome = errors.Join(outcome, ui.sizing.stop()) }() // Join before tty restoration.
 	// No demand/job is eligible before the static frame has been written.
 	localJobs := ui.startMetadata(ctx)
 	defer localJobs.stop() // Join before display/termios/descriptor restoration.

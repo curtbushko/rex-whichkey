@@ -156,13 +156,13 @@ func driveTerminalEditing(t *testing.T, sandbox *ptySandbox) {
 
 func driveTerminalPagination(t *testing.T, sandbox *ptySandbox) {
 	t.Helper()
-	// The two-page root becomes a four-page group before the queued Tabs.
-	// Reusing the old count for this read would incorrectly wrap back to 1/4.
-	mark := sandbox.resize(t, 40, 5)
+	// Seven rows include two outer padding rows. The two-page root becomes a
+	// four-page group before queued Tabs; stale counts would wrap back to 1/4.
+	mark := sandbox.resize(t, 40, 7)
 	sandbox.expect(t, mark, "Select action")
 	mark = sandbox.send(t, "g\t\t")
 	sandbox.expect(t, mark, "3/4")
-	mark = sandbox.resize(t, 40, 6)
+	mark = sandbox.resize(t, 40, 8)
 	sandbox.expect(t, mark, "3/3")
 	mark = sandbox.send(t, "\t\t")
 	sandbox.expect(t, mark, "2/3")

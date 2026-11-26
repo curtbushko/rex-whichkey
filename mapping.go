@@ -35,6 +35,8 @@ type Config struct {
 
 	// Go-owned inline rename presentation, not a public configuration option.
 	textEntry *textEntrySpec
+	// Direct popups pin instructions to the bottom; standalone keeps positioning.
+	footerAtBottom bool
 }
 
 // ConfigOptions preserves absence separately from explicit empty/false values.

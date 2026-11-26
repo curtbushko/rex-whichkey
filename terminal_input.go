@@ -22,6 +22,7 @@ type terminalMenu struct {
 	input          terminalKeys
 	theme          Theme
 	frame          MenuFrame
+	sizing         *popupSizingJob
 	noColor, ascii bool
 }
 
@@ -57,6 +58,7 @@ func (ui *terminalMenu) draw(ctx context.Context, fd int) error {
 	frame, err := drawTerminal(ctx, fd, ui.menu, ui.config, ui.theme)
 	if err == nil {
 		ui.frame = frame
+		ui.requestSizing()
 	}
 	return err
 }
@@ -130,6 +132,13 @@ func (ui *terminalMenu) startMetadata(ctx context.Context) *metadataJobs {
 }
 
 func (ui *terminalMenu) refresh(ctx context.Context, fd int, resize <-chan os.Signal, jobs *metadataJobs) error {
+	if ui.sizing != nil {
+		select {
+		case err := <-ui.sizing.errors:
+			return err
+		default:
+		}
+	}
 	if err := ui.refreshUpdates(ctx, fd, jobs); err != nil {
 		return err
 	}

@@ -69,9 +69,10 @@ A present `spec` replaces the **whole** binding list, not individual keys;
 are data, never replaced by truthy/default merging. An empty position remains an
 invalid position. `{"version":1}` preserves all built-ins.
 
-The shared Lua launch's finite `width`/`height` fractions (defaults `.8/.3`,
-centered) control native outer bounds, not this JSON `position`. The direct menu
-renders from row zero within its own PTY and never resizes that rectangle.
+The shared Lua launch's finite `width`/`height` fractions (defaults `.8/.2`,
+centered) control native width and maximum height, not this JSON `position`.
+The direct menu renders from row zero and fits its own popup's height to current
+content, including submenus, while retaining pagination at the height cap.
 Launch `config`, `ascii`, `no_color` are data options; normal source routing is
 `make run -- config=/absolute/menu.json` with the PATH Task wrapper, or GNU make
 `make run ARGS='config=/absolute/menu.json'`. Bare Go/root flags are not a launcher.

@@ -9,60 +9,78 @@ updating the theme when terminal palette replies arrive. Input framing lives in
 [`terminal_keys.go`](../terminal_keys.go), and bounded display rollback in
 [`terminal_modes.go`](../terminal_modes.go).
 
-## Compact status borders and paging
+## Borderless heading, muted footer and paging
 
-[`render.go`](../render.go) and [`layout.go`](../layout.go) separate three regions:
-a full-width top status border containing title/icon/breadcrumbs, the menu entries,
-and a full-width bottom status border containing concise key hints. Status text
-shares its row with the horizontal rule (`─`, or `-` in ASCII mode). One blank
-spacer separates content from each status border when room permits. No `Keys:`
-prefix or separate page-footer row is generated. These are terminal text borders,
-not native Rex pane/tab/window controls.
+[`render.go`](../render.go) and [`layout.go`](../layout.go) render an optional
+plain-text heading (title/icon/breadcrumbs), menu entries, and a plain-text footer.
+There are no application-drawn border lines, including in ASCII mode. Direct
+popups have one top blank row, a menu/footer separation row when space permits,
+and instructions on the final row, with no blank padding below them. Standalone
+frames retain padding at both edges. Padding counts toward fitted height and
+yields to content/navigation in tiny viewports. An absent heading reserves no
+additional row or spacer. Rex's native popup chrome is unchanged. The popup explicitly uses non-login
+startup (`shell="none", login=false`) so no login banner flashes before the menu.
+
+In direct popups the menu stays at the top. Extra viewport rows become blank
+space between menu and instructions, not below them. Anchoring does not inflate
+the natural height used by content fitting or the startup cache; removing the
+bottom padding reduces the preferred popup height by one row.
+
+The footer uses the terminal's muted neutral (ANSI gray before palette replies;
+a readable palette neutral or foreground/background-derived color afterwards).
+It does not fall back to the bright body foreground merely because ANSI gray
+has low contrast. Known backgrounds retain at least 4.5:1 text contrast. The
+right-hand `rex-whichkey` label appears when it fits without removing navigation,
+paging or recovery hints. Confirmation/error hints retain their critical color;
+branding stays muted. NO_COLOR remains plain text.
 
 A single-page menu has no page counter or Tab hint. Multiple pages retain a
-`current/total` counter and Tab navigation in the bottom border where width permits.
+`current/total` counter and Tab navigation in the footer where width permits.
 Paging shares that row rather than allocating another row that could itself
 cause pagination. The renderer picks shorter complete hints before grapheme
 clipping; at narrow widths Escape takes priority over decoration/counter text.
 Hidden and off-page bindings remain active, and Tab still wraps through pages.
 
-Content takes priority: page capacity and page count are established without
-spacers, then separation uses rows left after the selected page's visible content.
-Partially filled final pages can therefore have spacers even when full pages
-cannot. Bottom-hint separation takes the first spare row; both spacers appear
-when two rows remain. Three available rows permit both status borders, two permit
-content plus bottom hints, and one permits content alone. Confirmation replaces
+Direct popups reserve one menu/footer separation row before calculating page
+capacity whenever content and navigation still fit, so full pages retain that
+gap too. Heading separation uses spare rows. Standalone UI keeps its configured
+positioning and compact frame: its spacers use only rows left after content.
+Tiny viewports prioritize content and navigation over spacing. Three available
+inner rows permit heading and footer, two permit content plus bottom hints,
+and one permits content alone. Confirmation replaces
 the entries with `y=yes / other=cancel: …` in the critical role, so
 confirmation/cancellation instructions remain on the content row even without
-status borders, subject to width clipping. A zero-height viewport draws nothing
+status rows, subject to width clipping. A zero-height viewport draws nothing
 but does not mutate navigation. Semantic roles and text warnings remain intact
 without color; ASCII mode changes decorations, not user labels.
 
-## Fixed Lua rectangle and own-PTY fitting
+## Content-sized height and own-PTY fitting
 
 [`lua/rex_whichkey.lua`](../lua/rex_whichkey.lua) creates one centered float with
-finite launch `width`/`height` fractions in `(0,1]`, default `.8/.3`:
-`{(1-width)/2, (1-height)/2, width, height}`. Shared source/script/require launch
+finite launch `width`/`height` fractions in `(0,1]`, default `.8/.2`:
+`{(1-width)/2, (1-initial_height)/2, width, initial_height}`. A matching cached
+root height supplies `initial_height`; a miss uses the configured maximum.
+Shared source/script/require launch
 uses this same implementation. Source `make run` builds current Go and supplies
 its absolute target-bin directory; installed launch uses ordinary PATH.
 See [launch options](launch-contract.md#lua-presentation-and-creation).
 
-Go does not measure origin geometry, choose native content-height bounds or seed
-a hypothetical window grid. The direct menu starts at row zero and fits its
-**own PTY** cells. Larger menus paginate; status/spacer behavior above is retained.
-`MenuFrame.PreferredHeight` remains a natural terminal-row measurement, not a
-native layer sizing command. JSON `position` is still validated but does not
-choose outer bounds in direct mode; standalone UI/result positioning remains.
+Go retains that width and treats launch height as a cap. The current menu's
+`MenuFrame.PreferredHeight` supplies its natural content rows plus the footer,
+optional heading and their spacers. An independent worker fits the same verified layer to those rows,
+including submenu/back and provider updates, using only its **own client-sized
+PTY**. Longer menus paginate at the height cap. Screen/font changes reflow and
+refit; focus/palette redraws alone do not resize unchanged content.
 
-Submenu/back/paging/metadata/focus/idle never resize or replace the layer.
-External terminal/window/font changes can alter own-PTY cells; SIGWINCH and
-focus-in repaint/reflow retained content without application-driven outer resize.
-No idle menu expiry, repaint timer, font/settings mutation or geometry feedback
-loop is introduced. Palette replies are metadata, not keyboard actions.
-Captured placement/liveness checks remain distinct from selected app-generation
-checks. This is not pixel-perfect shrink wrapping, GUI pixel provenance or a
-first-size-final guarantee. Historical Go-controller sizing observations below
-are not evidence for this Lua sizing route.
+There is no origin-grid guess, replacement popup, focus change or font/settings
+mutation. Unknown launch geometry disables fitting, and an unpresented terminal
+retains the launch rectangle rather than using its bootstrap 80x24 grid.
+Cell rounding can leave one spare row; native chrome remains visible and initial
+size can settle after creation. JSON `position` still does not choose outer bounds
+in direct mode; standalone UI/result positioning is unchanged.
+See [sizing design and limits](content-sized-popup.md) and
+[startup geometry cache](geometry-cache.md). Historical observations
+below are not new evidence for this sizing route.
 
 ### Native chrome: accepted defaults, customization deferred (REQ-026)
 
@@ -72,7 +90,8 @@ REQ-026 completion. Rex's default native header/titlebar, border, corners and
 shadow may remain visible. The inspected Rex API has no supported per-float knobs
 for that customization; this is not a claim about all future Rex versions.
 
-Lua owns the native presentation policy, fractional sizing and launch. Go owns
+Lua owns native presentation policy, initial maximum bounds and launch. Go owns
+content-height fitting and
 the rendered menu header/footer, semantic terminal colors and palette matching;
 those terminal spans do not style or remove native controls. No guessed/ignored
 API fields, fake knobs, global Rex settings/user configuration changes, clipped

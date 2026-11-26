@@ -30,10 +30,27 @@ func runAPIFixture(logPath string) int {
 	if err != nil || closeErr != nil {
 		return 91
 	}
-	if _, writeErr := os.Stdout.WriteString(os.Getenv("REX_WHICHKEY_API_OUTPUT")); writeErr != nil {
+	output := os.Getenv("REX_WHICHKEY_API_OUTPUT")
+	exitCode := os.Getenv("REX_WHICHKEY_API_EXIT")
+	if sequence := os.Getenv("REX_WHICHKEY_API_OUTPUT_SEQUENCE"); sequence != "" {
+		outputs := []json.RawMessage{}
+		data, readErr := os.ReadFile(logPath)
+		if readErr != nil || json.Unmarshal([]byte(sequence), &outputs) != nil {
+			return 94
+		}
+		index := strings.Count(string(data), "\n") - 1
+		if index < 0 || index >= len(outputs) {
+			return 95
+		}
+		output = string(outputs[index])
+		if strconv.Itoa(index+1) == os.Getenv("REX_WHICHKEY_API_FAIL_AT") {
+			exitCode = "1"
+		}
+	}
+	if _, writeErr := os.Stdout.WriteString(output); writeErr != nil {
 		return 92
 	}
-	code, err := strconv.Atoi(os.Getenv("REX_WHICHKEY_API_EXIT"))
+	code, err := strconv.Atoi(exitCode)
 	if err != nil {
 		return 93
 	}

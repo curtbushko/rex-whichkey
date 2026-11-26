@@ -1,5 +1,94 @@
 # Current release evidence: shared Lua float / direct Go
 
+## Cached startup geometry follow-up (2026-11-26)
+
+Accepted [REXWHICHKEY-20261126-103524](decisions.md) adds a disposable root-height
+hint at `$XDG_CACHE_HOME/rex-whichkey/geometry.json`, falling back to
+`~/.cache/rex-whichkey/geometry.json`. Lua reads the hint before float creation;
+Go retains the configured maximum separately and caches only settled presented
+root menus. [Format, safety and limits](geometry-cache.md).
+
+The working-tree build, unit tests and full lint passed. Two final full-race
+attempts timed out without a completed result. A subsequent uncached diagnostic
+`go test -race ./... -count=1 -timeout=75s -v` passed all three packages (root
+40.383s, cmd 1.353s, rex 15.879s), with no race reports; the earlier timeouts' cause
+was not established. Its output is in ignored `.mtn-tmp/geometry-cache-race.log`.
+Focused checks cover Go-written JSON consumed by the Lua launch path,
+cold/invalid/mismatched fallback,
+atomic writes/permissions/final symlinks/temp cleanup, root/presentation/settling,
+write failures and growth beyond cached startup bounds. Native Rex preview.25's
+Lua runtime consumed isolated synthetic cache data with mocked resource creation:
+initial bounds were `[.1,.44,.8,.12]`, while command args retained `--max-height .2`.
+That verifies native Lua lookup/argument plumbing, not a real warm GUI launch.
+
+The real source launch `block:01a21887-4226-7d79-963e-f774d7c902d9` remained
+ownerless at its bootstrap 80x24 grid, correctly retained the `.2` cap and did not
+populate the user cache. It was dismissed and independently observed absent from
+`session.list_blocks`. No app switch, installed binding or profile was changed to
+force presentation. Final native presented cold-to-warm visual behavior remains
+unverified; automated/fixture results are not physical-key or remote certification.
+
+## Content-height fitting follow-up (2026-11-26)
+
+Accepted decision [REXWHICHKEY-20261126-092545](decisions.md) replaces fixed
+navigation height for the current direct menu. Width stays fractional; height
+fits current content within the launch cap, including submenu transitions.
+Historical fixed-rectangle entries below describe their original revisions,
+not the new contract. [Design and limits](content-sized-popup.md).
+
+Working-tree verification on base `3056d82702ec3f7f4711fa9f16e66f3fa64980dd`:
+`task build`, `task test` (unit and race), and full `task lint` passed. The latter
+used the existing devshell's `go-ai-lint` store bin explicitly on PATH, without
+sourcing its shell hook or changing project configuration. Tests cover own-grid
+presentation, sizing/calibration/cap, worker join/failure, strict resize ownership
+and readback/no-retry; existing lifecycle and script gates passed too.
+
+A development native run on Rex server preview.25 showed a presented default menu
+at height `.13` with six PTY rows, down from the `.2` cap. That was before the
+final presentation guard and is not final-candidate submenu certification. The
+final guarded candidate's test popup `block:01a2184c-90da-7dd3-bdd6-efea995dac84`
+was ownerless at its bootstrap 80x24 grid; bounds correctly remained `.8/.2`.
+It was dismissed and independently observed absent from `session.list_blocks`.
+No app selection, profile activation or installed binding was changed to force
+presentation. Final-candidate native presented submenu grow/shrink, physical keys,
+remote/all-platform and pixel-perfect results remain unverified.
+
+## Non-login startup follow-up (2026-11-26)
+
+The user reported a brief “Last login” flash before the menu. The installed Rex
+terminal schema defaults omitted `login` to true, even though the launcher already
+sets `shell="none"`. The shared Lua launcher now explicitly sets `login=false`.
+A regression asserts both options in the created terminal.
+
+Native preview.25 probes used `/bin/sleep 2`, `shell="none"`, `focus=false`, and
+normal on-completion cleanup in the exact originating window. `login=true`
+(`block:01a21946-183d-7e44-8b27-080b72017dcc`) captured a “Last login” banner;
+`login=false` (`block:01a21946-2184-76ca-8ed1-21e4ca67dcde`) captured a blank
+terminal. Both exact blocks were independently observed absent after exit.
+This isolates terminal startup behavior, not installed-binding deployment.
+The rebuilt source menu `block:01a21947-16e4-76ed-aa4c-1c2a4e81ff92` also rendered
+normally with a `rex-whichkey` foreground process (no login wrapper), then was
+Escape-dismissed and independently observed absent. The user cache was observed
+with a settled `.13` root height. No installed binding/profile was changed.
+
+## Borderless presentation follow-up (2026-11-26)
+
+The user requested removal of application-drawn rules, quieter terminal-colored
+navigation hints, and a `rex-whichkey` footer label. The renderer now uses plain
+heading/footer rows, omits an empty heading and its spacer, and adds right-aligned
+branding only when it fits without displacing navigation/recovery hints.
+Muted text uses terminal gray or a readable terminal-derived neutral; critical
+warnings remain critical. Direct popup instructions now occupy the final row,
+with no bottom blank padding and a menu/footer gap reserved before pagination
+when space permits. Top padding remains. Surplus viewport space stays between
+the top-aligned menu and instructions; preferred height drops the removed bottom
+row while the startup cache remains a disposable sizing hint. Standalone
+positioning remains intact. Native Rex chrome and NO_COLOR behavior are unchanged.
+Build, unit/race tests and full lint passed. Focused regressions cover borderless
+Unicode/ASCII output, narrow paging/navigation, terminal neutral/contrast and
+warning/branding roles. No installed-profile or physical-key observation is
+claimed by these checks. See [appearance](appearance.md).
+
 ## Background-script implementation evidence boundary
 
 The opt-in `script.run` contract is documented in

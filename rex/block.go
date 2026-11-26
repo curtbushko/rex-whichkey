@@ -115,6 +115,7 @@ type placedLayer struct {
 	id     string
 	kind   string
 	state  string
+	bounds *Bounds
 	blocks []Block
 }
 
@@ -149,9 +150,11 @@ func (s Session) snapshotLayers(view sessionView) ([]placedLayer, error) {
 			}
 			seen[item.ID] = true
 			layer := placedLayer{id: item.ID, kind: item.Kind, state: item.State}
-			// Keep parsing optional layout metadata, but never use it for float
-			// sizing or placement authority. Missing/malformed geometry remains
-			// nonfatal; the exact placed identities below are authoritative.
+			// Missing/malformed geometry disables fitting, not placement reads.
+			// Only validated bounds of the exact owned float may drive its size.
+			if bounds, err := decodeBounds(item.Bounds); err == nil {
+				layer.bounds = &bounds
+			}
 			_, _ = layoutRectangles(item.Layout)
 			for _, block := range item.Blocks {
 				if !resourceID(block.ID, "block") || seen[block.ID] {

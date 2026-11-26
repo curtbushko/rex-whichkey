@@ -78,8 +78,15 @@ func NewTheme(palette TerminalPalette, noColor, ascii bool) Theme {
 	// Prefer the user's cyan/blue keys, magenta groups, neutral help, red
 	// warnings and yellow icons. Missing or low-contrast entries get a readable
 	// semantic fallback, not a wholesale collapse to the body foreground.
-	candidates := [5][]int{{6, 14, 4, 12}, {5, 13}, {8, 7, 15}, {1, 9}, {3, 11}}
+	candidates := [5][]int{{6, 14, 4, 12}, {5, 13}, {8}, {1, 9}, {3, 11}}
 	fallbacks := [5]themeRGB{{0, 175, 215}, {175, 95, 215}, {128, 128, 128}, {215, 0, 0}, {215, 175, 0}}
+	// Missing/low-contrast neutral palette entries must not promote help to the
+	// body foreground. Derive a subdued neutral from the terminal's own colors.
+	fallbacks[ThemeMuted-ThemeKey] = themeRGB{
+		uint8((int(foreground.r) + int(background.r)) / 2),
+		uint8((int(foreground.g) + int(background.g)) / 2),
+		uint8((int(foreground.b) + int(background.b)) / 2),
+	}
 	for role, indexes := range candidates {
 		accent := fallbacks[role]
 		for _, index := range indexes {
@@ -97,8 +104,8 @@ func NewTheme(palette TerminalPalette, noColor, ascii bool) Theme {
 
 // Style colors plain menu text and resets only the foreground/background that it
 // sets. Without background metadata, native ANSI colors follow the user's terminal
-// palette; their contrast cannot be measured until replies arrive. Body/help text
-// retain the default foreground in that fallback. Control characters are removed
+// palette; their contrast cannot be measured until replies arrive. Body text
+// retains the default foreground, while muted hints use the terminal's gray. Control characters are removed
 // before styling, including in NO_COLOR mode, so a label cannot inject SGR, OSC
 // or cursor-control sequences.
 func (t Theme) Style(role ThemeRole, text string) string {
@@ -116,13 +123,15 @@ func (t Theme) Style(role ThemeRole, text string) string {
 			return text
 		}
 		// No background assignment or faint/dim text: unknown themes keep
-		// readable terminal defaults for labels/help and semantic ANSI accents.
+		// terminal defaults for labels and semantic ANSI accents for hints.
 		foreground := 39
 		switch role {
 		case ThemeKey:
 			foreground = 36
 		case ThemeGroup:
 			foreground = 35
+		case ThemeMuted:
+			foreground = 90
 		case ThemeCritical:
 			foreground = 31
 		case ThemeIcon:

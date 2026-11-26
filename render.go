@@ -19,9 +19,10 @@ type MenuFrame struct {
 	Lines               []string
 
 	// PreferredHeight is the natural row count at the supplied viewport width:
-	// all current entries (or the confirmation/empty message), both status
-	// borders, and one content spacer beside each border. It is independent of
-	// viewport height, page clipping and the selected page; it can exceed Height,
+	// all current entries (or the confirmation/empty message), the footer,
+	// an optional heading, spacers beside status rows and outer padding (top
+	// only in direct popups). It is independent of viewport height, page clipping
+	// and the selected page; it can exceed Height,
 	// even when Height is zero. Counts saturate at the largest int. Inactive
 	// menus and nonpositive widths report zero.
 	PreferredHeight int
@@ -52,7 +53,7 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	for i, item := range items {
 		itemWidths[i] = uniseg.StringWidth(item.plain())
 	}
-	layout := layoutMenu(width, height, config.Position, itemWidths, menu.Page())
+	layout := layoutMenu(width, height, config.Position, itemWidths, menu.Page(), header.plain() != "", config.footerAtBottom)
 	frame.PreferredHeight = layout.preferredHeight
 	if height <= 0 {
 		return frame
@@ -61,6 +62,9 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 	frame.Width, frame.Height = layout.width, layout.height
 	frame.Page, frame.Pages = layout.page, layout.pages
 
+	if layout.padding {
+		frame.Lines = append(frame.Lines, "")
+	}
 	if layout.header {
 		frame.Lines = append(frame.Lines, menuStatus(header, theme, layout.width))
 	}
@@ -72,14 +76,34 @@ func RenderMenu(menu *Menu, config Config, theme Theme, width, height int) MenuF
 		frame.Lines = append(frame.Lines, "")
 	}
 	if layout.help {
+		frame.Lines = menuFooterSpace(frame.Lines, layout, config.footerAtBottom)
 		role := ThemeMuted
 		if confirming || menu.entry != nil && menu.entry.problem != "" {
 			role = ThemeCritical
 		}
-		help := menuHelp(menu, confirming, layout.page, layout.pages, layout.width)
-		frame.Lines = append(frame.Lines, menuStatus(menuLine{menuText(role, help)}, theme, layout.width))
+		footer := menuFooter(menu, confirming, layout.page, layout.pages, layout.width, role)
+		frame.Lines = append(frame.Lines, menuStatus(footer, theme, layout.width))
+	}
+	if layout.bottomPadding {
+		frame.Lines = append(frame.Lines, "")
 	}
 	return frame
+}
+
+// Fill surplus popup rows before the footer, not after it. PreferredHeight
+// remains the compact natural height used by fitting and the geometry cache.
+func menuFooterSpace(lines []string, layout menuLayout, anchor bool) []string {
+	if !anchor {
+		return lines
+	}
+	footerRow := layout.height - 1
+	if layout.bottomPadding {
+		footerRow--
+	}
+	for len(lines) < footerRow {
+		lines = append(lines, "")
+	}
+	return lines
 }
 
 func menuItems(menu *Menu, config Config, theme Theme, width int) ([]menuLine, bool) {
@@ -244,23 +268,23 @@ func menuTextEntryHelp(menu *Menu) []string {
 	return []string{"Enter: save  Esc: back  Ctrl-U: clear", "Enter: save  Esc: back", "Enter Esc"}
 }
 
-// Status text shares its row with a horizontal rule, not an extra border row.
-// Narrow terminals spend their cells on hints rather than decorative padding.
+// Branding yields before navigation, paging and recovery instructions. It uses
+// the remaining right-hand space without adding a row or clipping the hints.
+func menuFooter(menu *Menu, confirming bool, page, pages, width int, role ThemeRole) menuLine {
+	help := menuHelp(menu, confirming, page, pages, width)
+	line := menuLine{menuText(role, help)}
+	const brand = "rex-whichkey"
+	space := width - uniseg.StringWidth(help) - len(brand)
+	if space >= 2 {
+		line = append(line, menuText(ThemeMuted, strings.Repeat(" ", space)+brand))
+	}
+	return line
+}
+
+// Status rows are plain text, with no application-drawn border or rule.
 func menuStatus(line menuLine, theme Theme, width int) string {
-	if width <= 0 {
-		return ""
-	}
-	rule := theme.Decoration("─", "-")
-	if line.plain() == "" {
-		return theme.Style(ThemeMuted, strings.Repeat(rule, width))
-	}
-	if uniseg.StringWidth(line.plain()) > width-4 {
-		text, used := line.render(theme, width)
-		return text + theme.Style(ThemeMuted, strings.Repeat(rule, width-used))
-	}
-	text, used := line.render(theme, width-4)
-	return theme.Style(ThemeMuted, rule+" ") + text +
-		theme.Style(ThemeMuted, " "+strings.Repeat(rule, width-used-3))
+	text, _ := line.render(theme, max(0, width))
+	return text
 }
 
 func menuDecoration(theme Theme, glyph, fallback string) string {

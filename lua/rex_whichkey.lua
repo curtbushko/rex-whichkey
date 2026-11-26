@@ -3,7 +3,7 @@
 -- Installed binding (no executable nomination):
 --   local whichkey = require("rex_whichkey")
 --   rex.bind("ctrl+space", function(ctx) return whichkey.launch(ctx) end)
--- Optional launch data: { width=.8, height=.3, config="/path/menu.json",
+-- Optional launch data: { width=.8, height=.2, config="/path/menu.json",
 --                         ascii=false, no_color=false }.
 --
 -- Development, after `task build` in this checkout, without init.lua reload:
@@ -13,11 +13,13 @@
 -- origin from another terminal. The action receives those as ctx, never from
 -- menu data. The trusted source/build caller supplies its absolute bin/GOOS-GOARCH
 -- directory as data, scoped to this one terminal's path_prepend. Omit it for
--- installed launches using ordinary PATH. Lua does not discover files or run Go.
+-- installed launches using ordinary PATH. Lua does not discover executables or run Go.
 -- The directory is one PATH entry, not an executable path, callback or command.
 -- The terminal always starts the fixed program rex-whichkey, shell=none.
 --
--- Native chrome uses Rex defaults. Terminal palette matching is Go's job.
+-- Width is fixed; height is a maximum. Go fits current content in this same
+-- float using its own client-sized PTY. Native chrome uses Rex defaults.
+-- Terminal palette matching is Go's job.
 -- exit.on_completion=true with a zero quick-failure threshold lets Rex delete
 -- even a failed/detached host after Go exits. A launch result is not UI readiness
 -- or proof of eventual deletion; observe session.list_blocks after completion.
@@ -54,6 +56,32 @@ local function fraction(value, default, name)
         error("rex_whichkey: " .. name .. " must be a finite fraction in (0, 1]", 0)
     end
     return value
+end
+
+-- Optional cache data is never executable Lua or resource authority. Read at
+-- only bounded JSON; any miss, invalid hint or unavailable decoder uses the normal cap.
+local function cached_height(width, maximum, config, ascii)
+    if type(rex.json) ~= "table" or type(rex.json.decode) ~= "function" then return maximum end
+    local root = os.getenv("XDG_CACHE_HOME")
+    if root == nil or root == "" then
+        local home = os.getenv("HOME")
+        if type(home) ~= "string" or home:sub(1, 1) ~= "/" then return maximum end
+        root = home .. "/.cache"
+    end
+    if root:sub(1, 1) ~= "/" then return maximum end
+    local file = io.open(root .. "/rex-whichkey/geometry.json", "rb")
+    if not file then return maximum end
+    local read_ok, data = pcall(file.read, file, 4097)
+    file:close()
+    if not read_ok or type(data) ~= "string" or #data > 4096 then return maximum end
+    local ok, cache = pcall(rex.json.decode, data)
+    if not ok or type(cache) ~= "table" or cache.version ~= 1
+        or cache.width ~= width or cache.maximum_height ~= maximum
+        or cache.config ~= (config or "") or cache.ascii ~= (ascii == true)
+        or type(cache.height) ~= "number" or not (cache.height > 0 and cache.height <= maximum) then
+        return maximum
+    end
+    return cache.height
 end
 
 local function exact_origin(session, block)
@@ -120,8 +148,10 @@ function M.launch(ctx, options)
         path = { directory }
     end
     local origin = exact_origin(session, block)
+    local initial_height = cached_height(width, height, config, options.ascii)
     local command = { "rex-whichkey", "direct", "--origin-session", session,
-        "--origin-block", block, "--origin-window", origin.window, "--origin-layer", origin.layer }
+        "--origin-block", block, "--origin-window", origin.window, "--origin-layer", origin.layer,
+        "--max-height", tostring(height) }
     if client then command[#command+1] = "--client"; command[#command+1] = client end
     if config then command[#command+1] = "--config"; command[#command+1] = config end
     if options.ascii then command[#command+1] = "--ascii" end
@@ -129,12 +159,12 @@ function M.launch(ctx, options)
     local created, err = rex.session.new_layer{
         session_id = session,
         window_id = origin.window,
-        bounds = { (1-width)/2, (1-height)/2, width, height },
+        bounds = { (1-width)/2, (1-initial_height)/2, width, initial_height },
         focus = true,
         layout = rex.layout.block{
             label = "rex-whichkey",
             flavor = "com.superlogical.terminal.shell",
-            options = { command = command, shell = "none", path_prepend = path,
+            options = { command = command, shell = "none", login = false, path_prepend = path,
                 exit = { on_completion = true, quick_exit_threshold_ms = 0 } },
         },
     }

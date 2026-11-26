@@ -25,8 +25,8 @@ snapshot, not a persistent cache:
   characters**. An invalid/oversized initial presentation value is cleared,
   never silently truncated/submitted.
 
-The same fixed rectangle, theme, status spacing, caret/scrolling and focus/resize
-redraw apply. No app chooser or native control/font setting is changed.
+The same owned float, theme, status spacing, caret/scrolling and focus/resize
+redraw apply. The rename form fits content height within the launch cap. No app chooser or native control/font setting is changed.
 
 ## Retained resource and cleanup
 

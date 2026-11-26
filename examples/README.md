@@ -61,7 +61,8 @@ and optional original `-C` and `--action rex_whichkey_launch`, without a global
 registration or require lookup. Only canonical `require("rex_whichkey")` returns
 its function table; ordinary script execution serializes no functions.
 The locally defined action is launch-only, not a command-palette/config takeover
-or menu callback registry. Defaults are centered `.8/.3`; fractions must be finite
+or menu callback registry. Defaults are centered width `.8` / maximum height `.2`;
+current menu content determines height within that cap. Fractions must be finite
 and in `(0,1]`. Native chrome uses Rex defaults for now; customization/REQ-026
 is explicitly user-deferred, not implemented by terminal colors/text borders.
 

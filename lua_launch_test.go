@@ -45,4 +45,8 @@ rex = {
 	require.True(t, ok, "launch must create a terminal block")
 	require.Equal(t, lua.LString("rex-whichkey"), block.RawGetString("label"))
 	require.Equal(t, lua.LString("com.superlogical.terminal.shell"), block.RawGetString("flavor"))
+	options, ok := block.RawGetString("options").(*lua.LTable)
+	require.True(t, ok)
+	require.Equal(t, lua.LString("none"), options.RawGetString("shell"))
+	require.Equal(t, lua.LFalse, options.RawGetString("login"), "popup must not print a login banner before the menu")
 }

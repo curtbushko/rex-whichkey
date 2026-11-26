@@ -42,18 +42,23 @@ Options are a closed data table:
 
 | Option | Contract |
 | --- | --- |
-| `width`, `height` | Finite fractions `(0,1]`, defaults `.8`, `.3` |
+| `width`, `height` | Finite fractions `(0,1]`, defaults `.8`, `.2`; height is a maximum |
 | `config` | Optional nonempty control-free JSON path; prefer absolute |
 | `ascii`, `no_color` | Optional booleans, forwarded as Go presentation flags |
 | `development_directory` | Trusted source/build caller only: one absolute PATH directory, no colon; omit installed |
 
-Lua centers bounds at `{(1-width)/2, (1-height)/2, width, height}` and creates
-exactly one terminal in one new floating layer in the original window. It uses
-`rex.layout.block`, `shell="none"`, and the fixed argument-array program:
+Lua uses a matching [cached root height](geometry-cache.md) as `initial_height`,
+or the configured maximum `height` on a miss. It centers bounds at
+`{(1-width)/2, (1-initial_height)/2, width, initial_height}` and creates exactly
+one terminal in one new floating layer in the original window. It uses
+`rex.layout.block`, `shell="none"`, `login=false`, and the fixed argument-array
+program. Explicit non-login startup prevents macOS from briefly printing a
+“Last login” banner before Go draws the menu:
 
 ```text
 rex-whichkey direct --origin-session SESSION --origin-block BLOCK \
-  --origin-window WINDOW --origin-layer LAYER [--client ORIGINAL_CLIENT] \
+  --origin-window WINDOW --origin-layer LAYER --max-height MAX_HEIGHT \
+  [--client ORIGINAL_CLIENT] \
   [--config PATH] [--ascii] [--no-color]
 ```
 
@@ -125,12 +130,26 @@ See [data/providers](mapping-format.md), [rename](tab-rename-input.md) and
 [session UI](session-owned-ui.md). There is no renderer child, runtime image,
 lifetime FIFO, lease, result/update/demand files, callback registry or relay.
 
-## Fixed navigation bounds and liveness
+<a id="fixed-navigation-bounds-and-liveness"></a>
 
-Lua chooses one fixed fractional rectangle. Menu navigation, background readiness,
-paging/back/focus/idle do not resize or recreate it. Go fits/paginates inside its
-current own-PTY cells; SIGWINCH/focus-in redraw do not alter outer bounds. This is
-not content-height native shrink wrapping or proof of first-size-final GUI pixels.
+## Content-sized height and liveness
+
+Lua creates one centered fractional rectangle. Its width stays fixed; initial
+height is a valid cached root hint or the configured maximum. The configured
+maximum is retained independently through `--max-height`. Go fits the same owned layer to the current menu's
+preferred rows (including optional heading, footer and spacers), resizing on submenu/back,
+provider updates and own-PTY geometry changes. Larger menus paginate at the cap;
+Tab alone does not shrink a partially filled last page. There is no replacement
+layer or focus change. See [design and decision](content-sized-popup.md).
+
+One worker reads only the popup's own PTY, confirms a matching client-sized grid,
+and validates exact sole-block ownership and expected bounds before each native
+resize, then reads bounds back. It never infers window size from the origin pane
+or Rex's initial 80x24 terminal. Missing launch bounds disables fitting; an
+unpresented popup stays at its launch size. Keyboard handling does not wait on
+resize calls. The worker cancels/joins before tty restoration and native cleanup;
+an uncertain resize suppresses selection. Native chrome/cell rounding may leave
+one spare row; initial display can settle after creation, not first-size-final.
 
 The terminal has no idle expiry. Original resource placement/liveness, selected
 app generation and operation deadlines remain guarded. Tab switching alone does

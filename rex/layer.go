@@ -39,6 +39,7 @@ type Layer struct {
 	client  *Client
 	layerID string
 	blockID string
+	bounds  *Bounds
 }
 
 // Block returns the exact terminal identity captured from popup binding. Its Inspect

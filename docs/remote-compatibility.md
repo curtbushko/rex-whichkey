@@ -67,7 +67,8 @@ See [CLI/GUI delegation](cli-gui-delegation.md).
 The direct menu has no idle expiry or original-Lua action lifetime. Go watches
 captured placement/liveness, joins metadata jobs and restores tty modes before
 cleanup. Tab changes alone do not dismiss. Lua fixes fractional outer bounds;
-Go fits only its own PTY/SIGWINCH, not the origin's GUI pixel geometry.
+Go fits content height from its own client-sized PTY/SIGWINCH within the launch
+height cap, not the origin's GUI pixel geometry.
 Native chrome uses Rex defaults for now; user1a deferred customization/REQ-026.
 
 Exact sole-popup detach/visible retirement, detached identity and exact original

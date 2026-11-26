@@ -4,7 +4,8 @@ Source `make run`, installed script and optional require binding use the same
 shared Lua float launcher and one direct Go menu process. Bare Go is not a
 launcher; `menu` is UI/result-only. JSON configuration can place supported intents
 at any valid full key.
-There is no native session picker, app chooser, extra pane or navigation resize.
+There is no native session picker, app chooser or extra pane. Current menu
+content determines the popup height within its launch cap.
 
 ## Sessions → Switch
 
@@ -16,7 +17,8 @@ in-flight attempt and terminal result, including failures:
 
 - Full typed IDs lead labels; the origin is marked `[current]`.
 - Keys 1–9 select rows; `n` opens More groups. Ordinary Tab paging,
-  Escape/Backspace and focus redraw retain fixed bounds.
+  Escape/Backspace refit content height within the launch cap; focus redraw
+  alone does not change bounds.
 - Empty inventory has a non-executable message; read failure has an explicit
   warning, not a successful empty inventory or picker fallback.
 - More than 512 resources is an error, not truncation. In-process expansion

@@ -28,8 +28,14 @@ func (v SessionSnapshot) DirectPopup(ownID string, origin Block) (Layer, Session
 	// Creation took focus. Provider current markers describe invocation intent,
 	// not the popup's new focus, without altering the raw ownership snapshot.
 	filtered.restoreOriginMarkers(origin)
+	var bounds *Bounds
+	for _, layer := range v.layers {
+		if layer.id == own.LayerID {
+			bounds = layer.bounds
+		}
+	}
 	return Layer{ID: own.LayerID, BlockID: ownID, WindowID: own.WindowID,
-		client: own.client, layerID: own.LayerID, blockID: ownID}, filtered, nil
+		client: own.client, layerID: own.LayerID, blockID: ownID, bounds: bounds}, filtered, nil
 }
 
 func (v SessionSnapshot) withoutDirectPopup(own Block) (SessionSnapshot, error) {
@@ -105,7 +111,7 @@ func (l Layer) Minimize(ctx context.Context) error {
 	if err := l.terminalPlacement(ctx, "placed"); err != nil {
 		return err
 	}
-	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, "layer_id": l.layerID, "state": "minimized"}, nil); err != nil {
+	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, fieldLayer: l.layerID, "state": "minimized"}, nil); err != nil {
 		return fmt.Errorf("rex: popup minimize failed or uncertain; not retried: %w", err)
 	}
 	return l.VerifyMinimized(ctx)
@@ -128,14 +134,14 @@ func (l Layer) RestoreForError(ctx context.Context) error {
 	if err := l.VerifyMinimized(ctx); err != nil {
 		return err
 	}
-	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, "layer_id": l.layerID, "state": "normal", "focus": true}, nil); err != nil {
+	if err := l.client.Call(ctx, "session.set_layer_state", map[string]any{fieldSession: l.client.session, fieldLayer: l.layerID, "state": layerStateNormal, "focus": true}, nil); err != nil {
 		return err
 	}
 	layer, err := l.owned(ctx)
 	if err != nil {
 		return err
 	}
-	if layer.state != "" && layer.state != "normal" {
+	if layer.state != "" && layer.state != layerStateNormal {
 		return errors.New("rex: error menu is not verified visible")
 	}
 	view, err := l.client.SessionSnapshot(ctx, l.client.session)

@@ -21,6 +21,8 @@ const (
 	fieldFocus       = "focus"
 	fieldSession     = "session_id"
 	fieldBlock       = "block_id"
+	fieldLayer       = "layer_id"
+	layerStateNormal = "normal"
 	fieldBounds      = "bounds"
 	fieldLabel       = "label"
 	fieldArgs        = "args"

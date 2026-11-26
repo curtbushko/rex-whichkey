@@ -40,6 +40,7 @@ const directHelp = `usage: rex-whichkey direct --origin-session ID --origin-bloc
 Run inside the sole terminal of a Lua-created float, not an ordinary pane.
 Original IDs are fixed invocation data, separate from popup REX_* identities.
 Options: --client FULL_ID --server ENDPOINT --config PATH --ascii --no-color
+Lua supplies --max-height FRACTION separately from cached launch geometry.
 No nested popup, parent process, private IPC or init reload is used.
 The shared public Lua action is rex_whichkey_launch; run lua/rex_whichkey.lua.
 `
@@ -52,6 +53,7 @@ func runDirect(ctx context.Context, args []string, output io.Writer) error {
 	flags.StringVar(&options.OriginBlock, "origin-block", "", "original full block ID")
 	flags.StringVar(&options.OriginWindow, "origin-window", "", "original full window ID")
 	flags.StringVar(&options.OriginLayer, "origin-layer", "", "original full layer ID")
+	flags.Float64Var(&options.MaximumHeight, "max-height", 0, "configured maximum height, independent of cached launch size")
 	server := flags.String("server", "", "execution-host endpoint override")
 	client := flags.String("client", "", "original exact app intent")
 	config := flags.String("config", "", "version 1 JSON menu data")

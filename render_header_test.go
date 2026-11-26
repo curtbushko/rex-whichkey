@@ -1,7 +1,6 @@
 package whichkey
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +14,7 @@ func TestMenuHeader(t *testing.T) {
 		icon   string
 		want   string
 	}{
-		{name: "root separator only"},
+		{name: "root without heading"},
 		{name: "submenu breadcrumb", prefix: "t", want: "Tabs"},
 		{name: "nested breadcrumbs", prefix: "ts", want: "Tabs » Split"},
 		{name: "explicit custom heading", title: "Custom", icon: "*", want: "* Custom"},
@@ -41,9 +40,10 @@ func TestMenuHeader(t *testing.T) {
 			frame := RenderMenu(menu, config, theme, 80, 10)
 			require.NotEmpty(t, frame.Lines)
 			if test.want == "" {
-				require.Equal(t, strings.Repeat("─", frame.Width), frame.Lines[0])
+				require.NotEmpty(t, frame.Lines[1], "no heading means content starts immediately")
+				require.NotContains(t, frame.Lines[1], "─")
 			} else {
-				require.Contains(t, frame.Lines[0], test.want)
+				require.Contains(t, frame.Lines[1], test.want)
 			}
 		})
 	}

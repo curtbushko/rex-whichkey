@@ -19,6 +19,9 @@ type DirectOptions struct {
 	OriginBlock   string
 	OriginWindow  string
 	OriginLayer   string
+	// MaximumHeight retains the configured cap when launch height is cached.
+	// Zero preserves the legacy launch-bounds cap.
+	MaximumHeight float64
 	// Nil selectors are absent; explicitly empty selectors are invalid.
 	Server  *string
 	Client  *string
@@ -114,10 +117,15 @@ func directSelection(ctx context.Context, client *rex.Client, origin launchOrigi
 		return MenuEvent{}, bound, appErr, err
 	}
 	config.textEntry = &textEntrySpec{}
-	config.Position = positionTop // Lua already placed the fixed outer viewport.
+	config.Position = positionTop // Native float placement is separate from terminal alignment.
+	config.footerAtBottom = true
 	state.request = popupRequest{Server: origin.Server, SessionID: origin.SessionID, BlockID: origin.BlockID,
 		selection: origin.selection, placement: &placement, snapshot: &snapshot}
-	state.client = client
+	state.client, state.popup = client, popup
+	state.geometry = geometryCacheEntry{Version: 1, MaximumHeight: options.MaximumHeight, ASCII: options.ASCII}
+	if options.Config != nil {
+		state.geometry.Config = *options.Config
+	}
 	terminalCtx := context.WithValue(ctx, terminalDirectKey{}, state)
 	event, outcome = RunTerminal(terminalCtx, config, options.NoColor, options.ASCII)
 	if outcome == nil && !event.Dismissed {
@@ -186,6 +194,9 @@ func directInvocation(parent context.Context, options DirectOptions) (string, st
 		!popupResourceID(options.OriginBlock, "block") || !popupResourceID(options.OriginWindow, "window") ||
 		!popupResourceID(options.OriginLayer, "layer") {
 		return "", "", errors.New("whichkey: direct requires full original session/block/window/layer IDs captured before popup creation")
+	}
+	if options.MaximumHeight != 0 && !geometryFraction(options.MaximumHeight) {
+		return "", "", errors.New("whichkey: direct --max-height must be a finite fraction in (0, 1]")
 	}
 	ownID := os.Getenv("REX_BLOCK")
 	// New Rex terminals set only REX_BLOCK. A legacy session hint may reject
@@ -268,6 +279,8 @@ type terminalDirectKey struct{}
 type directMenuState struct {
 	request   popupRequest
 	client    *rex.Client
+	popup     rex.Layer
+	geometry  geometryCacheEntry
 	config    Config
 	targets   map[string]providerTarget
 	labels    *renameLabels

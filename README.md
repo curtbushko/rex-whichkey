@@ -95,7 +95,7 @@ Use your actual GNU make path if it differs; `command -v make` identifies the PA
 entry. Extra arguments are Lua action `key=value` data, **not Go root flags**.
 Shell-quote paths containing spaces normally (and retain quoting inside GNU
 make's `ARGS`). Omit `development_directory` from user arguments: the source task
-supplies it. Defaults are centered width `.8`, height `.3`; dimensions must be
+supplies it. Defaults are centered width `.8`, maximum height `.2`; dimensions must be
 finite fractions in `(0,1]`. `ascii`/`no_color` are optional booleans.
 
 The equivalent explicit source entry, after `task build`, is:
@@ -244,8 +244,15 @@ local sessions or trigger retries in that invocation.
 Close requires `y`; another prompt key cancels. Esc/Backspace go up, then dismiss
 at root; unmapped `q` dismisses. Tab pages/wraps; hidden/off-page mappings remain
 active. Providers are sessions/windows/panes/known-hosts (hosts listing-only).
-Inline rename uses this same menu. Lua keeps one fixed fractional rectangle;
-Go fits its own PTY cells and handles SIGWINCH/pagination without resizing it.
+Inline rename uses this same menu. Lua creates one centered float at the
+configured width and maximum height. Go fits its height to the current menu,
+including submenu/back and provider updates; larger menus paginate at that cap.
+Fitting uses only the popup's client-sized PTY and preserves native chrome.
+A settled root height is cached at `$XDG_CACHE_HOME/rex-whichkey/geometry.json`
+(or `~/.cache/rex-whichkey/geometry.json`) and reused as the next initial height.
+Missing/invalid hints fall back to normal measurement; the configured maximum
+still permits larger submenus. See [content-sized height](docs/content-sized-popup.md)
+and [cache behavior](docs/geometry-cache.md).
 Native chrome uses Rex defaults **for now**: user1a explicitly deferred REQ-026
 native titlebar/border/corners/shadow customization; it is not implemented or
 credited complete. Rex's native header, border, corners and shadow may remain
