@@ -46,7 +46,7 @@ platform runtime, license permission or server environment.
 
 ## Original resource and GUI intent
 
-Source run requires originating full `REX_SESSION/REX_BLOCK`; absence fails rather
+Source run requires originating full `REX_BLOCK`; absence fails rather
 than allowing `rex do` to pick the focused block. A present original `REX_CLIENT`
 is forwarded with `-C`, not converted from a CLI caller to a GUI ID. The Lua
 context supplies exact original session/block/client intent before creation;

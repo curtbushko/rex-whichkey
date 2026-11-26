@@ -9,14 +9,14 @@ are historical. Current CLI-only direction is `REXWHICHKEY-20261106-114935`.
 
 The shared Lua launcher requires full original session/block context and resolves
 exact Window/Layer placement before creation. Source `make run` requires originating
-`REX_SESSION/REX_BLOCK` and passes explicit `-s/-b`; a present original `REX_CLIENT`
+`REX_BLOCK` and passes it as explicit `-s/-b`; a present original `REX_CLIENT`
 is passed with `-C`. Missing origin fails rather than focused-block selection.
 The binding uses exact `ctx.client_id` intent when supplied. A CLI caller is not
 converted to a focused/sole app; full ID shape alone does not prove app eligibility.
 Go independently verifies original intent and connection generation.
 
 Lua passes original IDs as `direct --origin-*` arguments and optional `--client`.
-Popup `REX_SESSION/REX_BLOCK` identify only the distinct execution terminal;
+Popup `REX_BLOCK` identifies only the distinct execution terminal;
 popup `REX_CLIENT` is **never** read as original app intent. Bare/root-flag Go
 launch is rejected. The shared script-local `rex_whichkey_launch` action needs no
 global user registration/reload; it is not caller impersonation or a menu callback.

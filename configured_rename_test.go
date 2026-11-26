@@ -379,6 +379,11 @@ func TestDirectInvocationRejectsRetargeting(t *testing.T) {
 			}
 		})
 	}
+	t.Setenv("REX_SESSION", "") // Current Rex terminals expose only REX_BLOCK.
+	own, requested, err = directInvocation(context.Background(), options)
+	require.NoError(t, err)
+	require.Equal(t, ownID, own)
+	require.Empty(t, requested)
 	t.Setenv("REX_BLOCK", originID)
 	_, _, err = directInvocation(context.Background(), options)
 	require.Error(t, err, "ordinary origin pane must never be detached")

@@ -24,8 +24,8 @@ rex_whichkey_launch` with an absolute `development_directory`. The new terminal
 gets one scoped PATH prepend; the command stays fixed `rex-whichkey direct`.
 No old installed module/binary, init.lua registration or reload is needed.
 
-Originating nonempty `REX_SESSION/REX_BLOCK` are mandatory and passed as explicit
-`-s/-b`. Missing origin fails, not focused-block selection outside Rex. A present
+Originating nonempty `REX_BLOCK` is mandatory and passed as both explicit
+`-s` and `-b`; Rex resolves its containing session. Missing origin fails, not focused-block selection outside Rex. A present
 original `REX_CLIENT` is passed as `-C`; Go rejects invalid/non-app intent, never
 uses popup `REX_CLIENT` as the original or substitutes a focused/sole app.
 Use your own real origin IDs, not another terminal's environment.

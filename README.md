@@ -65,8 +65,9 @@ make run
 
 `make run` always builds this checkout first, then invokes the current
 `lua/rex_whichkey.lua` script with `--action rex_whichkey_launch`. It requires
-nonempty originating `REX_SESSION` and `REX_BLOCK` and passes them explicitly as
-`-s`/`-b`; outside Rex it fails rather than using whichever block is focused.
+nonempty originating `REX_BLOCK` and passes it explicitly as both `-s` and
+`-b`; Rex resolves its containing session. Outside Rex it fails rather than
+using whichever block is focused. Current Rex no longer sets `REX_SESSION`.
 A present `REX_CLIENT` is forwarded as the original `-C` intent, never replaced
 with the popup's client. It must be a full ID and an eligible graphical app;
 a CLI caller ID is not permission to impersonate an app. Without explicit app
@@ -100,14 +101,13 @@ finite fractions in `(0,1]`. `ascii`/`no_color` are optional booleans.
 The equivalent explicit source entry, after `task build`, is:
 
 ```sh
-: "${REX_SESSION:?originating Rex session required}"
 : "${REX_BLOCK:?originating Rex block required}"
 set --
 if [ "${REX_CLIENT+x}" = x ]; then
   : "${REX_CLIENT:?original full client ID required when present}"
   set -- -C "$REX_CLIENT"
 fi
-rex "$@" do "$PWD/lua/rex_whichkey.lua" -s "$REX_SESSION" -b "$REX_BLOCK" \
+rex "$@" do "$PWD/lua/rex_whichkey.lua" -s "$REX_BLOCK" -b "$REX_BLOCK" \
   --action rex_whichkey_launch \
   development_directory="$PWD/bin/$(go env GOOS)-$(go env GOARCH)"
 ```
@@ -160,7 +160,6 @@ With the package bin directory already on the Rex server's PATH, the shared
 script is directly usable without user action registration or reload:
 
 ```sh
-: "${REX_SESSION:?originating Rex session required}"
 : "${REX_BLOCK:?originating Rex block required}"
 # PACKAGE is the absolute package output.
 set --
@@ -169,7 +168,7 @@ if [ "${REX_CLIENT+x}" = x ]; then
   set -- -C "$REX_CLIENT"
 fi
 rex "$@" do "$PACKAGE/share/rex-whichkey/lua/rex_whichkey.lua" \
-  -s "$REX_SESSION" -b "$REX_BLOCK" --action rex_whichkey_launch
+  -s "$REX_BLOCK" -b "$REX_BLOCK" --action rex_whichkey_launch
 ```
 
 Installed launches **omit `development_directory`** and use ordinary PATH.

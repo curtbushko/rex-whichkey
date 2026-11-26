@@ -12,7 +12,7 @@ import (
 )
 
 // DirectOptions is invocation data captured by Lua before creating the float.
-// Popup REX_SESSION/REX_BLOCK identify only the execution host, never the origin.
+// Popup REX_BLOCK identifies only the execution host, never the origin.
 // Bare invocation is rejected; only the explicit direct command enters this mode.
 type DirectOptions struct {
 	OriginSession string
@@ -188,7 +188,10 @@ func directInvocation(parent context.Context, options DirectOptions) (string, st
 		return "", "", errors.New("whichkey: direct requires full original session/block/window/layer IDs captured before popup creation")
 	}
 	ownID := os.Getenv("REX_BLOCK")
-	if os.Getenv("REX_SESSION") != options.OriginSession || !popupResourceID(ownID, "block") || ownID == options.OriginBlock {
+	// New Rex terminals set only REX_BLOCK. A legacy session hint may reject
+	// a mismatch, but RunDirectMenu verifies placement in a fresh server snapshot.
+	sessionHint := os.Getenv("REX_SESSION")
+	if (sessionHint != "" && sessionHint != options.OriginSession) || !popupResourceID(ownID, "block") || ownID == options.OriginBlock {
 		return "", "", errors.New("whichkey: direct must run in its own popup terminal, not the original pane")
 	}
 	requested := ""

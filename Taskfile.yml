@@ -27,7 +27,6 @@ tasks:
     cmds:
       - |
         set -eu
-        : "${REX_SESSION:?task run requires the originating REX_SESSION}"
         : "${REX_BLOCK:?task run requires the originating REX_BLOCK}"
         command -v rex >/dev/null
       - task: build
@@ -41,7 +40,7 @@ tasks:
           set -- -C "$REX_CLIENT"
         fi
         exec rex "$@" do "$source_directory/lua/rex_whichkey.lua" \
-          -s "$REX_SESSION" -b "$REX_BLOCK" --action rex_whichkey_launch \
+          -s "$REX_BLOCK" -b "$REX_BLOCK" --action rex_whichkey_launch \
           {{.CLI_ARGS}} development_directory="$build_directory"
 
   clean:

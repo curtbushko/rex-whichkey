@@ -98,7 +98,7 @@ func startPTYSandbox(t *testing.T, test, scenario string) *ptySandbox {
 	t.Cleanup(cancel)
 	command := exec.CommandContext(ctx, "/usr/bin/script", "-q", "/dev/null", executable, "-test.run", "^"+test+"$")
 	command.Env = append(os.Environ(), sandboxEnv+"="+dir, "REX_WHICHKEY_PTY_CASE="+scenario,
-		"PATH="+dir, "NO_COLOR=", "REX_SESSION="+sandboxSession, "REX_BLOCK="+sandboxOwn,
+		"PATH="+dir, "NO_COLOR=", "REX_SESSION=", "REX_BLOCK="+sandboxOwn,
 		// Re-executed race fixtures retain instrumentation, not the runtime's
 		// default one-second exit grace per CLI call (production has none).
 		"GORACE="+os.Getenv("GORACE")+" atexit_sleep_ms=0")

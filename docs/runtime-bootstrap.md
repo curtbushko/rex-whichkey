@@ -13,11 +13,11 @@ See the [launch contract](launch-contract.md) for public options and lifetime.
 
 [Taskfile.yml](../Taskfile.yml) is authoritative. `task build` builds `./cmd` into
 this root's `bin/GOOS-GOARCH/rex-whichkey`; `task run` checks explicit originating
-`REX_SESSION/REX_BLOCK`, builds current source and executes:
+`REX_BLOCK`, builds current source and executes:
 
 ```text
 rex [-C ORIGINAL_REX_CLIENT] do ABSOLUTE_ROOT/lua/rex_whichkey.lua \
-  -s ORIGINAL_REX_SESSION -b ORIGINAL_REX_BLOCK --action rex_whichkey_launch \
+  -s ORIGINAL_REX_BLOCK -b ORIGINAL_REX_BLOCK --action rex_whichkey_launch \
   [width=FRACTION height=FRACTION config=PATH ascii=BOOL no_color=BOOL] \
   development_directory=ABSOLUTE_ROOT/bin/GOOS-GOARCH
 ```

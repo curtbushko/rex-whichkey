@@ -25,9 +25,9 @@ Both delegate the unchanged quality commands to [Taskfile.yml](../Taskfile.yml).
 Run from the source checkout; `task build` retains the ordinary Go build command,
 outputting the fixed `rex-whichkey` program under the selected GOOS-GOARCH.
 
-The source task fails if originating `REX_SESSION` or `REX_BLOCK` is missing or
-empty, before any launch; it always passes both `-s` and `-b` rather than allowing
-Rex's focused-block default. A present `REX_CLIENT` is passed explicitly as `-C`;
+The source task fails if originating `REX_BLOCK` is missing or empty, before
+any launch; it passes that block as both `-s` and `-b`, letting Rex resolve its
+containing session rather than allowing Rex's focused-block default. A present `REX_CLIENT` is passed explicitly as `-C`;
 empty intent fails, and Go validates full ID/app eligibility. Do not replace a
 CLI caller's identity with a focused/sole GUI app. An absent original client
 remains absent at the source route; it is not taken from popup environment.
@@ -77,8 +77,9 @@ rejected; they cannot detach an ordinary caller pane. `menu` is UI/result-only,
 not a popup/resource launcher.
 
 Original IDs are explicit arguments captured **before creation**. The terminal's
-`REX_SESSION/REX_BLOCK` identify only its own execution context. Go requires the
-same session, a distinct own Block, and exact sole-block floating-layer placement
+`REX_BLOCK` identifies only its own execution context. Current Rex no longer
+sets `REX_SESSION`; a nonempty legacy value must still match the origin. Go
+verifies the same session through the fresh server snapshot, a distinct own Block, and exact sole-block floating-layer placement
 in the captured original window. Raw own-float validation is separate from the
 filtered provider view; own popup is excluded from pane rows/counts/targets and
 current markers describe the original source.
